@@ -30,5 +30,13 @@ project "testUi"
 	language "C++"
 	location "testUi"
 	targetdir("../bin")
-	files{"libsrc/testUi/*.cxx"}
+	files{"../libsrc/testUi/*.cxx"}
+	links {"ui", "glfw", "OpenGL32"}
+	
+project "uiEditor"
+	kind "ConsoleApp"
+	language "C++"
+	location "uiEditor"
+	targetdir("../bin")
+	files{"../libsrc/uiEditor/*.cxx"}
 	links {"ui", "glfw", "OpenGL32"}
