@@ -4,8 +4,8 @@ solution "Monstro"
    platforms{"x64"}
    startproject "testUi"
 
-   includedirs("../include", "../3rdParty/include")
-   libdirs("../lib", "../3rdParty/lib")
+   includedirs{"../include", "../3rdParty/include"}
+   libdirs{"../lib", "../3rdParty/lib"}
 
    
   configuration { "Debug" }
@@ -22,6 +22,7 @@ project "ui"
 	language "C++"
 	location "ui"
 	targetdir("../lib")
+   defines("UI_EXPORTS")
 	files{"../include/ui/*.h", "../libsrc/ui/*.cxx"}
 	vpaths { ["Headers"] = "../include/ui/*.h", ["Source"] = "../libsrc/ui/*.cxx" }
 	
@@ -31,7 +32,7 @@ project "testUi"
 	location "testUi"
 	targetdir("../bin")
 	files{"../libsrc/testUi/*.cxx"}
-	links {"ui", "glfw", "OpenGL32"}
+	links {"ui", "glfw3", "OpenGL32"}
 	
 project "uiEditor"
 	kind "ConsoleApp"
@@ -39,4 +40,4 @@ project "uiEditor"
 	location "uiEditor"
 	targetdir("../bin")
 	files{"../libsrc/uiEditor/*.cxx"}
-	links {"ui", "glfw", "OpenGL32"}
+	links {"ui", "glfw3", "OpenGL32"}

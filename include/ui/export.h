@@ -3,21 +3,14 @@ Copyright 2017
 Bob Holcomb
 -----------------------------------------------------------------------------*/
 
-#include "ui/font.h"
+#pragma once
 
-using namespace UI;
-
-Font::Font()
-{
-
-}
-
-Font::~Font()
-{
-
-}
-
-Glyph* Font::glyph(int glyph)
-{
-   return 0;
-}
+#ifdef _WIN32
+#ifdef UI_EXPORTS
+#define UI_DLL __declspec ( dllexport )
+#else
+#define UI_DLL __declspec ( dllimport )
+#endif
+#else
+#define UI_DLL
+#endif

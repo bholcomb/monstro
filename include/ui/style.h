@@ -3,21 +3,25 @@ Copyright 2017
 Bob Holcomb
 -----------------------------------------------------------------------------*/
 
+#pragma once
+
 #include "ui/util.h"
 
 namespace UI
 {
+   class Font;
+
    enum StyleItemType {COLOR, IMAGE};
    const int MAX_CURSOR_COUNT = 64;
-
-   enum Alignment
+   
+   enum class Alignment
    {
       LEFT = 1 << 0,
       RIGHT = 1 << 1,
       TOP = 1 << 2,
       BOTTOM = 1 << 3,
       HCENTER = LEFT | RIGHT,
-      VCETNER = TOP | BOTTOM,
+      VCENTER = TOP | BOTTOM,
       MIDDLE = HCENTER | VCENTER,
       DEFAULT = LEFT | HCENTER
    };
