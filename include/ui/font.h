@@ -29,6 +29,7 @@ namespace UI
       Glyph* glyph(int glyph);
 
    protected:
+      UInt32 myTexture;
       std::vector<Glyph> myGlyphs;
    };
 }

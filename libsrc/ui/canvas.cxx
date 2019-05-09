@@ -5,7 +5,6 @@ Bob Holcomb
 
 #include "ui/canvas.h"
 
-
 const double PI = 3.14159265359;
 
 using namespace UI;
@@ -221,22 +220,22 @@ void Canvas::pathRect(const Rect& r, float rounding /*= 0.0f*/, Corners roundedC
 
 }
 
-void Canvas::primativeRect(Vec2 a, Vec2 c, Color col)
+void Canvas::primitiveRect(Vec2 a, Vec2 c, Color col)
 {
 
 }
 
-void Canvas::primativeRectUv(Vec2 a, Vec2 c, Vec2 uva, Vec2 uvc, Color col)
+void Canvas::primitiveRectUv(Vec2 a, Vec2 c, Vec2 uva, Vec2 uvc, Color col)
 {
 
 }
 
-void Canvas::primativeText(float size, Vec2 pos, Color col, const std::string& text)
+void Canvas::primitiveText(float size, Vec2 pos, Color col, const std::string& text)
 {
 
 }
 
-void Canvas::primativeVert(Vec2 pos, Vec2 uv, Color col)
+void Canvas::primitiveVert(Vec2 pos, Vec2 uv, Color col)
 {
    writeIndex((UInt16)myVertCount);
    myVertCount++;

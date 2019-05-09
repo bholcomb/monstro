@@ -85,16 +85,19 @@ namespace UI
 
       virtual void pathFill(Color col);
       virtual void pathStroke(Color col, bool closed, float thickness = 1.0f);
+      virtual void pathMoveTo(Vec2 pos);
       virtual void pathLineTo(Vec2 pos);
+      virtual void pathClose();
       virtual void pathArcTo(Vec2 center, float radius, float aMin, float aMax, int numSegments = 12);
-      virtual void pathBezierCurveTo(Vec2 p2, Vec2 p3, Vec2 p4, int num_segments = 0);
+      virtual void pathQuadraticCurveTo(Vec2 p2, Vec2 p3, int num_segments = 0);
+      virtual void pathBezierCurveTo( Vec2 p2, Vec2 p3, Vec2 p4, int num_segments = 0);
       virtual void pathRect(const Rect& r, float rounding = 0.0f, Corners roundedCorners = Corners::NONE);
 
    protected:      
-      virtual void primativeRect(Vec2 a, Vec2 c, Color col);
-      virtual void primativeRectUv(Vec2 a, Vec2 c, Vec2 uva, Vec2 uvc, Color col);
-      virtual void primativeText(float size, Vec2 pos, Color col, const std::string& text);
-      virtual void primativeVert(Vec2 pos, Vec2 uv, Color col);
+      virtual void primitiveRect(Vec2 a, Vec2 c, Color col);
+      virtual void primitiveRectUv(Vec2 a, Vec2 c, Vec2 uva, Vec2 uvc, Color col);
+      virtual void primitiveText(float size, Vec2 pos, Color col, const std::string& text);
+      virtual void primitiveVert(Vec2 pos, Vec2 uv, Color col);
 
       virtual void writeVertex(Vec2 a, Vec2 uv, Color col);
       virtual void writeIndex(UInt16 idx);
