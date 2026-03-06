@@ -21,7 +21,7 @@ static bool checkbox_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
         ctx->hovered_id = id;
         
         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false)) {
-            monstro_set_active_id(ctx, id);
+            ctx->setActiveId(id);
         }
     }
     
@@ -33,7 +33,7 @@ static bool checkbox_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
             if (hovered) {
                 pressed = true;
             }
-            monstro_set_active_id(ctx, 0);
+            ctx->setActiveId(0);
         }
     }
     

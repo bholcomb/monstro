@@ -1,17 +1,14 @@
 #include "internal/types.h"
 
-static MonstroLayoutInternal* get_current_layout(MonstroContext* ctx) {
-    if (!ctx || !ctx->current_window) return nullptr;
-    MonstroWindowInternal* win = ctx->current_window;
-    if (win->layout_stack_top < 0) return nullptr;
-    return &win->layout_stack[win->layout_stack_top];
-}
+/* ------------------------------------------------------------------------- */
+/* Layout C API                                                              */
+/* ------------------------------------------------------------------------- */
 
 void monstro_begin_layout(MonstroContext* ctx, MonstroLayoutDirection direction) {
     if (!ctx || !ctx->current_window) return;
     
     MonstroWindowInternal* win = ctx->current_window;
-    MonstroLayoutInternal* parent = get_current_layout(ctx);
+    MonstroLayoutInternal* parent = ctx->getCurrentLayout();
     if (!parent || win->layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1) return;
     
     win->layout_stack_top++;
@@ -57,26 +54,21 @@ void monstro_end_layout(MonstroContext* ctx) {
     MonstroLayoutInternal* finishing = &win->layout_stack[win->layout_stack_top];
     win->layout_stack_top--;
     
-    // Get the total size of the finished layout (matches C# pattern: addItem(l.mySize))
     float layout_width = finishing->max_x - finishing->pos_x;
     float layout_height = finishing->max_y - finishing->pos_y;
     
-    // Add the finished layout as an item to the parent layout
     monstro_add_item(ctx, layout_width, layout_height);
 }
 
 void monstro_add_item(MonstroContext* ctx, float width, float height) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
-    // Track the maximum extent reached by any item (matches C# Layout.addItem)
     float item_right = layout->cursor_x + width;
     float item_bottom = layout->cursor_y + height;
     if (item_right > layout->max_x) layout->max_x = item_right;
     if (item_bottom > layout->max_y) layout->max_y = item_bottom;
     
-    // Advance cursor based on layout direction
-    // Add spacing AFTER items for visual separation between widgets
     float spacing_x = ctx->style.window.spacing[0];
     float spacing_y = ctx->style.window.spacing[1];
     
@@ -89,7 +81,7 @@ void monstro_add_item(MonstroContext* ctx, float width, float height) {
 
 MonstroVec2 monstro_get_cursor_pos(MonstroContext* ctx) {
     MonstroVec2 result = {0.0f, 0.0f};
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (layout) {
         result.x = layout->cursor_x - layout->pos_x;
         result.y = layout->cursor_y - layout->pos_y;
@@ -98,7 +90,7 @@ MonstroVec2 monstro_get_cursor_pos(MonstroContext* ctx) {
 }
 
 void monstro_set_cursor_pos(MonstroContext* ctx, float x, float y) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     layout->cursor_x = layout->pos_x + x;
     layout->cursor_y = layout->pos_y + y;
@@ -106,7 +98,7 @@ void monstro_set_cursor_pos(MonstroContext* ctx, float x, float y) {
 
 MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext* ctx) {
     MonstroVec2 result = {0.0f, 0.0f};
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (layout) {
         result.x = layout->cursor_x;
         result.y = layout->cursor_y;
@@ -115,14 +107,14 @@ MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext* ctx) {
 }
 
 void monstro_set_cursor_screen_pos(MonstroContext* ctx, float x, float y) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     layout->cursor_x = x;
     layout->cursor_y = y;
 }
 
 void monstro_indent(MonstroContext* ctx, float indent_width) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
     if (indent_width <= 0.0f) {
@@ -135,7 +127,7 @@ void monstro_indent(MonstroContext* ctx, float indent_width) {
 }
 
 void monstro_unindent(MonstroContext* ctx, float indent_width) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
     if (indent_width <= 0.0f) {
@@ -148,7 +140,7 @@ void monstro_unindent(MonstroContext* ctx, float indent_width) {
 }
 
 void monstro_spacer(MonstroContext* ctx, float size) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
     if (layout->direction == MONSTRO_LAYOUT_VERTICAL) {
@@ -159,7 +151,7 @@ void monstro_spacer(MonstroContext* ctx, float size) {
 }
 
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return 0.0f;
     
     if (direction == MONSTRO_LAYOUT_HORIZONTAL) {
@@ -170,7 +162,7 @@ float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection
 }
 
 MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
-    MonstroLayoutInternal* layout = get_current_layout(ctx);
+    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return {0, 0, 0, 0};
     
     return {layout->cursor_x, layout->cursor_y, layout->size_x, 0};

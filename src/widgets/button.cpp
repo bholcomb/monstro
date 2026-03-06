@@ -27,15 +27,15 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
             if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false)) {
                 if (flags & MONSTRO_BUTTON_PRESSED_ON_CLICK) {
                     pressed = true;
-                    monstro_set_active_id(ctx, 0);
+                    ctx->setActiveId(0);
                 } else {
-                    monstro_set_active_id(ctx, id);
+                    ctx->setActiveId(id);
                 }
-                monstro_focus_window(ctx, win);
+                ctx->focusWindow(win);
             } else if (monstro_is_mouse_released(ctx, MONSTRO_MOUSE_BUTTON_LEFT) && 
                        (flags & MONSTRO_BUTTON_PRESSED_ON_RELEASE)) {
                 pressed = true;
-                monstro_set_active_id(ctx, 0);
+                ctx->setActiveId(0);
             } else if ((flags & MONSTRO_BUTTON_REPEAT) && ctx->active_id == id &&
                        monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, true)) {
                 pressed = true;
@@ -51,7 +51,7 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
             if (hovered) {
                 pressed = true;
             }
-            monstro_set_active_id(ctx, 0);
+            ctx->setActiveId(0);
         }
     }
     

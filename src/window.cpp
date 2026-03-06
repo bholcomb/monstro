@@ -1,66 +1,103 @@
 #include "internal/types.h"
-#include <string.h>
-#include <math.h>
+#include <cstring>
+#include <cmath>
 
-MonstroWindowInternal* monstro_find_window(MonstroContext* ctx, const char* name) {
-    if (!ctx || !name) return nullptr;
+/* ------------------------------------------------------------------------- */
+/* MonstroWindowInternal Member Functions                                    */
+/* ------------------------------------------------------------------------- */
+
+void MonstroWindowInternal::init(const char* windowName, MonstroWindowFlags windowFlags) {
+    std::memset(this, 0, sizeof(MonstroWindowInternal));
     
-    uint64_t id = monstro_hash_string(name);
-    for (int i = 0; i < ctx->window_count; i++) {
-        if (ctx->windows[i].id == id) {
-            return &ctx->windows[i];
+    std::strncpy(name, windowName, sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    
+    id = monstro_hash_string(windowName);
+    move_id = monstro_hash_combine(id, monstro_hash_string("##MOVE"));
+    flags = windowFlags;
+    active = true;
+    collapsed = false;
+    
+    set_pos_allow_flags = (MonstroCondition)(MONSTRO_COND_ALWAYS | MONSTRO_COND_ONCE | 
+                                              MONSTRO_COND_FIRST_USE_EVER | MONSTRO_COND_APPEARING);
+    set_size_allow_flags = (MonstroCondition)(MONSTRO_COND_ALWAYS | MONSTRO_COND_ONCE | 
+                                               MONSTRO_COND_FIRST_USE_EVER | MONSTRO_COND_APPEARING);
+    
+    pos_x = 100.0f;
+    pos_y = 100.0f;
+    size_x = 300.0f;
+    size_y = 200.0f;
+}
+
+bool MonstroWindowInternal::containsPoint(float x, float y) const {
+    return x >= pos_x && x < pos_x + size_x &&
+           y >= pos_y && y < pos_y + size_y;
+}
+
+MonstroRect MonstroWindowInternal::getRect() const {
+    return {pos_x, pos_y, size_x, size_y};
+}
+
+void MonstroWindowInternal::initLayout(float contentY, float paddingX, float paddingY) {
+    layout_stack_top = 0;
+    MonstroLayoutInternal* layout = &layout_stack[0];
+    layout->direction = MONSTRO_LAYOUT_VERTICAL;
+    layout->pos_x = pos_x + paddingX;
+    layout->pos_y = contentY + paddingY;
+    layout->size_x = size_x - paddingX * 2.0f;
+    layout->size_y = size_y - (contentY - pos_y) - paddingY * 2.0f;
+    layout->cursor_x = layout->pos_x;
+    layout->cursor_y = layout->pos_y;
+    layout->max_x = layout->pos_x;
+    layout->max_y = layout->pos_y;
+}
+
+MonstroLayoutInternal* MonstroWindowInternal::getCurrentLayout() {
+    if (layout_stack_top < 0 || layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH) {
+        return nullptr;
+    }
+    return &layout_stack[layout_stack_top];
+}
+
+/* ------------------------------------------------------------------------- */
+/* MonstroContext Window Management Member Functions                         */
+/* ------------------------------------------------------------------------- */
+
+MonstroWindowInternal* MonstroContext::findWindow(const char* name) {
+    if (!name) return nullptr;
+    
+    uint64_t windowId = monstro_hash_string(name);
+    for (int i = 0; i < window_count; i++) {
+        if (windows[i].id == windowId) {
+            return &windows[i];
         }
     }
     return nullptr;
 }
 
-void monstro_focus_window(MonstroContext* ctx, MonstroWindowInternal* window) {
-    if (!ctx || !window) return;
-    ctx->focused_window = window;
+MonstroWindowInternal* MonstroContext::createWindow(const char* name, MonstroWindowFlags flags) {
+    if (!name || window_count >= MONSTRO_MAX_WINDOWS) return nullptr;
+    
+    MonstroWindowInternal* win = &windows[window_count++];
+    win->init(name, flags);
+    return win;
 }
 
-MonstroWindowInternal* monstro_find_hovered_window(MonstroContext* ctx, float x, float y) {
-    if (!ctx) return nullptr;
-    
-    // Iterate windows in reverse order (later windows are on top)
-    // Return the topmost window that contains the point
-    for (int i = ctx->window_count - 1; i >= 0; i--) {
-        MonstroWindowInternal* win = &ctx->windows[i];
-        
-        // Skip inactive windows
+MonstroWindowInternal* MonstroContext::findHoveredWindow(float x, float y) {
+    for (int i = window_count - 1; i >= 0; i--) {
+        MonstroWindowInternal* win = &windows[i];
         if (!win->active) continue;
         
-        // Check if point is inside window bounds
-        if (x >= win->pos_x && x < win->pos_x + win->size_x &&
-            y >= win->pos_y && y < win->pos_y + win->size_y) {
+        if (win->containsPoint(x, y)) {
             return win;
         }
     }
     return nullptr;
 }
 
-MonstroWindowInternal* monstro_create_window(MonstroContext* ctx, const char* name, MonstroWindowFlags flags) {
-    if (!ctx || !name || ctx->window_count >= MONSTRO_MAX_WINDOWS) return nullptr;
-    
-    MonstroWindowInternal* win = &ctx->windows[ctx->window_count++];
-    memset(win, 0, sizeof(MonstroWindowInternal));
-    
-    strncpy(win->name, name, sizeof(win->name) - 1);
-    win->id = monstro_hash_string(name);
-    win->move_id = monstro_hash_combine(win->id, monstro_hash_string("##MOVE"));
-    win->flags = flags;
-    win->active = true;
-    win->collapsed = false;
-    win->set_pos_allow_flags = (MonstroCondition)(MONSTRO_COND_ALWAYS | MONSTRO_COND_ONCE | MONSTRO_COND_FIRST_USE_EVER | MONSTRO_COND_APPEARING);
-    win->set_size_allow_flags = (MonstroCondition)(MONSTRO_COND_ALWAYS | MONSTRO_COND_ONCE | MONSTRO_COND_FIRST_USE_EVER | MONSTRO_COND_APPEARING);
-    
-    win->pos_x = 100.0f;
-    win->pos_y = 100.0f;
-    win->size_x = 300.0f;
-    win->size_y = 200.0f;
-    
-    return win;
-}
+/* ------------------------------------------------------------------------- */
+/* Condition Helpers                                                         */
+/* ------------------------------------------------------------------------- */
 
 static bool should_apply_condition(MonstroCondition cond, MonstroCondition allowed, bool appearing, bool first_use) {
     if (cond == MONSTRO_COND_NONE) return false;
@@ -70,6 +107,10 @@ static bool should_apply_condition(MonstroCondition cond, MonstroCondition allow
     if ((cond & MONSTRO_COND_APPEARING) && appearing && (allowed & MONSTRO_COND_APPEARING)) return true;
     return false;
 }
+
+/* ------------------------------------------------------------------------- */
+/* C API Implementation                                                      */
+/* ------------------------------------------------------------------------- */
 
 void monstro_set_next_window_pos(MonstroContext* ctx, float x, float y, MonstroCondition cond) {
     if (!ctx) return;
@@ -98,13 +139,14 @@ void monstro_set_next_window_focus(MonstroContext* ctx) {
 
 bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, MonstroWindowFlags flags) {
     if (!ctx || !name) return false;
+    (void)p_open;
     
-    MonstroWindowInternal* win = monstro_find_window(ctx, name);
+    MonstroWindowInternal* win = ctx->findWindow(name);
     bool first_use = (win == nullptr);
     bool appearing = first_use;
     
     if (!win) {
-        win = monstro_create_window(ctx, name, flags);
+        win = ctx->createWindow(name, flags);
         if (!win) return false;
     } else {
         appearing = (win->last_frame_active != ctx->frame - 1);
@@ -115,24 +157,25 @@ bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, M
     win->last_frame_active = ctx->frame;
     win->skip_items = false;
     
+    // Apply next window settings
     if (should_apply_condition(ctx->next_window_pos_cond, win->set_pos_allow_flags, appearing, first_use)) {
-        win->pos_x = ctx->next_window_pos_x;
-        win->pos_y = ctx->next_window_pos_y;
+        win->setPos(ctx->next_window_pos_x, ctx->next_window_pos_y);
     }
     
     if (should_apply_condition(ctx->next_window_size_cond, win->set_size_allow_flags, appearing, first_use)) {
-        win->size_x = ctx->next_window_size_x;
-        win->size_y = ctx->next_window_size_y;
+        win->setSize(ctx->next_window_size_x, ctx->next_window_size_y);
     }
     
     if (ctx->next_window_collapsed_cond != MONSTRO_COND_NONE) {
         win->collapsed = ctx->next_window_collapsed;
     }
     
+    // Clear next window conditions
     ctx->next_window_pos_cond = MONSTRO_COND_NONE;
     ctx->next_window_size_cond = MONSTRO_COND_NONE;
     ctx->next_window_collapsed_cond = MONSTRO_COND_NONE;
     
+    // Clear ONCE flags after first use
     if (win->set_pos_allow_flags & MONSTRO_COND_ONCE) {
         win->set_pos_allow_flags = (MonstroCondition)(win->set_pos_allow_flags & ~MONSTRO_COND_ONCE);
     }
@@ -140,13 +183,14 @@ bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, M
         win->set_size_allow_flags = (MonstroCondition)(win->set_size_allow_flags & ~MONSTRO_COND_ONCE);
     }
     
+    // Handle focus
     if (ctx->next_window_focus) {
-        ctx->focused_window = win;
+        ctx->focusWindow(win);
         ctx->next_window_focus = false;
     }
     
     ctx->current_window = win;
-    monstro_push_id(ctx, win->id);
+    ctx->pushId(win->id);
     
     if (win->collapsed) {
         win->skip_items = true;
@@ -155,20 +199,21 @@ bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, M
     MonstroCanvas* canvas = ctx->canvas;
     MonstroStyle* style = &ctx->style;
     
+    // Draw background
     if (flags & MONSTRO_WINDOW_BACKGROUND) {
         uint32_t bg_color = monstro_color_to_u32(style->window.background);
-        MonstroRect win_rect = {win->pos_x, win->pos_y, win->size_x, win->size_y};
-        monstro_canvas_add_rect_filled(canvas, win_rect, bg_color, style->window.rounding, MONSTRO_CORNER_ALL);
+        monstro_canvas_add_rect_filled(canvas, win->getRect(), bg_color, style->window.rounding, MONSTRO_CORNER_ALL);
     }
     
+    // Draw border
     if (flags & MONSTRO_WINDOW_BORDERS) {
         uint32_t border_color = monstro_color_to_u32(style->window.border_color);
-        MonstroRect win_rect = {win->pos_x, win->pos_y, win->size_x, win->size_y};
-        monstro_canvas_add_rect(canvas, win_rect, border_color, style->window.rounding, MONSTRO_CORNER_ALL, style->window.border);
+        monstro_canvas_add_rect(canvas, win->getRect(), border_color, style->window.rounding, MONSTRO_CORNER_ALL, style->window.border);
     }
     
     float content_y = win->pos_y;
     
+    // Draw title bar
     if ((flags & MONSTRO_WINDOW_TITLE_BAR) && !win->collapsed) {
         float header_height = 28.0f;
         MonstroStyleItem* header_style;
@@ -190,24 +235,16 @@ bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, M
         content_y += header_height;
     }
     
+    // Initialize layout
     float padding_x = style->window.padding[0];
     float padding_y = style->window.padding[1];
+    win->initLayout(content_y, padding_x, padding_y);
     
-    win->layout_stack_top = 0;
-    MonstroLayoutInternal* layout = &win->layout_stack[0];
-    layout->direction = MONSTRO_LAYOUT_VERTICAL;
-    layout->pos_x = win->pos_x + padding_x;
-    layout->pos_y = content_y + padding_y;
-    layout->size_x = win->size_x - padding_x * 2.0f;
-    layout->size_y = win->size_y - (content_y - win->pos_y) - padding_y * 2.0f;
-    layout->cursor_x = layout->pos_x;
-    layout->cursor_y = layout->pos_y;
-    layout->max_x = layout->pos_x;
-    layout->max_y = layout->pos_y;
-    
+    // Set clip rect
     MonstroRect clip_rect = {win->pos_x, content_y, win->size_x, win->size_y - (content_y - win->pos_y)};
     monstro_canvas_push_clip_rect(canvas, clip_rect);
     
+    // Handle window dragging
     if ((flags & MONSTRO_WINDOW_MOVABLE) && (flags & MONSTRO_WINDOW_TITLE_BAR)) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
@@ -217,16 +254,15 @@ bool monstro_begin_window(MonstroContext* ctx, const char* name, bool* p_open, M
                          my >= win->pos_y && my < win->pos_y + header_height;
         
         if (in_header && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false)) {
-            monstro_set_active_id(ctx, win->move_id);
+            ctx->setActiveId(win->move_id);
         }
         
         if (ctx->active_id == win->move_id) {
             if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT)) {
-                win->pos_x += ctx->mouse.delta_x;
-                win->pos_y += ctx->mouse.delta_y;
-                monstro_keep_alive_id(ctx, win->move_id);
+                win->move(ctx->mouse.delta_x, ctx->mouse.delta_y);
+                ctx->keepAliveId(win->move_id);
             } else {
-                monstro_set_active_id(ctx, 0);
+                ctx->setActiveId(0);
             }
         }
     }
@@ -241,32 +277,23 @@ void monstro_end_window(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return;
     
     monstro_canvas_pop_clip_rect(ctx->canvas);
-    monstro_pop_id(ctx);
+    ctx->popId();
     ctx->current_window = nullptr;
 }
 
 MonstroRect monstro_get_window_rect(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return {0, 0, 0, 0};
-    MonstroWindowInternal* win = ctx->current_window;
-    return {win->pos_x, win->pos_y, win->size_x, win->size_y};
+    return ctx->current_window->getRect();
 }
 
 MonstroVec2 monstro_get_window_pos(MonstroContext* ctx) {
-    MonstroVec2 result = {0.0f, 0.0f};
-    if (ctx && ctx->current_window) {
-        result.x = ctx->current_window->pos_x;
-        result.y = ctx->current_window->pos_y;
-    }
-    return result;
+    if (!ctx || !ctx->current_window) return {0.0f, 0.0f};
+    return ctx->current_window->getPos();
 }
 
 MonstroVec2 monstro_get_window_size(MonstroContext* ctx) {
-    MonstroVec2 result = {0.0f, 0.0f};
-    if (ctx && ctx->current_window) {
-        result.x = ctx->current_window->size_x;
-        result.y = ctx->current_window->size_y;
-    }
-    return result;
+    if (!ctx || !ctx->current_window) return {0.0f, 0.0f};
+    return ctx->current_window->getSize();
 }
 
 float monstro_get_scroll_x(MonstroContext* ctx) {
@@ -301,9 +328,5 @@ bool monstro_is_window_focused(MonstroContext* ctx) {
 
 bool monstro_is_window_hovered(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return false;
-    MonstroWindowInternal* win = ctx->current_window;
-    float mx = ctx->mouse.pos_x;
-    float my = ctx->mouse.pos_y;
-    return mx >= win->pos_x && mx < win->pos_x + win->size_x &&
-           my >= win->pos_y && my < win->pos_y + win->size_y;
+    return ctx->current_window->containsPoint(ctx->mouse.pos_x, ctx->mouse.pos_y);
 }
