@@ -1,0 +1,11 @@
+# VulkEase - Vulkan made easy
+# Pre-built library from dist directory
+
+vulkease:
+  common:
+    include_dirs:
+      - "/home/bholcomb/projects/side/vulkease/dist/include"
+    lib_dirs:
+      - "/home/bholcomb/projects/side/vulkease/dist/bin"
+    libs:
+      - "vulkease"

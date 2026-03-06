@@ -1,0 +1,10 @@
+# Monstro Dependencies
+
+glfw3:
+  file: dependencies/glfw3.yaml
+
+vulkan:
+  file: dependencies/vulkan.yaml
+
+vulkease:
+  file: dependencies/vulkease.yaml

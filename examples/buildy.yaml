@@ -1,0 +1,49 @@
+# Monstro Examples
+
+artifacts:
+  transform:
+    # UI shaders for basic example
+    - name: basic_shaders
+      tool: glslangValidator
+      inputs:
+        - "basic/shaders/*.vert"
+        - "basic/shaders/*.frag"
+      outputs: "${output_dir}/shaders/basic/${filename}.spv"
+
+targets:
+  executables:
+    - name: monstro_basic
+      language: cpp
+      sources:
+        - "basic/*.cpp"
+      include_dirs:
+        - "../include"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [basic_shaders]
+
+staging:
+  name: monstro_examples_dist
+  destination: "../bin"
+  use_symlinks: false
+
+  contents:
+    - folder: "."
+      targets:
+        - monstro_basic
+        - monstro
+
+    - folder: data/basic/shaders
+      artifacts:
+        - basic_shaders
+
+    - folder: data/fonts
+      files:
+        - "basic/data/consola.png"
+        - "basic/data/freeSans.ttf"

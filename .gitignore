@@ -1,0 +1,28 @@
+# Build outputs
+build/
+bin/
+dist/
+*.o
+*.d
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# Buildy cache
+.buildy_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiled shaders
+*.spv
+
+# Dependencies (downloaded by buildy)
+# Keep buildy_config but ignore downloaded deps

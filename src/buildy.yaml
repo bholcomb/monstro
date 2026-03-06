@@ -1,0 +1,15 @@
+# Monstro UI Library - Source Module
+
+targets:
+  shared_libraries:
+    - name: monstro
+      language: cpp
+      sources:
+        - "*.cpp"
+        - "widgets/*.cpp"
+      include_dirs:
+        - "../include"
+        - "../externals"
+      defines:
+        - "MONSTRO_EXPORT=1"
+      deps: []
