@@ -19,6 +19,14 @@ void monstro_open_popup(MonstroContext* ctx, const char* label) {
     
     if (is_popup_open_internal(ctx, popup_id)) return;
     if (ctx->popup_stack_top >= MONSTRO_MAX_POPUP_STACK) return;
+
+    // Close any sibling popups from the same parent window.
+    // This ensures that opening one menu closes any other open menu
+    // at the same level (e.g. clicking "Edit" closes "File").
+    while (ctx->popup_stack_top > 0 &&
+           ctx->popup_stack[ctx->popup_stack_top - 1].parent_window == win) {
+        ctx->popup_stack_top--;
+    }
     
     MonstroPopupInternal* popup = &ctx->popup_stack[ctx->popup_stack_top++];
     popup->popup_id = popup_id;

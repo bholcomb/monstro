@@ -70,7 +70,9 @@ bool Window::begin(bool* p_closed) {
     }
 
     layout_stack_top = -1;
-    beginLayout(MONSTRO_LAYOUT_VERTICAL);
+
+    MonstroStyle* pad_style = &ctx->style;
+    beginLayout(pad_style->window.padding[0], pad_style->window.padding[1], MONSTRO_LAYOUT_VERTICAL);
 
     if (last_frame_active != ctx->frame) {
         last_frame_active = ctx->frame;
@@ -124,8 +126,8 @@ bool Window::end() {
     if (flags & MONSTRO_WINDOW_AUTO_RESIZE) {
         Layout* layout = getCurrentLayout();
         if (layout) {
-            float new_width = layout->mySizeX + style->window.padding[0];
-            float new_height = layout->mySizeY + style->window.padding[1];
+            float new_width = layout->mySizeX + style->window.padding[0] * 2.0f;
+            float new_height = layout->mySizeY + style->window.padding[1] * 2.0f;
             if (new_width > 0.0f) size.x = new_width;
             if (new_height > 0.0f) size.y = new_height;
         }
