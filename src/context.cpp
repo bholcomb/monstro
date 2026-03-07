@@ -113,11 +113,9 @@ void Context::keepAliveId(uint64_t id) {
     }
 }
 
-MonstroLayoutInternal* Context::getCurrentLayout() {
+Layout* Context::getCurrentLayout() {
     if (!current_window) return nullptr;
-    Window* win = current_window;
-    if (win->layout_stack_top < 0) return nullptr;
-    return &win->layout_stack[win->layout_stack_top];
+    return current_window->getCurrentLayout();
 }
 
 } // namespace monstro

@@ -8,8 +8,9 @@ void monstro_separator(MonstroContext* ctx) {
     monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
-    MonstroLayoutInternal* layout = &win->layout_stack[win->layout_stack_top];
-    float avail_w = layout->size_x - (layout->cursor_x - layout->pos_x);
+    monstro::Layout* layout = win->getCurrentLayout();
+    if (!layout) return;
+    float avail_w = layout->mySizeX - (layout->myCursorX - layout->myPosX);
     
     MonstroStyle* style = &ctx->style;
     monstro::Canvas* canvas = &ctx->current_window->canvas;
@@ -32,8 +33,9 @@ void monstro_separator_text(MonstroContext* ctx, const char* text) {
     monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
-    MonstroLayoutInternal* layout = &win->layout_stack[win->layout_stack_top];
-    float avail_w = layout->size_x - (layout->cursor_x - layout->pos_x);
+    monstro::Layout* layout = win->getCurrentLayout();
+    if (!layout) return;
+    float avail_w = layout->mySizeX - (layout->myCursorX - layout->myPosX);
     
     MonstroStyle* style = &ctx->style;
     monstro::Canvas* canvas = &ctx->current_window->canvas;

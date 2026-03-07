@@ -3,12 +3,20 @@
 
 #include "monstro.h"
 
-struct MonstroLayoutInternal {
-    MonstroLayoutDirection direction;
-    float pos_x, pos_y;
-    float size_x, size_y;
-    float cursor_x, cursor_y;
-    float max_x, max_y;
+namespace monstro {
+
+struct Layout {
+    MonstroLayoutDirection myDirection;
+    float myPosX, myPosY;
+    float mySizeX, mySizeY;
+    float myCursorX, myCursorY;
+    float myMaxX, myMaxY;
+
+    void init(MonstroLayoutDirection direction, float posX, float posY);
+    void addItem(float width, float height);
+    void nextLine();
 };
+
+} // namespace monstro
 
 #endif

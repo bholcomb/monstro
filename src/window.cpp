@@ -122,10 +122,10 @@ bool Window::end() {
     canvas.popClipRect();
 
     if (flags & MONSTRO_WINDOW_AUTO_RESIZE) {
-        MonstroLayoutInternal* layout = getCurrentLayout();
+        Layout* layout = getCurrentLayout();
         if (layout) {
-            float new_width = layout->size_x + style->window.padding[0];
-            float new_height = layout->size_y + style->window.padding[1];
+            float new_width = layout->mySizeX + style->window.padding[0];
+            float new_height = layout->mySizeY + style->window.padding[1];
             if (new_width > 0.0f) size.x = new_width;
             if (new_height > 0.0f) size.y = new_height;
         }
@@ -143,31 +143,39 @@ bool Window::end() {
 void Window::drawBackground() {
     MonstroStyle* style = &ctx->style;
 
+    float saved_rounding = style->window.rounding;
+
     if (flags & MONSTRO_WINDOW_ROOT) {
         canvas.pushClipRectFullscreen();
-        float saved_rounding = style->window.rounding;
         style->window.rounding = 0.0f;
-
-        if (!collapsed && (flags & MONSTRO_WINDOW_BACKGROUND)) {
-            MonstroStyleItem* bg = &style->window.fixed_background;
-            if (bg->type == MONSTRO_STYLE_ITEM_COLOR) {
-                canvas.addRectFilled(getRect(), monstro_color_to_u32(bg->data.color), 0.0f, MONSTRO_CORNER_ALL);
-            }
-        }
-
-        style->window.rounding = saved_rounding;
     } else {
         MonstroRect clip_rect = getRect();
         clip_rect.w += 1;
         clip_rect.h += 1;
         canvas.pushClipRect(clip_rect);
+    }
 
-        if (!collapsed && (flags & MONSTRO_WINDOW_BACKGROUND)) {
-            MonstroStyleItem* bg = &style->window.fixed_background;
-            if (bg->type == MONSTRO_STYLE_ITEM_COLOR) {
-                canvas.addRectFilled(getRect(), monstro_color_to_u32(bg->data.color), style->window.rounding, MONSTRO_CORNER_ALL);
-            }
+    if (!collapsed && (flags & MONSTRO_WINDOW_BACKGROUND)) {
+        MonstroStyleItem* bg = &style->window.fixed_background;
+        MonstroRect r = getRect();
+        switch (bg->type) {
+            case MONSTRO_STYLE_ITEM_COLOR:
+                canvas.addRectFilled(r, monstro_color_to_u32(bg->data.color), style->window.rounding, MONSTRO_CORNER_ALL);
+                break;
+            case MONSTRO_STYLE_ITEM_IMAGE:
+                canvas.addImage(bg->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
+                break;
+            case MONSTRO_STYLE_ITEM_SPRITE:
+                canvas.addImage(bg->data.sprite.texture_id, r, bg->data.sprite.uv_min, bg->data.sprite.uv_max, 0xFFFFFFFF);
+                break;
+            case MONSTRO_STYLE_ITEM_NINEPATCH:
+                canvas.addNinePatch(&bg->data.ninepatch, r, 0xFFFFFFFF);
+                break;
         }
+    }
+
+    if (flags & MONSTRO_WINDOW_ROOT) {
+        style->window.rounding = saved_rounding;
     }
 }
 
@@ -180,15 +188,10 @@ void Window::drawForeground() {
     }
 
     if (collapsed) {
-        if (flags & MONSTRO_WINDOW_TITLE_BAR) {
-            MonstroRect title_rect = getTitleBarRect();
-            uint32_t header_color = monstro_color_to_u32(style->window.header.active.data.color);
-            canvas.addRectFilled(title_rect, header_color, style->window.rounding, MONSTRO_CORNER_ALL);
-
-            uint32_t label_color = monstro_color_to_u32(style->window.header.label_normal);
-            if (style->font) {
-                canvas.addTextEx(style->font, title_rect, label_color, name, MONSTRO_ALIGN_CENTER);
-            }
+        MonstroRect title_rect = getTitleBarRect();
+        canvas.addRectFilled(title_rect, monstro_color_to_u32(style->window.header.active.data.color), style->window.rounding, MONSTRO_CORNER_ALL);
+        if (style->font) {
+            canvas.addTextEx(style->font, title_rect, monstro_color_to_u32(style->window.header.label_normal), name, MONSTRO_ALIGN_CENTER);
         }
     } else {
         if (flags & MONSTRO_WINDOW_TITLE_BAR) {
@@ -210,14 +213,28 @@ void Window::drawForeground() {
         }
 
         if (flags & MONSTRO_WINDOW_BORDERS) {
-            uint32_t border_color = monstro_color_to_u32(style->window.border_color);
-            canvas.addRect(getRect(), border_color, style->window.rounding, MONSTRO_CORNER_ALL, style->window.border);
+            MonstroStyleItem* border = &style->window.border_style;
+            MonstroRect r = getRect();
+            switch (border->type) {
+                case MONSTRO_STYLE_ITEM_COLOR:
+                    canvas.addRect(r, monstro_color_to_u32(border->data.color), style->window.rounding, MONSTRO_CORNER_ALL, style->window.border);
+                    break;
+                case MONSTRO_STYLE_ITEM_IMAGE:
+                    canvas.addImage(border->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
+                    break;
+                case MONSTRO_STYLE_ITEM_SPRITE:
+                    canvas.addImage(border->data.sprite.texture_id, r, border->data.sprite.uv_min, border->data.sprite.uv_max, 0xFFFFFFFF);
+                    break;
+                case MONSTRO_STYLE_ITEM_NINEPATCH:
+                    canvas.addNinePatch(&border->data.ninepatch, r, 0xFFFFFFFF);
+                    break;
+            }
 
             if (!(flags & MONSTRO_WINDOW_TITLE_BAR)) {
                 MonstroRect title_rect = getTitleBarRect();
                 MonstroVec2 p1 = {title_rect.x + 1.0f, title_rect.y};
                 MonstroVec2 p2 = {title_rect.x + title_rect.w - 1.0f, title_rect.y};
-                canvas.addLine(p1, p2, border_color, style->window.border);
+                canvas.addLine(p1, p2, monstro_color_to_u32(style->window.border_color), style->window.border);
             }
         }
     }
@@ -233,15 +250,15 @@ void Window::drawForeground() {
 
 MonstroVec2 Window::getCursorPos() const {
     if (layout_stack_top < 0) return {0.0f, 0.0f};
-    const MonstroLayoutInternal* l = &layout_stack[layout_stack_top];
-    return {l->pos_x + l->cursor_x, l->pos_y + l->cursor_y};
+    const Layout* l = &layout_stack[layout_stack_top];
+    return {l->myPosX + l->myCursorX, l->myPosY + l->myCursorY};
 }
 
 void Window::setCursorPos(float x, float y) {
     if (layout_stack_top < 0) return;
-    MonstroLayoutInternal* l = &layout_stack[layout_stack_top];
-    l->cursor_x = x - l->pos_x;
-    l->cursor_y = y - l->pos_y;
+    Layout* l = &layout_stack[layout_stack_top];
+    l->myCursorX = x - l->myPosX;
+    l->myCursorY = y - l->myPosY;
 }
 
 MonstroVec2 Window::getCursorScreenPos() const {
@@ -324,7 +341,7 @@ void Window::setSize(float w, float h, MonstroCondition cond) {
 /* Layout                                                                    */
 /* ------------------------------------------------------------------------- */
 
-MonstroLayoutInternal* Window::getCurrentLayout() {
+Layout* Window::getCurrentLayout() {
     if (layout_stack_top < 0 || layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH) {
         return nullptr;
     }
@@ -333,35 +350,19 @@ MonstroLayoutInternal* Window::getCurrentLayout() {
 
 void Window::setLayoutDirection(MonstroLayoutDirection direction) {
     if (layout_stack_top < 0) return;
-    layout_stack[layout_stack_top].direction = direction;
+    layout_stack[layout_stack_top].myDirection = direction;
 }
 
 void Window::addItem(float width, float height) {
-    if (layout_stack_top < 0) return;
-
-    MonstroLayoutInternal* layout = &layout_stack[layout_stack_top];
-
-    layout->size_x = std::max(layout->size_x, layout->cursor_x + width);
-    layout->size_y = std::max(layout->size_y, layout->cursor_y + height);
-
-    if (layout->direction == MONSTRO_LAYOUT_VERTICAL) {
-        layout->cursor_y += height;
-    } else {
-        layout->cursor_x += width;
-    }
+    Layout* layout = getCurrentLayout();
+    if (!layout) return;
+    layout->addItem(width, height);
 }
 
 void Window::nextLine() {
-    if (layout_stack_top < 0) return;
-
-    MonstroLayoutInternal* l = &layout_stack[layout_stack_top];
-    if (l->direction == MONSTRO_LAYOUT_HORIZONTAL) {
-        l->cursor_x = 0.0f;
-        l->cursor_y += l->size_y;
-    } else {
-        l->cursor_x += l->size_x;
-        l->cursor_y = 0.0f;
-    }
+    Layout* layout = getCurrentLayout();
+    if (!layout) return;
+    layout->nextLine();
 }
 
 void Window::beginLayout(MonstroLayoutDirection direction) {
@@ -377,40 +378,22 @@ void Window::beginLayout(MonstroLayoutDirection direction) {
     }
 
     layout_stack_top++;
-    MonstroLayoutInternal* layout = &layout_stack[layout_stack_top];
-    layout->direction = direction;
-    layout->pos_x = start_x;
-    layout->pos_y = start_y;
-    layout->size_x = 0.0f;
-    layout->size_y = 0.0f;
-    layout->cursor_x = 0.0f;
-    layout->cursor_y = 0.0f;
-    layout->max_x = 0.0f;
-    layout->max_y = 0.0f;
+    layout_stack[layout_stack_top].init(direction, start_x, start_y);
 }
 
 void Window::beginLayout(float x, float y, MonstroLayoutDirection direction) {
     if (layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1) return;
 
     layout_stack_top++;
-    MonstroLayoutInternal* layout = &layout_stack[layout_stack_top];
-    layout->direction = direction;
-    layout->pos_x = x;
-    layout->pos_y = y;
-    layout->size_x = 0.0f;
-    layout->size_y = 0.0f;
-    layout->cursor_x = 0.0f;
-    layout->cursor_y = 0.0f;
-    layout->max_x = 0.0f;
-    layout->max_y = 0.0f;
+    layout_stack[layout_stack_top].init(direction, x, y);
 }
 
 void Window::endLayout() {
     if (layout_stack_top <= 0) return;
 
-    MonstroLayoutInternal* finishing = &layout_stack[layout_stack_top];
-    float layout_width = finishing->size_x;
-    float layout_height = finishing->size_y;
+    Layout* finishing = &layout_stack[layout_stack_top];
+    float layout_width = finishing->mySizeX;
+    float layout_height = finishing->mySizeY;
 
     layout_stack_top--;
 

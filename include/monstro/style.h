@@ -9,7 +9,9 @@ extern "C" {
 
 typedef struct MonstroStyleText {
     MonstroColor color;
+    MonstroColor background;
     float padding[2];
+    MonstroAlign alignment;
 } MonstroStyleText;
 
 typedef struct MonstroStyleButton {
@@ -372,6 +374,7 @@ typedef struct MonstroStyleWindowHeader {
 typedef struct MonstroStyleWindow {
     MonstroStyleWindowHeader header;
     MonstroStyleItem fixed_background;
+    MonstroStyleItem border_style;
     MonstroColor background;
 
     MonstroColor border_color;

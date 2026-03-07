@@ -1,4 +1,46 @@
 #include "context.h"
+#include <algorithm>
+
+/* ------------------------------------------------------------------------- */
+/* Layout member functions                                                   */
+/* ------------------------------------------------------------------------- */
+
+namespace monstro {
+
+void Layout::init(MonstroLayoutDirection direction, float posX, float posY) {
+    myDirection = direction;
+    myPosX = posX;
+    myPosY = posY;
+    mySizeX = 0.0f;
+    mySizeY = 0.0f;
+    myCursorX = 0.0f;
+    myCursorY = 0.0f;
+    myMaxX = 0.0f;
+    myMaxY = 0.0f;
+}
+
+void Layout::addItem(float width, float height) {
+    mySizeX = std::max(mySizeX, myCursorX + width);
+    mySizeY = std::max(mySizeY, myCursorY + height);
+
+    if (myDirection == MONSTRO_LAYOUT_VERTICAL) {
+        myCursorY += height;
+    } else {
+        myCursorX += width;
+    }
+}
+
+void Layout::nextLine() {
+    if (myDirection == MONSTRO_LAYOUT_HORIZONTAL) {
+        myCursorX = 0.0f;
+        myCursorY += mySizeY;
+    } else {
+        myCursorX += mySizeX;
+        myCursorY = 0.0f;
+    }
+}
+
+} // namespace monstro
 
 /* ------------------------------------------------------------------------- */
 /* Layout C API - delegates to window methods (matching C# architecture)     */
@@ -45,59 +87,59 @@ void monstro_set_cursor_screen_pos(MonstroContext* ctx, float x, float y) {
 }
 
 void monstro_indent(MonstroContext* ctx, float indent_width) {
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
+    monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
     if (indent_width <= 0.0f) {
         indent_width = ctx->style.tree.indent;
     }
     
-    layout->pos_x += indent_width;
-    layout->cursor_x += indent_width;
-    layout->size_x -= indent_width;
+    layout->myPosX += indent_width;
+    layout->myCursorX += indent_width;
+    layout->mySizeX -= indent_width;
 }
 
 void monstro_unindent(MonstroContext* ctx, float indent_width) {
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
+    monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
     if (indent_width <= 0.0f) {
         indent_width = ctx->style.tree.indent;
     }
     
-    layout->pos_x -= indent_width;
-    layout->cursor_x -= indent_width;
-    layout->size_x += indent_width;
+    layout->myPosX -= indent_width;
+    layout->myCursorX -= indent_width;
+    layout->mySizeX += indent_width;
 }
 
 void monstro_spacer(MonstroContext* ctx, float size) {
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
+    monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return;
     
-    if (layout->direction == MONSTRO_LAYOUT_VERTICAL) {
-        layout->cursor_y += size;
+    if (layout->myDirection == MONSTRO_LAYOUT_VERTICAL) {
+        layout->myCursorY += size;
     } else {
-        layout->cursor_x += size;
+        layout->myCursorX += size;
     }
 }
 
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction) {
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
+    monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return 0.0f;
     
     if (direction == MONSTRO_LAYOUT_HORIZONTAL) {
-        return layout->size_x * (percent / 100.0f);
+        return layout->mySizeX * (percent / 100.0f);
     } else {
-        return layout->size_y * (percent / 100.0f);
+        return layout->mySizeY * (percent / 100.0f);
     }
 }
 
 MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return {0, 0, 0, 0};
-    MonstroLayoutInternal* layout = ctx->getCurrentLayout();
+    monstro::Layout* layout = ctx->getCurrentLayout();
     if (!layout) return {0, 0, 0, 0};
     
-    float x = ctx->current_window->pos.x + layout->pos_x + layout->cursor_x;
-    float y = ctx->current_window->pos.y + layout->pos_y + layout->cursor_y;
-    return {x, y, layout->size_x, 0};
+    float x = ctx->current_window->pos.x + layout->myPosX + layout->myCursorX;
+    float y = ctx->current_window->pos.y + layout->myPosY + layout->myCursorY;
+    return {x, y, layout->mySizeX, 0};
 }

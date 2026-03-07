@@ -22,7 +22,7 @@ struct Window {
     bool skip_items = false;
     uint64_t move_id = 0;
 
-    MonstroLayoutInternal layout_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
+    Layout layout_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
     int layout_stack_top = -1;
 
     MonstroVec2 pos = {0.0f, 0.0f};
@@ -68,7 +68,7 @@ struct Window {
     void setPosition(float x, float y, MonstroCondition cond);
     void setSize(float w, float h, MonstroCondition cond);
 
-    MonstroLayoutInternal* getCurrentLayout();
+    Layout* getCurrentLayout();
     void setLayoutDirection(MonstroLayoutDirection direction);
     void addItem(float width, float height);
     void nextLine();

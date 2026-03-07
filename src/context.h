@@ -38,7 +38,7 @@ struct Context {
     void pushWindow(Window* win);
     void popWindow();
 
-    MonstroLayoutInternal* getCurrentLayout();
+    Layout* getCurrentLayout();
 
 
 

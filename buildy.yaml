@@ -76,6 +76,8 @@ staging:
     - folder: "include"
       files:
         - "include/monstro.h"
+    - folder: "include/monstro"
+      files:
         - "include/monstro/*.h"
 
     # docs

@@ -307,13 +307,21 @@ typedef struct MonstroNinePatch {
     uint32_t texture_height;
 } MonstroNinePatch;
 
+typedef struct MonstroSprite {
+    uint64_t texture_id;
+    MonstroVec2 uv_min;
+    MonstroVec2 uv_max;
+} MonstroSprite;
+
 /* ------------------------------------------------------------------------- */
 /* Style Types                                                               */
 /* ------------------------------------------------------------------------- */
 
 typedef enum MonstroStyleItemType {
     MONSTRO_STYLE_ITEM_COLOR = 0,
-    MONSTRO_STYLE_ITEM_IMAGE = 1
+    MONSTRO_STYLE_ITEM_IMAGE = 1,
+    MONSTRO_STYLE_ITEM_SPRITE = 2,
+    MONSTRO_STYLE_ITEM_NINEPATCH = 3
 } MonstroStyleItemType;
 
 typedef struct MonstroStyleItem {
@@ -321,6 +329,8 @@ typedef struct MonstroStyleItem {
     union {
         MonstroColor color;
         uint64_t texture_id;
+        MonstroSprite sprite;
+        MonstroNinePatch ninepatch;
     } data;
 } MonstroStyleItem;
 

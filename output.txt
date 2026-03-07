@@ -1,0 +1,268 @@
+2026/03/07 12:25:35.475319 Found 6 template file(s)
+2026/03/07 12:25:35.475404 Found 29 toolchain file(s)
+2026/03/07 12:25:35.475413 Found 7 build system file(s)
+2026/03/07 12:25:35.478811 Loaded 13 embedded template(s)
+2026/03/07 12:25:35.478829 Additional templates directory not found, using built-in: /home/bholcomb/projects/side/monstero/data/templates
+2026/03/07 12:25:35.478832 Total templates loaded: 13
+2026/03/07 12:25:35.478843 Parsed metadata for template 'c_executable': language=c, types=[executable]
+2026/03/07 12:25:35.478847 Parsed metadata for template 'go_executable': language=go, types=[executable]
+2026/03/07 12:25:35.478851 Parsed metadata for template 'rust_executable': language=rust, types=[executable]
+2026/03/07 12:25:35.478855 Parsed metadata for template 'rust_static_library': language=rust, types=[static_library]
+2026/03/07 12:25:35.478859 Parsed metadata for template 'rust_shared_library': language=rust, types=[shared_library]
+2026/03/07 12:25:35.478864 Parsed metadata for template 'c_shared_library': language=c, types=[shared_library]
+2026/03/07 12:25:35.478868 Parsed metadata for template 'c_static_library': language=c, types=[static_library]
+2026/03/07 12:25:35.478872 Parsed metadata for template 'cpp_shared_library': language=cpp, types=[shared_library]
+2026/03/07 12:25:35.478883 Parsed metadata for template 'cpp_static_library': language=cpp, types=[static_library]
+2026/03/07 12:25:35.478887 Parsed metadata for template 'cpp_executable': language=cpp, types=[executable]
+2026/03/07 12:25:35.478891 Parsed metadata for template 'go_shared_library': language=go, types=[shared_library]
+2026/03/07 12:25:35.478894 No config file specified, attempting workspace discovery...
+2026/03/07 12:25:35.479408 Discovered workspace at: /home/bholcomb/projects/side/monstero
+2026/03/07 12:25:35.479416 Discovering modules in workspace...
+2026/03/07 12:25:35.479582 Loaded 2 explicit modules with 2 total targets
+2026/03/07 12:25:35.479591 Found 2 module(s)
+2026/03/07 12:25:35.479807 Loaded embedded toolchain: clang-c-linux - Clang/LLVM C compiler for Linux x86_64
+2026/03/07 12:25:35.480019 Loaded embedded toolchain: clang-c-macos - Apple Clang C for macOS
+2026/03/07 12:25:35.480297 Loaded embedded toolchain: clang-cpp-linux - Clang/LLVM C++ compiler for Linux x86_64
+2026/03/07 12:25:35.480550 Loaded embedded toolchain: clang-cpp-macos - Apple Clang C++ for macOS
+2026/03/07 12:25:35.480643 Loaded embedded toolchain: compressonator - AMD Compressonator CLI for texture compression (cross-platform)
+2026/03/07 12:25:35.480841 Loaded embedded toolchain: docker-c-linux - GCC C in Docker for cross-platform builds
+2026/03/07 12:25:35.481101 Loaded embedded toolchain: docker-cpp-linux - GCC C++ in Docker for cross-platform builds
+2026/03/07 12:25:35.481247 Loaded embedded toolchain: doxygen - Doxygen documentation generator
+2026/03/07 12:25:35.481426 Loaded embedded toolchain: emscripten-c - Emscripten C for WebAssembly compilation
+2026/03/07 12:25:35.481639 Loaded embedded toolchain: emscripten-cpp - Emscripten C++ for WebAssembly compilation
+2026/03/07 12:25:35.481841 Loaded embedded toolchain: gcc-c-arm-cross - GCC C ARM cross-compiler for embedded systems
+2026/03/07 12:25:35.482045 Loaded embedded toolchain: gcc-c-linux - GCC C compiler for Linux x86_64
+2026/03/07 12:25:35.482238 Loaded embedded toolchain: gcc-c-mingw - MinGW-w64 GCC C for Windows cross-compilation
+2026/03/07 12:25:35.482479 Loaded embedded toolchain: gcc-cpp-arm-cross - GCC C++ ARM cross-compiler for embedded systems
+2026/03/07 12:25:35.482743 Loaded embedded toolchain: gcc-cpp-linux - GCC C++ compiler for Linux x86_64
+2026/03/07 12:25:35.482988 Loaded embedded toolchain: gcc-cpp-mingw - MinGW-w64 GCC C++ for Windows cross-compilation
+2026/03/07 12:25:35.483076 Loaded embedded toolchain: glslc - Google shaderc glslc compiler for GLSL to SPIR-V
+2026/03/07 12:25:35.483229 Loaded embedded toolchain: go-linux - Go compiler for Linux
+2026/03/07 12:25:35.483381 Loaded embedded toolchain: go-macos - Go compiler for macOS
+2026/03/07 12:25:35.483556 Loaded embedded toolchain: go-windows - Go compiler for Windows
+2026/03/07 12:25:35.483654 Loaded embedded toolchain: imagemagick - ImageMagick convert for cross-platform image conversion
+2026/03/07 12:25:35.483858 Loaded embedded toolchain: msvc-c-windows - Microsoft Visual C for Windows x86_64
+2026/03/07 12:25:35.484116 Loaded embedded toolchain: msvc-cpp-windows - Microsoft Visual C++ for Windows x86_64
+2026/03/07 12:25:35.484247 Loaded embedded toolchain: rust-linux - Rust compiler for Linux x86_64
+2026/03/07 12:25:35.484390 Loaded embedded toolchain: rust-macos-arm64 - Rust compiler for macOS ARM64 (Apple Silicon)
+2026/03/07 12:25:35.484537 Loaded embedded toolchain: rust-macos - Rust compiler for macOS
+2026/03/07 12:25:35.485920 Loaded embedded toolchain: rust-wasm - Rust compiler for WebAssembly
+2026/03/07 12:25:35.486456 Loaded embedded toolchain: rust-windows - Rust compiler for Windows (cross-compile from Linux)
+2026/03/07 12:25:35.486561 Loaded embedded toolchain: texconv - Microsoft DirectXTex texconv for texture conversion to DDS
+2026/03/07 12:25:35.486745 Loaded toolchain: glslangValidator - Khronos glslangValidator GLSL to SPIR-V compiler
+2026/03/07 12:25:35.486755 Additional toolchains directory not found, using built-in: /home/bholcomb/projects/side/monstero/data/toolchains
+2026/03/07 12:25:35.486857 Loaded embedded build system: autoconf - GNU Autoconf/Automake build system
+2026/03/07 12:25:35.486917 Loaded embedded build system: buildy - Buildy build system (recursive)
+2026/03/07 12:25:35.487000 Loaded embedded build system: cargo - Rust Cargo build system
+2026/03/07 12:25:35.487077 Loaded embedded build system: cmake - CMake build system
+2026/03/07 12:25:35.487162 Loaded embedded build system: go_mod - Go modules build system
+2026/03/07 12:25:35.487250 Loaded embedded build system: make - GNU Make build system
+2026/03/07 12:25:35.487326 Loaded embedded build system: meson - Meson build system
+2026/03/07 12:25:35.487857 Fetching URL: https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip -> /home/bholcomb/projects/side/monstero/.buildy_cache/deps/glfw3
+2026/03/07 12:25:35.488045 WARNING: No checksum provided for https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip - consider adding one for reproducible builds
+2026/03/07 12:25:35.489423 Using cached archive, destination exists: /home/bholcomb/projects/side/monstero/.buildy_cache/deps/glfw3
+2026/03/07 12:25:35.489433 === Building dependency: glfw3 (using buildy) ===
+2026/03/07 12:25:35.489456 Building glfw3 (debug) with buildy
+2026/03/07 12:25:35.489468 Executing build phase: /home/bholcomb/projects/side/monstero/buildy --platform linux --architecture x86_64 --config debug /home/bholcomb/projects/side/monstero/buildy_config/dependencies/glfw3_build.yaml
+2026/03/07 12:25:35.533563 Phase 'build' completed successfully
+2026/03/07 12:25:35.533588 Build completed for glfw3 (debug)
+2026/03/07 12:25:35.533633 Building glfw3 (release) with buildy
+2026/03/07 12:25:35.533653 Executing build phase: /home/bholcomb/projects/side/monstero/buildy --platform linux --architecture x86_64 --config release /home/bholcomb/projects/side/monstero/buildy_config/dependencies/glfw3_build.yaml
+2026/03/07 12:25:35.562414 Phase 'build' completed successfully
+2026/03/07 12:25:35.562430 Build completed for glfw3 (release)
+2026/03/07 12:25:35.562446 === Dependency glfw3 built successfully ===
+2026/03/07 12:25:35.564697 Starting workspace build...
+2026/03/07 12:25:35.564966 Loaded build state from /home/bholcomb/projects/side/monstero/.buildy_cache/incremental_build.json
+2026/03/07 12:25:35.564976 Using default toolchain: gcc-cpp-linux
+2026/03/07 12:25:35.565061 Phase 1: Task Generation
+2026/03/07 12:25:35.565607 New files: 3
+2026/03/07 12:25:35.565618 Detected source changes. Rebuilding affected tasks.
+2026/03/07 12:25:35.565622 Initializing target registry...
+2026/03/07 12:25:35.565635 Indexed 2 unique target names
+2026/03/07 12:25:35.565642 Processing module: examples
+2026/03/07 12:25:35.565651 Using default toolchain: gcc-cpp-linux
+2026/03/07 12:25:35.565689 Using toolchain: gcc-cpp-linux (GCC C++ compiler for Linux x86_64)
+2026/03/07 12:25:35.565700 Execution environment: native
+2026/03/07 12:25:35.565714 Output directory pattern '${base_dir}/linux-x86_64-release' resolved to '/home/bholcomb/projects/side/monstero/build/linux-x86_64-release'
+2026/03/07 12:25:35.565881 Generated transform task: /home/bholcomb/projects/side/monstero/examples/basic/shaders/ui.vert -> /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/shaders/basic/ui.vert.spv
+2026/03/07 12:25:35.565931 Generated transform task: /home/bholcomb/projects/side/monstero/examples/basic/shaders/ui.frag -> /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/shaders/basic/ui.frag.spv
+2026/03/07 12:25:35.565936 Registered artifact 'basic_shaders' with 2 outputs
+2026/03/07 12:25:35.565975 Found template 'cpp_executable' for language=cpp, type=executable
+2026/03/07 12:25:35.565986 Target depends on artifact 'basic_shaders': added 2 virtual files for glob matching
+2026/03/07 12:25:35.565990 Expanding pattern 'basic/*.cpp' as '/home/bholcomb/projects/side/monstero/examples/basic/*.cpp'
+2026/03/07 12:25:35.566018 Pattern 'basic/*.cpp' matched 1 files: [examples/basic/main.cpp]
+2026/03/07 12:25:35.566037 Matched examples/basic/main.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.566113 Matched link tool for 'executable' -> 'link_executable'
+2026/03/07 12:25:35.566206 Registered target 'monstro_basic' -> task 'link_monstro_basic_001__examples' (output: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/bin/monstro_basic)
+2026/03/07 12:25:35.566219 Using registered output path for target 'monstro_basic': /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/bin/monstro_basic
+2026/03/07 12:25:35.566457 Generated copy task: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/bin/monstro_basic -> /home/bholcomb/projects/side/monstero/bin/monstro_basic
+2026/03/07 12:25:35.566463 WARNING: staging target 'monstro' not found in generated targets or global registry
+2026/03/07 12:25:35.566529 Generated copy task: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/shaders/basic/ui.vert.spv -> /home/bholcomb/projects/side/monstero/bin/data/basic/shaders/ui.vert.spv
+2026/03/07 12:25:35.566765 Generated copy task: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/shaders/basic/ui.frag.spv -> /home/bholcomb/projects/side/monstero/bin/data/basic/shaders/ui.frag.spv
+2026/03/07 12:25:35.567048 Generated copy task: /home/bholcomb/projects/side/monstero/examples/basic/data/consola.png -> /home/bholcomb/projects/side/monstero/bin/data/fonts/consola.png
+2026/03/07 12:25:35.567724 Generated copy task: /home/bholcomb/projects/side/monstero/examples/basic/data/freeSans.ttf -> /home/bholcomb/projects/side/monstero/bin/data/fonts/freeSans.ttf
+2026/03/07 12:25:35.567738 Generated 5 staging tasks for 'monstro_examples_dist' at /home/bholcomb/projects/side/monstero/bin
+2026/03/07 12:25:35.567744 Processing module: src
+2026/03/07 12:25:35.567772 Using default toolchain: gcc-cpp-linux
+2026/03/07 12:25:35.567830 Using toolchain: gcc-cpp-linux (GCC C++ compiler for Linux x86_64)
+2026/03/07 12:25:35.567835 Execution environment: native
+2026/03/07 12:25:35.567853 Output directory pattern '${base_dir}/linux-x86_64-release' resolved to '/home/bholcomb/projects/side/monstero/build/linux-x86_64-release'
+2026/03/07 12:25:35.567973 Found template 'cpp_shared_library' for language=cpp, type=shared_library
+2026/03/07 12:25:35.567982 Expanding pattern '*.cpp' as '/home/bholcomb/projects/side/monstero/src/*.cpp'
+2026/03/07 12:25:35.568046 Pattern '*.cpp' matched 9 files: [src/canvas.cpp src/context.cpp src/drawbuffer.cpp src/font.cpp src/idStack.cpp src/input.cpp src/layout.cpp src/style.cpp src/window.cpp]
+2026/03/07 12:25:35.568054 Expanding pattern 'widgets/*.cpp' as '/home/bholcomb/projects/side/monstero/src/widgets/*.cpp'
+2026/03/07 12:25:35.568101 Pattern 'widgets/*.cpp' matched 10 files: [src/widgets/button.cpp src/widgets/checkbox.cpp src/widgets/combo.cpp src/widgets/image.cpp src/widgets/label.cpp src/widgets/menu.cpp src/widgets/popup.cpp src/widgets/selectable.cpp src/widgets/separator.cpp src/widgets/window.cpp]
+2026/03/07 12:25:35.568140 Matched src/canvas.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568237 Matched src/context.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568311 Matched src/drawbuffer.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568380 Matched src/font.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568444 Matched src/idStack.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568504 Matched src/input.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568567 Matched src/layout.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568621 Matched src/style.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568688 Matched src/window.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568755 Matched src/widgets/button.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568826 Matched src/widgets/checkbox.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568880 Matched src/widgets/combo.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568939 Matched src/widgets/image.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.568996 Matched src/widgets/label.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569060 Matched src/widgets/menu.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569125 Matched src/widgets/popup.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569191 Matched src/widgets/selectable.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569269 Matched src/widgets/separator.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569341 Matched src/widgets/window.cpp (compile) -> tool 'cpp_compile'
+2026/03/07 12:25:35.569413 Matched link tool for 'shared_library' -> 'link_shared_library'
+2026/03/07 12:25:35.570166 Registered target 'monstro' -> task 'link_monstro_001__src' (output: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/bin/libmonstro.so)
+2026/03/07 12:25:35.570180 Target 'monstro_basic' already registered -> link task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570183 Target 'monstro' already registered -> link task 'link_monstro_001__src'
+2026/03/07 12:25:35.570187 Resolved dependency 'monstro' to link task 'link_monstro_001__src' in task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570190 Skipping external library 'glfw3' for build ordering in task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570193 Skipping external library 'vulkease' for build ordering in task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570196 Skipping external library 'vulkan' for build ordering in task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570200 Resolved dependency 'monstro' to link task 'link_monstro_001__src' in task 'link_monstro_basic_001__examples'
+2026/03/07 12:25:35.570518 Generated copy task: /home/bholcomb/projects/side/monstero/build/linux-x86_64-release/bin/libmonstro.so -> /home/bholcomb/projects/side/monstero/dist/bin/libmonstro.so
+2026/03/07 12:25:35.570569 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro.h
+2026/03/07 12:25:35.570640 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/font.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/font.h
+2026/03/07 12:25:35.570688 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/input.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/input.h
+2026/03/07 12:25:35.570731 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/layout.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/layout.h
+2026/03/07 12:25:35.570777 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/monstro.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/monstro.h
+2026/03/07 12:25:35.570832 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/style.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/style.h
+2026/03/07 12:25:35.571067 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/types.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/types.h
+2026/03/07 12:25:35.571542 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/widgets.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/widgets.h
+2026/03/07 12:25:35.571655 Generated copy task: /home/bholcomb/projects/side/monstero/include/monstro/window.h -> /home/bholcomb/projects/side/monstero/dist/include/monstro/window.h
+2026/03/07 12:25:35.571724 Generated copy task: /home/bholcomb/projects/side/monstero/README.md -> /home/bholcomb/projects/side/monstero/dist/docs/README.md
+2026/03/07 12:25:35.571738 Generated 11 staging tasks for 'monstro_dist' at /home/bholcomb/projects/side/monstero/dist
+2026/03/07 12:25:35.571746 Generated 42 tasks from 2 modules
+2026/03/07 12:25:35.572955 Task graph saved to /home/bholcomb/projects/side/monstero/.buildy_cache/tasks.json
+2026/03/07 12:25:35.572971 Task generation completed in 0.01s (42 tasks)
+2026/03/07 12:25:35.572989 Phase 2: Task Execution
+2026/03/07 12:25:35.573006 Starting build with 42 tasks in 5 stages
+2026/03/07 12:25:35.573014 
+Stage 1/5: 16 task(s) [0.0% complete]
+2026/03/07 12:25:35.573093 [2/42] setup_dirs_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.573219 [1/42] stage_monstro_h_002__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573299 [3/42] stage_readme_md_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573340 [5/42] stage_layout_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573376 [6/42] stage_window_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573447 [4/42] stage_input_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573454 [7/42] transform_ui_002__examples - cache hit, restored outputs
+2026/03/07 12:25:35.573554 [9/42] transform_ui_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.573689 [12/42] stage_monstro_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573696 [8/42] stage_widgets_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573759 [14/42] setup_dirs_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.573692 [11/42] stage_types_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573847 [13/42] stage_style_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.573938 [16/42] stage_consola_png_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.573998 [15/42] stage_font_h_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.575766 [10/42] stage_freesans_ttf_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.575799 
+Stage 2/5: 22 task(s) [38.1% complete]
+2026/03/07 12:25:35.575997 [20/42] stage_ui_vert_spv_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.576195 Cache hit for compile_monstro_src_widgets_menu_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.576217 Cache hit for compile_monstro_src_drawbuffer_cpp_001__src: 11 headers unchanged
+2026/03/07 12:25:35.576369 Cache hit for compile_monstro_src_window_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.576390 [19/42] compile_monstro_src_widgets_menu_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.576537 [17/42] compile_monstro_src_drawbuffer_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.576566 [21/42] compile_monstro_src_window_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.576734 Cache hit for compile_monstro_src_widgets_label_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.576888 Cache hit for compile_monstro_src_widgets_image_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.576898 [22/42] compile_monstro_src_widgets_label_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577023 Cache hit for compile_monstro_src_idstack_cpp_001__src: 4 headers unchanged
+2026/03/07 12:25:35.577052 [24/42] compile_monstro_src_widgets_image_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577114 Cache hit for compile_monstro_src_context_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.577218 [25/42] compile_monstro_src_idstack_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577393 Cache hit for compile_monstro_src_widgets_button_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.577461 [23/42] compile_monstro_src_context_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577554 Cache hit for compile_monstro_src_widgets_checkbox_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.577571 [26/42] compile_monstro_src_widgets_button_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577679 Cache hit for compile_monstro_src_font_cpp_001__src: 22 headers unchanged
+2026/03/07 12:25:35.577734 [27/42] compile_monstro_src_widgets_checkbox_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.577906 Cache hit for compile_monstro_src_layout_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.578067 Cache hit for compile_monstro_src_widgets_selectable_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.578087 [29/42] compile_monstro_src_layout_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.578245 [30/42] compile_monstro_src_widgets_selectable_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.578407 Cache hit for compile_monstro_src_widgets_popup_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.578422 Cache hit for compile_monstro_basic_examples_basic_main_cpp_001__examples: 12 headers unchanged
+2026/03/07 12:25:35.578556 Cache hit for compile_monstro_src_canvas_cpp_001__src: 12 headers unchanged
+2026/03/07 12:25:35.578598 [31/42] compile_monstro_src_widgets_popup_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.578757 [18/42] compile_monstro_src_font_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.578788 [28/42] compile_monstro_basic_examples_basic_main_cpp_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.578832 [32/42] compile_monstro_src_canvas_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.578926 Cache hit for compile_monstro_src_widgets_combo_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.579056 [34/42] stage_ui_frag_spv_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.579154 [33/42] compile_monstro_src_widgets_combo_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.579167 Cache hit for compile_monstro_src_widgets_window_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.579312 Cache hit for compile_monstro_src_style_cpp_001__src: 2 headers unchanged
+2026/03/07 12:25:35.579342 [36/42] compile_monstro_src_widgets_window_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.579353 Cache hit for compile_monstro_src_input_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.579471 Cache hit for compile_monstro_src_widgets_separator_cpp_001__src: 20 headers unchanged
+2026/03/07 12:25:35.579640 [38/42] compile_monstro_src_widgets_separator_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.579666 [35/42] compile_monstro_src_input_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.579708 [37/42] compile_monstro_src_style_cpp_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.579734 
+Stage 3/5: 1 task(s) [90.5% complete]
+2026/03/07 12:25:35.582233 [39/42] link_monstro_001__src - cache hit, restored outputs
+2026/03/07 12:25:35.582258 
+Stage 4/5: 2 task(s) [92.9% complete]
+2026/03/07 12:25:35.583746 [40/42] link_monstro_basic_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.584243 [41/42] stage_libmonstro_so_001__workspace - cache hit, restored outputs
+2026/03/07 12:25:35.584269 
+Stage 5/5: 1 task(s) [97.6% complete]
+2026/03/07 12:25:35.586016 [42/42] stage_monstro_basic_001__examples - cache hit, restored outputs
+2026/03/07 12:25:35.586057 
+Build completed in 0.0s
+2026/03/07 12:25:35.586068 Tasks: 42 total, 42 cache hits, 0 executed
+2026/03/07 12:25:35.586076 Task execution completed in 0.01s
+2026/03/07 12:25:35.587397 Saved build state to /home/bholcomb/projects/side/monstero/.buildy_cache/incremental_build.json
+2026/03/07 12:25:35.587805 Build report saved to /home/bholcomb/projects/side/monstero/.buildy_cache/build_report.json
+
+╔════════════════════════════════════════════════════════════╗
+║                      BUILD REPORT                          ║
+╠════════════════════════════════════════════════════════════╣
+║  Status:          ✓ SUCCESS                                ║
+║  Platform:        linux-x86_64                             ║
+║  Configuration:   release                                  ║
+║  Toolchain:       gcc-cpp-linux                            ║
+╠════════════════════════════════════════════════════════════╣
+║  TIMING                                                    ║
+╠════════════════════════════════════════════════════════════╣
+║  Total Duration:  0.02s                                    ║
+║  Task Generation: 0.01s                                    ║
+║  Execution:       0.01s                                    ║
+╠════════════════════════════════════════════════════════════╣
+║  TASKS                                                     ║
+╠════════════════════════════════════════════════════════════╣
+║  Total Tasks:     42                                       ║
+║  Executed:        42                                       ║
+║  Cache Hits:      42 (100.0%)                              ║
+║  Cache Misses:    0                                        ║
+╠════════════════════════════════════════════════════════════╣
+║  TASKS BY TYPE                                             ║
+╠════════════════════════════════════════════════════════════╣
+║    compile:       20                                         ║
+║    copy:          16                                         ║
+║    link:          2                                          ║
+║    setup:         2                                          ║
+║    transform:     2                                          ║
+╚════════════════════════════════════════════════════════════╝
+
