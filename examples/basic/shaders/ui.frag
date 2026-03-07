@@ -19,6 +19,7 @@ layout(location = 0) out vec4 outColor;
 // Texture type constants
 const uint UI_TEXTURE_RGBA = 0;
 const uint UI_TEXTURE_FONT_ATLAS = 1;
+const uint UI_TEXTURE_NONE = 2;
 
 // Push constants (must match vertex shader layout)
 layout(push_constant) uniform PushConstants {
@@ -32,24 +33,19 @@ layout(push_constant) uniform PushConstants {
 } pc;
 
 void main() {
-    if (pc.textureType == UI_TEXTURE_FONT_ATLAS) {
-        // Font atlas (R8): vertex color provides RGB, red channel is alpha/coverage
+    if (pc.textureType == UI_TEXTURE_NONE) {
+        outColor = fragColor;
+    } else if (pc.textureType == UI_TEXTURE_FONT_ATLAS) {
         vec4 texColor = texture(
             sampler2D(ve_textures[nonuniformEXT(pc.textureIndex)], 
                       ve_samplers[nonuniformEXT(pc.samplerIndex)]), 
             fragTexCoord);
         outColor = vec4(fragColor.rgb, fragColor.a * texColor.r);
     } else {
-        // RGBA texture: for solid color UI elements (UV=0,0), just use vertex color
-        // This avoids issues with the white texture not being set up correctly
-        if (fragTexCoord.x == 0.0 && fragTexCoord.y == 0.0) {
-            outColor = fragColor;
-        } else {
-            vec4 texColor = texture(
-                sampler2D(ve_textures[nonuniformEXT(pc.textureIndex)], 
-                          ve_samplers[nonuniformEXT(pc.samplerIndex)]), 
-                fragTexCoord);
-            outColor = texColor * fragColor;
-        }
+        vec4 texColor = texture(
+            sampler2D(ve_textures[nonuniformEXT(pc.textureIndex)], 
+                      ve_samplers[nonuniformEXT(pc.samplerIndex)]), 
+            fragTexCoord);
+        outColor = texColor * fragColor;
     }
 }

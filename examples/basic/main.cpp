@@ -77,6 +77,9 @@ struct App {
     int buttonClicks;
     bool checkboxValue;
     float sliderValue;
+    float sliderValue2;
+    int sliderInt;
+    int radioValue;
 };
 
 static App* g_app = nullptr;
@@ -450,8 +453,9 @@ static bool uploadUIBuffers(App* app, MonstroDrawBuffer* drawBuffer) {
 
 // Texture type flags for shader
 enum UITextureType : uint32_t {
-    UI_TEXTURE_RGBA = 0,      // Standard RGBA texture (multiply with vertex color)
-    UI_TEXTURE_FONT_ATLAS = 1 // R8 font atlas (R channel is alpha, use vertex color for RGB)
+    UI_TEXTURE_RGBA = 0,
+    UI_TEXTURE_FONT_ATLAS = 1,
+    UI_TEXTURE_NONE = 2
 };
 
 // Push constants structure matching shader
@@ -504,13 +508,14 @@ static void renderUI(App* app, VECommandBuffer* cmd, MonstroContext* ctx, Monstr
         
         veSetScissor(cmd, sx, sy, sw, sh);
         
-        // Look up texture - map Monstro texture_id to VulkEase texture index
         VETextureIndex texture = app->whiteTexture;
-        UITextureType texType = UI_TEXTURE_RGBA;
+        UITextureType texType = UI_TEXTURE_NONE;
         
         if (dc->texture_id == app->fontAtlasTextureId && app->fontAtlasTextureId != 0) {
             texture = app->fontAtlasTexture;
             texType = UI_TEXTURE_FONT_ATLAS;
+        } else if (dc->texture_id != 0) {
+            texType = UI_TEXTURE_RGBA;
         }
         
         // Set push constants
@@ -538,7 +543,7 @@ static void updateUI(App* app, float deltaTime) {
     monstro_begin_frame(ctx, deltaTime);
     
     monstro_set_next_window_pos(ctx, 50.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
-    monstro_set_next_window_size(ctx, 350.0f, 400.0f, MONSTRO_COND_FIRST_USE_EVER);
+    monstro_set_next_window_size(ctx, 450.0f, 700.0f, MONSTRO_COND_FIRST_USE_EVER);
     
     MonstroWindowFlags windowFlags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
     if (monstro_begin_window(ctx, "Monstro Demo", nullptr, windowFlags)) {
@@ -580,6 +585,27 @@ static void updateUI(App* app, float deltaTime) {
         
         if (monstro_checkbox(ctx, "Enable Feature", &app->checkboxValue, "Toggle this feature")) {
             printf("Checkbox toggled: %d\n", app->checkboxValue);
+        }
+        
+        monstro_separator_text(ctx, "Sliders");
+        
+        monstro_slider_float(ctx, "Volume", &app->sliderValue, 0.0f, 1.0f, "%.2f", "Adjust volume");
+        monstro_slider_float(ctx, "Speed", &app->sliderValue2, 0.0f, 100.0f, "%.1f", "Adjust speed");
+        monstro_slider_int(ctx, "Count", &app->sliderInt, 0, 10, "%d", "Set count");
+        
+        monstro_separator_text(ctx, "Radio Buttons");
+        
+        if(monstro_radio_button(ctx, "Option A", &app->radioValue, 0, nullptr))
+        {
+            printf("Radio button Option A clicked with value: %d\n", app->radioValue);
+        }
+        if(monstro_radio_button(ctx, "Option B", &app->radioValue, 1, nullptr))
+        {
+            printf("Radio button Option B clicked with value: %d\n", app->radioValue);
+        }
+        if(monstro_radio_button(ctx, "Option C", &app->radioValue, 2, nullptr))
+        {
+            printf("Radio button Option C clicked with value: %d\n", app->radioValue);
         }
         
         monstro_separator_text(ctx, "Layout Test");

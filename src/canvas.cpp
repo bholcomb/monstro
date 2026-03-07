@@ -311,7 +311,7 @@ void Canvas::addCircleFilled(MonstroVec2 center, float radius, uint32_t color, i
 
     Reservation r = reserveGeometry((uint32_t)(num_segments + 1), (uint32_t)(num_segments * 3));
 
-    r.vertices[0] = {{center.x, center.y}, {0.5f, 0.5f}, color};
+    r.vertices[0] = {{center.x, center.y}, {0.0f, 0.0f}, color};
 
     for (int i = 0; i < num_segments; i++) {
         float angle = (float)i / (float)num_segments * 6.2831853f;

@@ -141,10 +141,10 @@ void monstro_style_set_default(MonstroStyle* style) {
     // Option (radio button)
     style->option.normal = styleItemColor(TOGGLE);
     style->option.hover = styleItemColor(TOGGLE_HOVER);
-    style->option.active = styleItemColor(TOGGLE_HOVER);
+    style->option.active = styleItemColor(rgba( 45,  60,  80, 255));
     style->option.cursor_normal = styleItemColor(ACCENT);
     style->option.cursor_hover = styleItemColor(ACCENT);
-    style->option.border_color = rgba( 55,  68,  87, 179);
+    style->option.border_color = rgba( 80, 100, 120, 220);
     style->option.text_background = WINDOW;
     style->option.text_normal = TEXT;
     style->option.text_hover = TEXT_SEL;
@@ -154,7 +154,7 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->option.padding[1] = 3.0f;
     style->option.touch_padding[0] = 0.0f;
     style->option.touch_padding[1] = 0.0f;
-    style->option.border = 0.0f;
+    style->option.border = 1.5f;
     style->option.spacing = 4.0f;
 
     // Selectable
@@ -185,9 +185,9 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->slider.hover = styleItemHide();
     style->slider.active = styleItemHide();
     style->slider.border_color = BORDER;
-    style->slider.bar_normal = SLIDER;
-    style->slider.bar_hover = SLIDER;
-    style->slider.bar_active = SLIDER;
+    style->slider.bar_normal = rgba( 30,  37,  47, 255);
+    style->slider.bar_hover = rgba( 40,  50,  62, 255);
+    style->slider.bar_active = rgba( 40,  50,  62, 255);
     style->slider.bar_filled = ACCENT;
     style->slider.cursor_normal = styleItemColor(SLIDER_CURSOR);
     style->slider.cursor_hover = styleItemColor(SLIDER_CURSOR_HOVER);
@@ -201,7 +201,7 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->slider.show_buttons = false;
     style->slider.bar_height = 8.0f;
     style->slider.rounding = 0.0f;
-    style->slider.border = 0.0f;
+    style->slider.border = 1.0f;
 
     // Slider buttons
     style->slider.inc_button.normal = styleItemColor(HEADER);
