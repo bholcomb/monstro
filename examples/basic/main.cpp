@@ -614,10 +614,26 @@ static void updateUI(App* app, float deltaTime) {
         }
         monstro_end_layout(ctx);
         
-        monstro_separator_text(ctx, "More Widgets");
+        monstro_separator_text(ctx, "Tabs");
         
-        if (monstro_button(ctx, "Reset Counter", nullptr)) {
-            app->buttonClicks = 0;
+        if (monstro_begin_tab_bar(ctx, "demoTabs", MONSTRO_TAB_BAR_NONE)) {
+            if (monstro_begin_tab_item(ctx, "General", nullptr)) {
+                monstro_label(ctx, "General settings go here.");
+                if (monstro_button(ctx, "Reset Counter", nullptr)) {
+                    app->buttonClicks = 0;
+                }
+                monstro_end_tab_item(ctx);
+            }
+            if (monstro_begin_tab_item(ctx, "Advanced", nullptr)) {
+                monstro_label(ctx, "Advanced options.");
+                monstro_checkbox(ctx, "Extra Feature", &app->checkboxValue, nullptr);
+                monstro_end_tab_item(ctx);
+            }
+            if (monstro_begin_tab_item(ctx, "About", nullptr)) {
+                monstro_label(ctx, "Monstro UI v2.0");
+                monstro_end_tab_item(ctx);
+            }
+            monstro_end_tab_bar(ctx);
         }
     }
     monstro_end_window(ctx);

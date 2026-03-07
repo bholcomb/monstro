@@ -11,6 +11,16 @@
 #include "helpers.h"
 #include "idStack.h"
 
+struct MonstroTabBarState {
+    uint64_t id;
+    uint64_t selected_tab;
+    int last_frame_active;
+    float header_start_x;
+    float header_start_y;
+    float header_height;
+    bool content_active;
+};
+
 namespace monstro {
 
 struct Context {
@@ -68,6 +78,10 @@ struct Context {
 
     MonstroPopupInternal popup_stack[MONSTRO_MAX_POPUP_STACK] = {};
     int popup_stack_top = 0;
+
+    MonstroTabBarState tab_bars[MONSTRO_MAX_TAB_BARS] = {};
+    int tab_bar_count = 0;
+    MonstroTabBarState* current_tab_bar = nullptr;
 
     uint64_t hovered_id = 0;
     uint64_t hovered_id_prev_frame = 0;
