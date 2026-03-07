@@ -1,15 +1,11 @@
 #ifndef MONSTRO_MONSTRO_H
 #define MONSTRO_MONSTRO_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct MonstroContext MonstroContext;
-typedef struct MonstroCanvas MonstroCanvas;
 
 void monstro_init(void);
 void monstro_shutdown(void);
@@ -19,11 +15,12 @@ void monstro_context_destroy(MonstroContext* ctx);
 
 MonstroCanvas* monstro_context_get_canvas(MonstroContext* ctx);
 
-typedef struct MonstroFont MonstroFont;
 void monstro_context_set_default_font(MonstroContext* ctx, MonstroFont* font);
 MonstroFont* monstro_context_get_default_font(MonstroContext* ctx);
 
-void monstro_begin_frame(MonstroContext* ctx, float display_width, float display_height, float delta_time);
+void monstro_set_display_size(MonstroContext* ctx, float width, float height);
+
+void monstro_begin_frame(MonstroContext* ctx, float delta_time);
 void monstro_end_frame(MonstroContext* ctx);
 
 float monstro_get_delta_time(MonstroContext* ctx);

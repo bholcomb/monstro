@@ -1,40 +1,11 @@
 #ifndef MONSTRO_FONT_H
 #define MONSTRO_FONT_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
-
-#include "canvas.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct MonstroContext MonstroContext;
-typedef struct MonstroFontManager MonstroFontManager;
-typedef struct MonstroFont MonstroFont;
-
-typedef enum MonstroTextureFormat {
-    MONSTRO_TEXTURE_FORMAT_R8 = 0,
-    MONSTRO_TEXTURE_FORMAT_RGBA8 = 1
-} MonstroTextureFormat;
-
-typedef struct MonstroGlyph {
-    float min_tex_coord[2];
-    float max_tex_coord[2];
-    float size[2];
-    float offset[2];
-    float advance[2];
-} MonstroGlyph;
-
-typedef struct MonstroTextureData {
-    uint32_t width;
-    uint32_t height;
-    MonstroTextureFormat format;
-    size_t data_size;
-    const void* data;
-} MonstroTextureData;
 
 MonstroFontManager* monstro_font_manager_create(void);
 void monstro_font_manager_destroy(MonstroFontManager* manager);

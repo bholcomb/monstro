@@ -1,41 +1,11 @@
 #ifndef MONSTRO_STYLE_H
 #define MONSTRO_STYLE_H
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "color.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct MonstroContext MonstroContext;
-typedef struct MonstroFont MonstroFont;
-
-typedef enum MonstroAlign {
-    MONSTRO_ALIGN_LEFT      = 1 << 0,
-    MONSTRO_ALIGN_RIGHT     = 1 << 1,
-    MONSTRO_ALIGN_TOP       = 1 << 2,
-    MONSTRO_ALIGN_BOTTOM    = 1 << 3,
-    MONSTRO_ALIGN_HCENTER   = MONSTRO_ALIGN_LEFT | MONSTRO_ALIGN_RIGHT,
-    MONSTRO_ALIGN_VCENTER   = MONSTRO_ALIGN_TOP | MONSTRO_ALIGN_BOTTOM,
-    MONSTRO_ALIGN_CENTER    = MONSTRO_ALIGN_HCENTER | MONSTRO_ALIGN_VCENTER,
-    MONSTRO_ALIGN_DEFAULT   = MONSTRO_ALIGN_LEFT | MONSTRO_ALIGN_VCENTER
-} MonstroAlign;
-
-typedef enum MonstroStyleItemType {
-    MONSTRO_STYLE_ITEM_COLOR = 0,
-    MONSTRO_STYLE_ITEM_IMAGE = 1
-} MonstroStyleItemType;
-
-typedef struct MonstroStyleItem {
-    MonstroStyleItemType type;
-    union {
-        MonstroColor color;
-        uint64_t texture_id;
-    } data;
-} MonstroStyleItem;
 
 typedef struct MonstroStyleText {
     MonstroColor color;

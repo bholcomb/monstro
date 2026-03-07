@@ -1,21 +1,11 @@
 #ifndef MONSTRO_LAYOUT_H
 #define MONSTRO_LAYOUT_H
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "canvas.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct MonstroContext MonstroContext;
-
-typedef enum MonstroLayoutDirection {
-    MONSTRO_LAYOUT_HORIZONTAL = 0,
-    MONSTRO_LAYOUT_VERTICAL = 1
-} MonstroLayoutDirection;
 
 void monstro_begin_layout(MonstroContext* ctx, MonstroLayoutDirection direction);
 void monstro_begin_layout_at(MonstroContext* ctx, float x, float y, MonstroLayoutDirection direction);

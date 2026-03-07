@@ -1,74 +1,12 @@
 #ifndef MONSTRO_CANVAS_H
 #define MONSTRO_CANVAS_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
-
+#include "types.h"
 #include "style.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*
- * Types
- */
-
-typedef struct MonstroCanvas MonstroCanvas;
-typedef struct MonstroFont MonstroFont;
-
-typedef struct MonstroVec2 {
-    float x, y;
-} MonstroVec2;
-
-typedef struct MonstroRect {
-    float x, y, w, h;
-} MonstroRect;
-
-typedef enum MonstroCornerFlags {
-    MONSTRO_CORNER_NONE   = 0,
-    MONSTRO_CORNER_LL     = 1 << 0,
-    MONSTRO_CORNER_LR     = 1 << 1,
-    MONSTRO_CORNER_UR     = 1 << 2,
-    MONSTRO_CORNER_UL     = 1 << 3,
-    MONSTRO_CORNER_TOP    = MONSTRO_CORNER_UL | MONSTRO_CORNER_UR,
-    MONSTRO_CORNER_BOTTOM = MONSTRO_CORNER_LL | MONSTRO_CORNER_LR,
-    MONSTRO_CORNER_LEFT   = MONSTRO_CORNER_LL | MONSTRO_CORNER_UL,
-    MONSTRO_CORNER_RIGHT  = MONSTRO_CORNER_LR | MONSTRO_CORNER_UR,
-    MONSTRO_CORNER_ALL    = MONSTRO_CORNER_LL | MONSTRO_CORNER_LR | MONSTRO_CORNER_UL | MONSTRO_CORNER_UR
-} MonstroCornerFlags;
-
-typedef void (*MonstroCustomDrawCallback)(void* user_data, const float clip_rect[4], int layer);
-
-typedef struct MonstroVertex {
-    float position[2];
-    float texcoord[2];
-    uint32_t color;
-} MonstroVertex;
-
-typedef struct MonstroDrawCommand {
-    float clip_rect[4];
-    int layer;
-    uint32_t order;  // Original draw order for stable sorting within same layer
-    uint64_t texture_id;
-    uint32_t index_offset;
-    uint32_t index_count;
-    MonstroCustomDrawCallback custom_draw;
-    void* user_data;
-} MonstroDrawCommand;
-
-typedef struct MonstroNinePatch {
-    uint64_t texture_id;
-    MonstroVec2 uv_min;
-    MonstroVec2 uv_max;
-    float border_left;
-    float border_right;
-    float border_top;
-    float border_bottom;
-    uint32_t texture_width;
-    uint32_t texture_height;
-} MonstroNinePatch;
 
 /*
  * Canvas Lifecycle

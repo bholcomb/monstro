@@ -1,16 +1,11 @@
 #ifndef MONSTRO_WIDGETS_H
 #define MONSTRO_WIDGETS_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct MonstroContext MonstroContext;
-typedef struct MonstroFont MonstroFont;
 
 /* ------------------------------------------------------------------------- */
 /* Flags                                                                     */
@@ -19,7 +14,12 @@ typedef struct MonstroFont MonstroFont;
 typedef enum MonstroSelectableFlags {
     MONSTRO_SELECTABLE_NONE             = 0,
     MONSTRO_SELECTABLE_DONT_CLOSE_POPUP = 1 << 0,
-    MONSTRO_SELECTABLE_DISABLED         = 1 << 1
+    MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS = 1 << 1,
+    MONSTRO_SELECTABLE_MENU             = 1 << 2,
+    MONSTRO_SELECTABLE_MENU_ITEM        = 1 << 3,
+    MONSTRO_SELECTABLE_DISABLED         = 1 << 4,
+    MONSTRO_SELECTABLE_DRAW_FILL_WIDTH  = 1 << 5,
+    MONSTRO_SELECTABLE_HAS_TOGGLE       = 1 << 6
 } MonstroSelectableFlags;
 
 typedef enum MonstroSliderFlags {
@@ -174,10 +174,13 @@ bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, b
 /* Popup                                                                     */
 /* ------------------------------------------------------------------------- */
 
-void monstro_open_popup(MonstroContext* ctx, const char* str_id);
+void monstro_open_popup(MonstroContext* ctx, const char* label);
 void monstro_close_current_popup(MonstroContext* ctx);
-bool monstro_begin_popup(MonstroContext* ctx, const char* str_id);
-bool monstro_begin_popup_modal(MonstroContext* ctx, const char* name, bool* p_open);
+bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFlags extra_flags);
+bool monstro_begin_popup_modal(MonstroContext* ctx, const char* label, bool* p_open, MonstroWindowFlags flags);
+bool monstro_begin_popup_context_item(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
+bool monstro_begin_popup_context_window(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button, bool also_over_items);
+bool monstro_begin_popup_context_void(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
 void monstro_end_popup(MonstroContext* ctx);
 bool monstro_is_popup_open(MonstroContext* ctx, const char* str_id);
 

@@ -1,4 +1,4 @@
-#include "../internal/types.h"
+#include "../context.h"
 #include <string.h>
 
 void monstro_label(MonstroContext* ctx, const char* text) {

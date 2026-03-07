@@ -1,4 +1,4 @@
-#include "../internal/types.h"
+#include "../context.h"
 #include <string.h>
 #include <cmath>
 
@@ -106,9 +106,8 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     MonstroCanvas* canvas = ctx->canvas;
     MonstroFont* font = style->font;
     
-    // Note: Unlike C# which uses addItem(padding) for external margin,
-    // we include padding in the button size for auto-sized buttons.
-    // This avoids double-padding and works better in horizontal layouts.
+    // Add spacing before button (like C#: win.addItem(style.button.padding))
+    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
     uint64_t id = monstro_get_id(ctx, monstro_hash_string(label));
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
@@ -127,6 +126,7 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     draw_button_background(canvas, r, style, hovered, held);
     draw_button_text(canvas, font, r, style, label, hovered, held);
     
+    // Add button size (like C#: win.addItem(size))
     monstro_add_item(ctx, w, h);
     
     (void)tooltip;
@@ -144,7 +144,8 @@ bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, f
     MonstroCanvas* canvas = ctx->canvas;
     MonstroFont* font = style->font;
     
-    // No external padding - user provides exact size
+    // Add spacing before button (like C#: win.addItem(style.button.padding))
+    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
     uint64_t id = monstro_get_id(ctx, monstro_hash_string(label));
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
@@ -174,7 +175,8 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
     MonstroStyle* style = &ctx->style;
     MonstroCanvas* canvas = ctx->canvas;
     
-    // No external padding - user provides exact size
+    // Add spacing before button (like C#: win.addItem(style.button.padding))
+    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
     uint64_t id = monstro_get_id(ctx, monstro_hash_string(str_id));
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);

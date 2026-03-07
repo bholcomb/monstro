@@ -1,4 +1,4 @@
-#include "../internal/types.h"
+#include "../context.h"
 
 void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float height) {
     monstro_image_ex(ctx, texture_id, width, height, 0.0f, 0.0f, 1.0f, 1.0f, 0xFFFFFFFF);

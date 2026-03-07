@@ -1,5 +1,8 @@
-#include "internal/types.h"
+#include "context.h"
 #include <new>
+#include <stdexcept>
+#include <cmath>
+#include <cstring>
 
 /* ------------------------------------------------------------------------- */
 /* MonstroContext Implementation                                             */
@@ -23,9 +26,7 @@ MonstroContext::~MonstroContext() {
     }
 }
 
-void MonstroContext::beginFrame(float displayWidth, float displayHeight, float dt) {
-    display_width = displayWidth;
-    display_height = displayHeight;
+void MonstroContext::beginFrame(float dt) {
     delta_time = dt;
     time += dt;
     frame++;
@@ -43,13 +44,8 @@ void MonstroContext::beginFrame(float displayWidth, float displayHeight, float d
     processMouseInput(dt);
     processKeyboardInput(dt);
     
-    mouse.delta_x = mouse.pos_x - mouse.prev_pos_x;
-    mouse.delta_y = mouse.pos_y - mouse.prev_pos_y;
-    mouse.prev_pos_x = mouse.pos_x;
-    mouse.prev_pos_y = mouse.pos_y;
-    
     // Find hovered window using previous frame's window data
-    hovered_window = findHoveredWindow(mouse.pos_x, mouse.pos_y);
+    hovered_window = findHoveredWindow(mouse.pos_x, mouse.pos_y, false);
     
     // Reset all windows to inactive for this frame
     for (int i = 0; i < window_count; i++) {
@@ -60,20 +56,60 @@ void MonstroContext::beginFrame(float displayWidth, float displayHeight, float d
     
     next_window_pos_cond = MONSTRO_COND_NONE;
     next_window_size_cond = MONSTRO_COND_NONE;
-    next_window_collapsed_cond = MONSTRO_COND_NONE;
+    next_window_focus_cond = MONSTRO_COND_NONE;
+    next_window_pos_x = -INFINITY;
+    next_window_pos_y = -INFINITY;
+    next_window_size_x = -INFINITY;
+    next_window_size_y = -INFINITY;
     
     want_capture_mouse = false;
     want_capture_keyboard = false;
     want_text_input = false;
     
-    current_window = nullptr;
-    mouse_cursor = MONSTRO_MOUSE_CURSOR_ARROW;
-    
-    id_stack_top = 0;
-    id_stack[0] = 0;
+    if (window_stack_top != 0) {
+        throw std::runtime_error("Unbalanced window stack: missing monstro_end_window() calls");
+    }
+    if (id_stack_top != 0) {
+        throw std::runtime_error("Unbalanced ID stack: missing monstro_pop_id() calls");
+    }
+
+    // Begin root window (matching C# beginFrame)
+    next_window_size_x = display_width;
+    next_window_size_y = display_height;
+    next_window_size_cond = MONSTRO_COND_ALWAYS;
+    next_window_pos_x = 0.0f;
+    next_window_pos_y = 0.0f;
+    next_window_pos_cond = MONSTRO_COND_ALWAYS;
+    MonstroWindowFlags root_flags = (MonstroWindowFlags)(MONSTRO_WINDOW_ROOT | MONSTRO_WINDOW_INPUTS);
+    monstro_begin_window(this, "root", nullptr, root_flags);
+    root_window = findWindow("root");
 }
 
 void MonstroContext::endFrame() {
+    // End root window (matching C# endFrame)
+    monstro_end_window(this);
+
+    // Focus on click (matching C# endFrame)
+    if (hovered_window != nullptr &&
+        active_id == 0 &&
+        (mouse.buttons[MONSTRO_MOUSE_BUTTON_LEFT].pressed ||
+         mouse.buttons[MONSTRO_MOUSE_BUTTON_RIGHT].pressed ||
+         mouse.buttons[MONSTRO_MOUSE_BUTTON_MIDDLE].pressed)) {
+        focusWindow(hovered_window);
+    }
+
+    // Window move initiation on middle-click over title bar (matching C# endFrame)
+    if (hovered_window != nullptr &&
+        active_id == 0 &&
+        hovered_id == 0 &&
+        mouse.buttons[MONSTRO_MOUSE_BUTTON_MIDDLE].pressed) {
+        MonstroRect title_rect = hovered_window->getTitleBarRect(&style);
+        if (mouse.pos_x >= title_rect.x && mouse.pos_x < title_rect.x + title_rect.w &&
+            mouse.pos_y >= title_rect.y && mouse.pos_y < title_rect.y + title_rect.h) {
+            setActiveId(hovered_window->move_id);
+        }
+    }
+
     mouse.wheel_x = 0.0f;
     mouse.wheel_y = 0.0f;
     keyboard.input_text_len = 0;
@@ -113,6 +149,11 @@ void MonstroContext::processMouseInput(float dt) {
             btn->down_time = -1.0f;
         }
     }
+
+    mouse.delta_x = mouse.pos_x - mouse.prev_pos_x;
+    mouse.delta_y = mouse.pos_y - mouse.prev_pos_y;
+    mouse.prev_pos_x = mouse.pos_x;
+    mouse.prev_pos_y = mouse.pos_y;
 }
 
 void MonstroContext::processKeyboardInput(float dt) {
@@ -204,8 +245,14 @@ MonstroFont* monstro_context_get_default_font(MonstroContext* ctx) {
     return ctx ? ctx->getDefaultFont() : nullptr;
 }
 
-void monstro_begin_frame(MonstroContext* ctx, float display_width, float display_height, float delta_time) {
-    if (ctx) ctx->beginFrame(display_width, display_height, delta_time);
+void monstro_set_display_size(MonstroContext* ctx, float width, float height) {
+    if (!ctx) return;
+    ctx->display_width = width;
+    ctx->display_height = height;
+}
+
+void monstro_begin_frame(MonstroContext* ctx, float delta_time) {
+    if (ctx) ctx->beginFrame(delta_time);
 }
 
 void monstro_end_frame(MonstroContext* ctx) {

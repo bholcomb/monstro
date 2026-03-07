@@ -72,6 +72,8 @@ void monstro_style_set_default(MonstroStyle* style) {
     
     // Window
     style->window.background = rgba(30, 30, 30, 240);
+    style->window.fixed_background.type = MONSTRO_STYLE_ITEM_COLOR;
+    style->window.fixed_background.data.color = rgba(30, 30, 30, 240);
     style->window.border_color = rgba(60, 60, 60, 255);
     
     style->window.header.normal.type = MONSTRO_STYLE_ITEM_COLOR;
@@ -96,6 +98,34 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->window.spacing[1] = 6.0f;
     style->window.padding[0] = 8.0f;
     style->window.padding[1] = 8.0f;
+    style->window.group_padding[0] = 8.0f;
+    style->window.group_padding[1] = 12.0f;
+    style->window.menu_padding[0] = 4.0f;
+    style->window.menu_padding[1] = 4.0f;
+    style->window.menu_border_color = rgba(255, 0, 0, 255);  // Red for debugging
+    
+    // Menu
+    style->menu.normal.type = MONSTRO_STYLE_ITEM_COLOR;
+    style->menu.normal.data.color = rgba(50, 50, 50, 255);
+    style->menu.hover.type = MONSTRO_STYLE_ITEM_COLOR;
+    style->menu.hover.data.color = rgba(70, 70, 70, 255);
+    style->menu.text_normal = rgba(200, 200, 200, 255);
+    style->menu.text_hover = rgba(220, 220, 220, 255);
+    style->menu.padding[0] = 8.0f;
+    style->menu.padding[1] = 4.0f;
+    style->menu.rounding = 0.0f;
+    
+    // Selectable
+    style->selectable.normal.type = MONSTRO_STYLE_ITEM_COLOR;
+    style->selectable.normal.data.color = rgba(0, 0, 0, 0);
+    style->selectable.hover.type = MONSTRO_STYLE_ITEM_COLOR;
+    style->selectable.hover.data.color = rgba(70, 70, 70, 255);
+    style->selectable.text_normal = rgba(200, 200, 200, 255);
+    style->selectable.text_hover = rgba(220, 220, 220, 255);
+    style->selectable.text_hover_active = rgba(100, 150, 200, 255);
+    style->selectable.padding[0] = 4.0f;
+    style->selectable.padding[1] = 2.0f;
+    style->selectable.rounding = 2.0f;
     
     // Tree
     style->tree.indent = 16.0f;

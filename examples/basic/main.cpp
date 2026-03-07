@@ -20,7 +20,6 @@
 #endif
 
 #include <monstro.h>
-#include <monstro/font.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,6 +131,9 @@ static void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
         if (app->colorTexture != VE_INVALID_TEXTURE_INDEX) {
             veResizeRenderTarget(app->device, &app->renderTarget, (uint32_t)width, (uint32_t)height);
             app->colorTexture = app->renderTarget.attachments[0].texture;
+        }
+        if (app->ui) {
+            monstro_set_display_size(app->ui, (float)width, (float)height);
         }
     }
 }
@@ -530,15 +532,43 @@ static void renderUI(App* app, VECommandBuffer* cmd, MonstroCanvas* canvas, uint
 }
 
 // Update UI state
-static void updateUI(App* app, float deltaTime, int width, int height) {
+static void updateUI(App* app, float deltaTime) {
     MonstroContext* ctx = app->ui;
     
-    monstro_begin_frame(ctx, (float)width, (float)height, deltaTime);
+    monstro_begin_frame(ctx, deltaTime);
     
     monstro_set_next_window_pos(ctx, 50.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
-    monstro_set_next_window_size(ctx, 350.0f, 350.0f, MONSTRO_COND_FIRST_USE_EVER);
+    monstro_set_next_window_size(ctx, 350.0f, 400.0f, MONSTRO_COND_FIRST_USE_EVER);
     
-    if (monstro_begin_window(ctx, "Monstro Demo", nullptr, MONSTRO_WINDOW_DEFAULT)) {
+    MonstroWindowFlags windowFlags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
+    if (monstro_begin_window(ctx, "Monstro Demo", nullptr, windowFlags)) {
+        
+        // Menu bar
+        if (monstro_begin_menu_bar(ctx)) {
+            if (monstro_begin_menu(ctx, "File", true)) {
+                if (monstro_menu_item(ctx, "Save", nullptr, true)) {
+                    printf("Menu: Save clicked\n");
+                }
+                if (monstro_menu_item(ctx, "Exit", nullptr, true)) {
+                    printf("Menu: Exit clicked\n");
+                }
+                monstro_end_menu(ctx);
+            }
+            if (monstro_begin_menu(ctx, "Edit", true)) {
+                if (monstro_menu_item(ctx, "Cut", nullptr, true)) {
+                    printf("Menu: Cut clicked\n");
+                }
+                if (monstro_menu_item(ctx, "Copy", nullptr, true)) {
+                    printf("Menu: Copy clicked\n");
+                }
+                if (monstro_menu_item(ctx, "Paste", nullptr, true)) {
+                    printf("Menu: Paste clicked\n");
+                }
+                monstro_end_menu(ctx);
+            }
+            monstro_end_menu_bar(ctx);
+        }
+        
         monstro_label(ctx, "Hello, Monstro!");
         
         monstro_separator(ctx);
@@ -602,7 +632,7 @@ static void renderFrame(App* app, float deltaTime) {
     if (width == 0 || height == 0) return;
     
     // Update UI
-    updateUI(app, deltaTime, width, height);
+    updateUI(app, deltaTime);
     
     // Upload UI geometry
     MonstroCanvas* canvas = monstro_context_get_canvas(app->ui);
@@ -725,6 +755,12 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Failed to create Monstro context\n");
         cleanup(&app);
         return 1;
+    }
+    
+    {
+        int fw, fh;
+        glfwGetFramebufferSize(app.window, &fw, &fh);
+        monstro_set_display_size(app.ui, (float)fw, (float)fh);
     }
     
     // Load font
