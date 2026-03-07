@@ -80,6 +80,7 @@ struct App {
     float sliderValue2;
     int sliderInt;
     int radioValue;
+    int comboSelected;
 };
 
 static App* g_app = nullptr;
@@ -608,6 +609,15 @@ static void updateUI(App* app, float deltaTime) {
             printf("Radio button Option C clicked with value: %d\n", app->radioValue);
         }
         
+        monstro_separator_text(ctx, "Combo Box");
+
+        {
+            const char* items[] = {"Apple", "Banana", "Cherry", "Date", "Elderberry"};
+            if (monstro_combo(ctx, "Fruit", &app->comboSelected, items, 5, nullptr)) {
+                printf("Combo selected: %s (%d)\n", items[app->comboSelected], app->comboSelected);
+            }
+        }
+
         monstro_separator_text(ctx, "Layout Test");
         
         // Test horizontal layout - buttons side by side

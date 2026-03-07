@@ -150,6 +150,8 @@ void Window::drawBackground() {
     if (flags & MONSTRO_WINDOW_ROOT) {
         canvas.pushClipRectFullscreen();
         style->window.rounding = 0.0f;
+    } else if ((flags & MONSTRO_WINDOW_AUTO_RESIZE) && size.y <= 0.0f) {
+        canvas.pushClipRectFullscreen();
     } else {
         MonstroRect clip_rect = getRect();
         clip_rect.w += 1;
@@ -336,7 +338,9 @@ void Window::setSize(float w, float h, MonstroCondition cond) {
         ~(MONSTRO_COND_ONCE | MONSTRO_COND_FIRST_USE_EVER | MONSTRO_COND_APPEARING));
 
     size.x = w;
-    size.y = h;
+    if (h != 0.0f || !(flags & MONSTRO_WINDOW_AUTO_RESIZE)) {
+        size.y = h;
+    }
 }
 
 /* ------------------------------------------------------------------------- */
