@@ -4,7 +4,7 @@
 
 static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
                            bool* out_hovered, bool* out_held, MonstroSelectableFlags flags) {
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     
     *out_hovered = false;
     *out_held = false;
@@ -63,14 +63,14 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
                         MonstroSelectableFlags flags, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
-    uint64_t id = ctx->getId(monstro_hash_string(label));
+    uint64_t id = win->getChildId(label);
     MonstroVec2 label_size = monstro_font_measure_text(font, label, 0.0f);
     if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
     if (label_size.y == 0.0f) label_size.y = 16.0f;
@@ -92,12 +92,12 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
     
     if (hovered) {
         MonstroColor col = style->selectable.text_hover_active;
-        monstro_canvas_add_rect_filled(canvas, outer, monstro_color_to_u32(col),
+        canvas->addRectFilled(outer, monstro_color_to_u32(col),
                                        style->selectable.rounding, MONSTRO_CORNER_ALL);
     }
     
     MonstroVec2 text_pos = {inner.x, inner.y};
-    monstro_canvas_add_text(canvas, font, text_pos, 
+    canvas->addText(font, text_pos, 
                             monstro_color_to_u32(style->selectable.text_normal), label);
     
     if (pressed && !(flags & MONSTRO_SELECTABLE_DONT_CLOSE_POPUP)) {
@@ -120,14 +120,14 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
                               float width, float height, MonstroSelectableFlags flags, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
-    uint64_t id = ctx->getId(monstro_hash_string(label));
+    uint64_t id = win->getChildId(label);
     MonstroVec2 label_size = monstro_font_measure_text(font, label, 0.0f);
     if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
     if (label_size.y == 0.0f) label_size.y = 16.0f;
@@ -149,12 +149,12 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
     
     if (hovered) {
         MonstroColor col = style->selectable.text_hover_active;
-        monstro_canvas_add_rect_filled(canvas, outer, monstro_color_to_u32(col),
+        canvas->addRectFilled(outer, monstro_color_to_u32(col),
                                        style->selectable.rounding, MONSTRO_CORNER_ALL);
     }
     
     MonstroVec2 text_pos = {inner.x, inner.y};
-    monstro_canvas_add_text(canvas, font, text_pos, 
+    canvas->addText(font, text_pos, 
                             monstro_color_to_u32(style->selectable.text_normal), label);
     
     if (pressed && !(flags & MONSTRO_SELECTABLE_DONT_CLOSE_POPUP)) {

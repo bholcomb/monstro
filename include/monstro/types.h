@@ -6,15 +6,18 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
+namespace monstro { struct Context; struct DrawBuffer; }
+typedef monstro::Context MonstroContext;
+typedef monstro::DrawBuffer MonstroDrawBuffer;
 extern "C" {
+#else
+typedef struct MonstroContext MonstroContext;
+typedef struct MonstroDrawBuffer MonstroDrawBuffer;
 #endif
 
 /* ------------------------------------------------------------------------- */
 /* Forward Declarations                                                      */
 /* ------------------------------------------------------------------------- */
-
-typedef struct MonstroContext MonstroContext;
-typedef struct MonstroCanvas MonstroCanvas;
 typedef struct MonstroFont MonstroFont;
 typedef struct MonstroFontManager MonstroFontManager;
 
@@ -25,6 +28,10 @@ typedef struct MonstroFontManager MonstroFontManager;
 typedef struct MonstroVec2 {
     float x, y;
 } MonstroVec2;
+
+#define MONSTRO_VEC2_ZERO    ((MonstroVec2){ 0.0f, 0.0f })
+/* -1.0f/0.0f produces -Infinity without requiring <math.h> */
+#define MONSTRO_VEC2_INVALID ((MonstroVec2){ -1.0f/0.0f, -1.0f/0.0f })
 
 typedef struct MonstroRect {
     float x, y, w, h;

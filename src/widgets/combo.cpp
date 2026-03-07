@@ -5,14 +5,14 @@
 bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* preview_value, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
-    uint64_t id = monstro_get_id(ctx, monstro_hash_string(label));
+    uint64_t id = win->getChildId(label);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     MonstroVec2 label_size = {0.0f, 0.0f};
@@ -74,21 +74,21 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     }
     
     if (bg_style->type == MONSTRO_STYLE_ITEM_COLOR) {
-        monstro_canvas_add_rect_filled(canvas, combo_rect, monstro_color_to_u32(bg_style->data.color),
+        canvas->addRectFilled(combo_rect, monstro_color_to_u32(bg_style->data.color),
                                        style->combo.rounding, MONSTRO_CORNER_ALL);
     }
     
-    monstro_canvas_add_rect(canvas, combo_rect, monstro_color_to_u32(style->combo.border_color),
+    canvas->addRect(combo_rect, monstro_color_to_u32(style->combo.border_color),
                             style->combo.rounding, MONSTRO_CORNER_ALL, style->combo.border);
     
     if (label_size.x > 0) {
         MonstroVec2 label_pos = {pos.x, pos.y + (total_height - label_size.y) * 0.5f};
-        monstro_canvas_add_text(canvas, font, label_pos, monstro_color_to_u32(style->text.color), label);
+        canvas->addText(font, label_pos, monstro_color_to_u32(style->text.color), label);
     }
     
     if (preview_value) {
         MonstroVec2 preview_pos = {combo_x + pad_x, pos.y + (combo_height - preview_size.y) * 0.5f};
-        monstro_canvas_add_text(canvas, font, preview_pos, monstro_color_to_u32(label_color), preview_value);
+        canvas->addText(font, preview_pos, monstro_color_to_u32(label_color), preview_value);
     }
     
     float arrow_x = combo_x + combo_width - button_width - pad_x * 0.5f;
@@ -98,7 +98,7 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     MonstroVec2 p1 = {arrow_x, arrow_y - arrow_size * 0.5f};
     MonstroVec2 p2 = {arrow_x + arrow_size, arrow_y - arrow_size * 0.5f};
     MonstroVec2 p3 = {arrow_x + arrow_size * 0.5f, arrow_y + arrow_size * 0.5f};
-    monstro_canvas_add_triangle_filled(canvas, p1, p2, p3, monstro_color_to_u32(label_color));
+    canvas->addTriangleFilled(p1, p2, p3, monstro_color_to_u32(label_color));
     
     monstro_add_item(ctx, total_width, total_height);
     

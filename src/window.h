@@ -4,60 +4,86 @@
 #include "monstro.h"
 #include "constants.h"
 #include "layout.h"
+#include "canvas.h"
 
-struct MonstroWindowInternal {
+namespace monstro {
+
+struct Context;
+
+struct Window {
+    Context* ctx = nullptr;
+    Canvas canvas;
+
     char name[256] = {};
     uint64_t id = 0;
-    uint64_t move_id = 0;
     MonstroWindowFlags flags = MONSTRO_WINDOW_NONE;
-
-    float pos_x = 0.0f, pos_y = 0.0f;
-    float size_x = 0.0f, size_y = 0.0f;
-    float scroll_x = 0.0f, scroll_y = 0.0f;
-
-    bool active = false;
-    bool collapsed = false;
-    bool skip_items = false;
     int last_frame_active = 0;
+    bool active = false;
+    bool skip_items = false;
+    uint64_t move_id = 0;
 
     MonstroLayoutInternal layout_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
-    int layout_stack_top = 0;
+    int layout_stack_top = -1;
 
-    MonstroWindowInternal* parent = nullptr;
-    MonstroWindowInternal* child = nullptr;
-    MonstroWindowInternal* sibling = nullptr;
+    MonstroVec2 pos = {0.0f, 0.0f};
+    MonstroVec2 size = {0.0f, 0.0f};
+    float scroll_x = 0.0f, scroll_y = 0.0f;
+    bool collapsed = false;
+
+    Window* parent = nullptr;
+    Window* child = nullptr;
+    Window* sibling = nullptr;
 
     MonstroCondition set_pos_allow_flags = MONSTRO_COND_NONE;
     MonstroCondition set_size_allow_flags = MONSTRO_COND_NONE;
 
-    void init(const char* windowName, MonstroWindowFlags windowFlags);
+    void init(Context* context, const char* windowName, MonstroWindowFlags windowFlags);
 
-    bool containsPoint(float x, float y) const;
+    
+    uint64_t getChildId(const char* childName);
+    
+    void move(float dx, float dy) { pos.x += dx; pos.y += dy; }
+    
+    MonstroVec2 getCursorPos() const;
+    void setCursorPos(float x, float y);
+    MonstroVec2 getCursorScreenPos() const;
+    void setCursorScreenPos(float x, float y);
+    
     MonstroRect getRect() const;
-    MonstroVec2 getPos() const { return {pos_x, pos_y}; }
-    MonstroVec2 getSize() const { return {size_x, size_y}; }
-
-    float getTitleBarHeight(const struct MonstroStyle* style) const;
-    float getMenuBarHeight(const struct MonstroStyle* style) const;
-    MonstroRect getTitleBarRect(const struct MonstroStyle* style) const;
-    MonstroRect getMenuBarRect(const struct MonstroStyle* style) const;
-
-    void initLayout(float contentY, float paddingX, float paddingY);
-    void beginLayout(MonstroLayoutDirection direction);
-    void beginLayoutAt(float x, float y, MonstroLayoutDirection direction);
-    void endLayout();
-    void addItem(float width, float height);
-    MonstroLayoutInternal* getCurrentLayout();
-
-    void setPos(float x, float y) { pos_x = x; pos_y = y; }
-    void setSize(float w, float h) { size_x = w; size_y = h; }
-    void move(float dx, float dy) { pos_x += dx; pos_y += dy; }
-    void setPosition(float x, float y, MonstroCondition cond);
-    void setSizeWithCond(float w, float h, MonstroCondition cond);
-
-    void addChild(MonstroWindowInternal* win);
+    float getTitleBarHeight() const;
+    MonstroRect getTitleBarRect() const;
+    float getMenuBarHeight() const;
+    MonstroRect getMenuBarRect() const;
+    
+    bool begin(bool* p_closed);
+    bool end();
+    bool mouseOverTitle() const;
+    
+    void addChild(Window* win);
     void remove();
     void makeLastSibling();
+
+    void collectDrawCommands(Context* ctx) const;
+
+    void setPosition(float x, float y, MonstroCondition cond);
+    void setSize(float w, float h, MonstroCondition cond);
+
+    MonstroLayoutInternal* getCurrentLayout();
+    void setLayoutDirection(MonstroLayoutDirection direction);
+    void addItem(float width, float height);
+    void nextLine();
+    void beginLayout(MonstroLayoutDirection direction);
+    void beginLayout(float x, float y, MonstroLayoutDirection direction);
+    void endLayout();
+
+
+private:
+    void drawBackground();
+    void drawForeground();
 };
+
+} // namespace monstro
+
+typedef monstro::Window MonstroWindowInternal;
 
 #endif

@@ -5,14 +5,14 @@
 void monstro_separator(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
     MonstroLayoutInternal* layout = &win->layout_stack[win->layout_stack_top];
     float avail_w = layout->size_x - (layout->cursor_x - layout->pos_x);
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     float pad_y = style->separator.padding[1];
@@ -21,7 +21,7 @@ void monstro_separator(MonstroContext* ctx) {
     
     MonstroVec2 p1 = {pos.x, pos.y + pad_y + thickness * 0.5f};
     MonstroVec2 p2 = {pos.x + avail_w, pos.y + pad_y + thickness * 0.5f};
-    monstro_canvas_add_line(canvas, p1, p2, color, thickness);
+    canvas->addLine(p1, p2, color, thickness);
     
     monstro_add_item(ctx, avail_w, pad_y * 2.0f + thickness);
 }
@@ -29,14 +29,14 @@ void monstro_separator(MonstroContext* ctx) {
 void monstro_separator_text(MonstroContext* ctx, const char* text) {
     if (!ctx || !ctx->current_window || !text) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
     MonstroLayoutInternal* layout = &win->layout_stack[win->layout_stack_top];
     float avail_w = layout->size_x - (layout->cursor_x - layout->pos_x);
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
@@ -56,14 +56,14 @@ void monstro_separator_text(MonstroContext* ctx, const char* text) {
     
     MonstroVec2 p1 = {pos.x, line_y};
     MonstroVec2 p2 = {text_x - text_pad_x, line_y};
-    monstro_canvas_add_line(canvas, p1, p2, sep_color, thickness);
+    canvas->addLine(p1, p2, sep_color, thickness);
     
     MonstroVec2 p3 = {text_x + text_size.x + text_pad_x, line_y};
     MonstroVec2 p4 = {pos.x + avail_w, line_y};
-    monstro_canvas_add_line(canvas, p3, p4, sep_color, thickness);
+    canvas->addLine(p3, p4, sep_color, thickness);
     
     MonstroVec2 text_pos = {text_x, pos.y + (total_h - text_size.y) * 0.5f};
-    monstro_canvas_add_text(canvas, font, text_pos, monstro_color_to_u32(style->text.color), text);
+    canvas->addText(font, text_pos, monstro_color_to_u32(style->text.color), text);
     
     monstro_add_item(ctx, avail_w, total_h);
 }

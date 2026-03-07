@@ -11,11 +11,11 @@ void monstro_label(MonstroContext* ctx, const char* text) {
 void monstro_label_ex(MonstroContext* ctx, const char* text, uint32_t color) {
     if (!ctx || !ctx->current_window || !text) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
     MonstroVec2 text_size = monstro_font_measure_text(font, text, 0.0f);
@@ -33,7 +33,7 @@ void monstro_label_ex(MonstroContext* ctx, const char* text, uint32_t color) {
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     MonstroVec2 text_pos = {pos.x + padding_x, pos.y + padding_y};
     
-    monstro_canvas_add_text(canvas, font, text_pos, color, text);
+    canvas->addText(font, text_pos, color, text);
     
     monstro_add_item(ctx, outer_w, outer_h);
 }

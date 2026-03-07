@@ -6,7 +6,7 @@
 bool monstro_begin_menu_bar(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     if (!(win->flags & MONSTRO_WINDOW_MENU_BAR)) {
@@ -16,14 +16,13 @@ bool monstro_begin_menu_bar(MonstroContext* ctx) {
     MonstroStyle* style = &ctx->style;
     
     // Get menu bar rect position relative to window (like C#: win.menuBarRect.position - win.position)
-    MonstroRect menu_bar_rect = win->getMenuBarRect(style);
-    float rel_x = menu_bar_rect.x - win->pos_x;
-    float rel_y = menu_bar_rect.y - win->pos_y;
+    MonstroRect menu_bar_rect = win->getMenuBarRect();
+    float rel_x = menu_bar_rect.x - win->pos.x;
+    float rel_y = menu_bar_rect.y - win->pos.y;
+
+    win->beginLayout(rel_x, rel_y, MONSTRO_LAYOUT_HORIZONTAL);
     
-    // Begin layout at the menu bar position (like C#: win.beginLayout(position, Direction.Horizontal))
-    win->beginLayoutAt(rel_x, rel_y, MONSTRO_LAYOUT_HORIZONTAL);
-    
-    ctx->pushId(monstro_hash_string("menuBar"));
+    ctx->id_stack.push("menuBar");
     
     return true;
 }
@@ -31,10 +30,10 @@ bool monstro_begin_menu_bar(MonstroContext* ctx) {
 void monstro_end_menu_bar(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
-    ctx->popId();
+    ctx->id_stack.pop();
     
     // End layout like C#: win.endLayout() - this adds the menu bar size to parent layout
     win->endLayout();
@@ -43,7 +42,7 @@ void monstro_end_menu_bar(MonstroContext* ctx) {
 bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
@@ -56,7 +55,7 @@ bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     if (text_size.y == 0.0f) text_size.y = 16.0f;
     
     float label_width = text_size.x + style->menu.padding[0];
-    float label_height = win->getMenuBarHeight(style);
+    float label_height = win->getMenuBarHeight();
     if (label_height == 0.0f) {
         label_height = text_size.y + style->menu.padding[1] * 2.0f;
     }
@@ -65,7 +64,7 @@ bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     bool opened = monstro_is_popup_open(ctx, label);
     
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
-    MonstroRect menu_bar_rect = win->getMenuBarRect(style);
+    MonstroRect menu_bar_rect = win->getMenuBarRect();
     float popup_x = pos.x;
     float popup_y = pos.y + menu_bar_rect.h;
     
@@ -108,7 +107,7 @@ void monstro_end_menu(MonstroContext* ctx) {
 bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, bool enabled) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;

@@ -8,16 +8,16 @@ void monstro_image_ex(MonstroContext* ctx, uint64_t texture_id, float width, flo
                       float uv0_x, float uv0_y, float uv1_x, float uv1_y, uint32_t tint_col) {
     if (!ctx || !ctx->current_window) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     MonstroRect rect = {pos.x, pos.y, width, height};
     MonstroVec2 uv_min = {uv0_x, uv0_y};
     MonstroVec2 uv_max = {uv1_x, uv1_y};
-    monstro_canvas_add_image(canvas, texture_id, rect, uv_min, uv_max, tint_col);
+    canvas->addImage(texture_id, rect, uv_min, uv_max, tint_col);
     
     monstro_add_item(ctx, width, height);
 }
@@ -29,16 +29,16 @@ void monstro_icon(MonstroContext* ctx, uint64_t texture_id, float size) {
 void monstro_icon_colored(MonstroContext* ctx, uint64_t texture_id, float size, uint32_t color) {
     if (!ctx || !ctx->current_window) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return;
     
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     MonstroRect rect = {pos.x, pos.y, size, size};
     MonstroVec2 uv_min = {0.0f, 0.0f};
     MonstroVec2 uv_max = {1.0f, 1.0f};
-    monstro_canvas_add_image(canvas, texture_id, rect, uv_min, uv_max, color);
+    canvas->addImage(texture_id, rect, uv_min, uv_max, color);
     
     monstro_add_item(ctx, size, size);
 }

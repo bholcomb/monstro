@@ -4,7 +4,7 @@
 
 static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
                             bool* out_hovered, bool* out_held, MonstroButtonFlags flags) {
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     
     if ((flags & MONSTRO_BUTTON_DISABLED) || win != ctx->hovered_window) {
         *out_hovered = false;
@@ -21,7 +21,7 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
         ctx->hovered_id = id;
         
         bool no_key_mods = (flags & MONSTRO_BUTTON_NO_KEY_MODIFIERS) == 0;
-        bool mods_ok = no_key_mods || !(ctx->keyboard.mods & (MONSTRO_MOD_CTRL | MONSTRO_MOD_SHIFT | MONSTRO_MOD_ALT));
+        bool mods_ok = no_key_mods || !(ctx->keyboard.getMods() & (MONSTRO_MOD_CTRL | MONSTRO_MOD_SHIFT | MONSTRO_MOD_ALT));
         
         if (mods_ok) {
             if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false)) {
@@ -60,7 +60,7 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
     return pressed;
 }
 
-static void draw_button_background(MonstroCanvas* canvas, MonstroRect r, MonstroStyle* style,
+static void draw_button_background(monstro::Canvas* canvas, MonstroRect r, MonstroStyle* style,
                                    bool hovered, bool held) {
     MonstroStyleItem* background = &style->button.normal;
     if (hovered) background = &style->button.hover;
@@ -68,21 +68,21 @@ static void draw_button_background(MonstroCanvas* canvas, MonstroRect r, Monstro
     
     switch (background->type) {
         case MONSTRO_STYLE_ITEM_COLOR:
-            monstro_canvas_add_rect_filled(canvas, r, monstro_color_to_u32(background->data.color),
+            canvas->addRectFilled(r, monstro_color_to_u32(background->data.color),
                                            style->button.rounding, MONSTRO_CORNER_ALL);
-            monstro_canvas_add_rect(canvas, r, monstro_color_to_u32(style->button.border_color),
+            canvas->addRect(r, monstro_color_to_u32(style->button.border_color),
                                     style->button.rounding, MONSTRO_CORNER_ALL, style->button.border);
             break;
         case MONSTRO_STYLE_ITEM_IMAGE: {
             MonstroVec2 uv_min = {0.0f, 0.0f};
             MonstroVec2 uv_max = {1.0f, 1.0f};
-            monstro_canvas_add_image(canvas, background->data.texture_id, r, uv_min, uv_max, 0xFFFFFFFF);
+            canvas->addImage(background->data.texture_id, r, uv_min, uv_max, 0xFFFFFFFF);
             break;
         }
     }
 }
 
-static void draw_button_text(MonstroCanvas* canvas, MonstroFont* font, MonstroRect r, MonstroStyle* style,
+static void draw_button_text(monstro::Canvas* canvas, MonstroFont* font, MonstroRect r, MonstroStyle* style,
                              const char* text, bool hovered, bool held) {
     if (!font) return;
     
@@ -90,26 +90,26 @@ static void draw_button_text(MonstroCanvas* canvas, MonstroFont* font, MonstroRe
     if (hovered) text_color = style->button.text_hover;
     if (held) text_color = style->button.text_active;
     
-    monstro_canvas_push_clip_rect(canvas, r);
-    monstro_canvas_add_text_ex(canvas, font, r, monstro_color_to_u32(text_color),
+    canvas->pushClipRect(r);
+    canvas->addTextEx(font, r, monstro_color_to_u32(text_color),
                                text, style->button.text_alignment);
-    monstro_canvas_pop_clip_rect(canvas);
+    canvas->popClipRect();
 }
 
 bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
     // Add spacing before button (like C#: win.addItem(style.button.padding))
     monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
-    uint64_t id = monstro_get_id(ctx, monstro_hash_string(label));
+    uint64_t id = win->getChildId(label);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     float text_w = monstro_font_measure_text(font, label, 0.0f).x;
@@ -137,17 +137,17 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
 bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, float height, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
     
     // Add spacing before button (like C#: win.addItem(style.button.padding))
     monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
-    uint64_t id = monstro_get_id(ctx, monstro_hash_string(label));
+    uint64_t id = win->getChildId(label);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     MonstroRect r = {pos.x, pos.y, width, height};
     
@@ -169,16 +169,16 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
                           float width, float height, const char* tooltip) {
     if (!ctx || !ctx->current_window || !str_id) return false;
     
-    MonstroWindowInternal* win = ctx->current_window;
+    monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
     
     MonstroStyle* style = &ctx->style;
-    MonstroCanvas* canvas = ctx->canvas;
+    monstro::Canvas* canvas = &ctx->current_window->canvas;
     
     // Add spacing before button (like C#: win.addItem(style.button.padding))
     monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
-    uint64_t id = monstro_get_id(ctx, monstro_hash_string(str_id));
+    uint64_t id = win->getChildId(str_id);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     MonstroRect r = {pos.x, pos.y, width, height};
     
@@ -196,7 +196,7 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
     
     MonstroVec2 uv_min = {0.0f, 0.0f};
     MonstroVec2 uv_max = {1.0f, 1.0f};
-    monstro_canvas_add_image(canvas, texture_id, ir, uv_min, uv_max, 0xFFFFFFFF);
+    canvas->addImage(texture_id, ir, uv_min, uv_max, 0xFFFFFFFF);
     
     monstro_add_item(ctx, width, height);
     

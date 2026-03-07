@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 
-struct MonstroWindowInternal;
+namespace monstro { struct Window; }
 
 struct MonstroPopupInternal {
     uint64_t popup_id;
-    MonstroWindowInternal* parent_window;
+    monstro::Window* parent_window;
     uint64_t parent_id;
     float open_pos_x, open_pos_y;
 };

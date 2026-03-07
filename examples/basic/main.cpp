@@ -381,14 +381,14 @@ static bool initUIRenderer(App* app) {
 }
 
 // Upload UI buffers to GPU
-static bool uploadUIBuffers(App* app, MonstroCanvas* canvas) {
+static bool uploadUIBuffers(App* app, MonstroDrawBuffer* drawBuffer) {
     const MonstroVertex* vertices = nullptr;
     size_t vertexByteSize = 0;
-    monstro_canvas_get_vertex_buffer(canvas, &vertices, &vertexByteSize);
+    monstro_draw_buffer_get_vertex_buffer(drawBuffer, &vertices, &vertexByteSize);
     
     const uint32_t* indices = nullptr;
     uint32_t indexCount = 0;
-    monstro_canvas_get_index_buffer(canvas, &indices, &indexCount);
+    monstro_draw_buffer_get_index_buffer(drawBuffer, &indices, &indexCount);
     size_t indexByteSize = indexCount * sizeof(uint32_t);
     
     if (vertexByteSize == 0 || indexByteSize == 0) {
@@ -467,10 +467,10 @@ struct UIPushConstants {
 };
 
 // Render UI draw commands
-static void renderUI(App* app, VECommandBuffer* cmd, MonstroCanvas* canvas, uint32_t width, uint32_t height) {
+static void renderUI(App* app, VECommandBuffer* cmd, MonstroContext* ctx, MonstroDrawBuffer* drawBuffer, uint32_t width, uint32_t height) {
     const MonstroDrawCommand* drawCmds = nullptr;
     uint32_t drawCount = 0;
-    monstro_canvas_get_draw_commands(canvas, &drawCmds, &drawCount);
+    monstro_context_get_draw_commands(ctx, &drawCmds, &drawCount);
     
     if (drawCount == 0 || app->vertexBuffer == VE_INVALID_ADDRESS) {
         return;
@@ -635,9 +635,9 @@ static void renderFrame(App* app, float deltaTime) {
     updateUI(app, deltaTime);
     
     // Upload UI geometry
-    MonstroCanvas* canvas = monstro_context_get_canvas(app->ui);
+    MonstroDrawBuffer* drawBuffer = monstro_context_get_draw_buffer(app->ui);
     
-    uploadUIBuffers(app, canvas);
+    uploadUIBuffers(app, drawBuffer);
     
     // Begin command buffer
     VECommandBuffer* cmd = nullptr;
@@ -649,7 +649,7 @@ static void renderFrame(App* app, float deltaTime) {
     veBeginRendering(cmd, &app->renderTarget);
     
     // Render UI
-    renderUI(app, cmd, canvas, (uint32_t)width, (uint32_t)height);
+    renderUI(app, cmd, app->ui, drawBuffer, (uint32_t)width, (uint32_t)height);
     
     // End rendering
     veEndRendering(cmd);

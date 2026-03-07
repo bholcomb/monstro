@@ -14,8 +14,8 @@ static bool is_popup_open_internal(MonstroContext* ctx, uint64_t popup_id) {
 void monstro_open_popup(MonstroContext* ctx, const char* label) {
     if (!ctx || !ctx->current_window || !label) return;
     
-    MonstroWindowInternal* win = ctx->current_window;
-    uint64_t popup_id = ctx->getId(monstro_hash_string(label));
+    monstro::Window* win = ctx->current_window;
+    uint64_t popup_id = win->getChildId(label);
     
     if (is_popup_open_internal(ctx, popup_id)) return;
     if (ctx->popup_stack_top >= MONSTRO_MAX_POPUP_STACK) return;
@@ -23,7 +23,7 @@ void monstro_open_popup(MonstroContext* ctx, const char* label) {
     MonstroPopupInternal* popup = &ctx->popup_stack[ctx->popup_stack_top++];
     popup->popup_id = popup_id;
     popup->parent_window = win;
-    popup->parent_id = ctx->getId(monstro_hash_string("popups"));
+    popup->parent_id = win->getChildId("popups");
     popup->open_pos_x = ctx->mouse.pos_x;
     popup->open_pos_y = ctx->mouse.pos_y;
 }
@@ -36,15 +36,16 @@ void monstro_close_current_popup(MonstroContext* ctx) {
 bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFlags extra_flags) {
     if (!ctx || !ctx->current_window || !label) return false;
     
-    MonstroWindowInternal* parent_win = ctx->current_window;
-    uint64_t popup_id = ctx->getId(monstro_hash_string(label));
+    monstro::Window* parent_win = ctx->current_window;
+    uint64_t popup_id = parent_win->getChildId(label);
     
     if (!is_popup_open_internal(ctx, popup_id)) {
         return false;
     }
     
     MonstroWindowFlags flags = (MonstroWindowFlags)(
-        extra_flags | MONSTRO_WINDOW_POPUP | MONSTRO_WINDOW_AUTO_RESIZE
+        extra_flags | MONSTRO_WINDOW_POPUP | MONSTRO_WINDOW_AUTO_RESIZE |
+        MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_INPUTS
     );
     
     char popup_name[320];
@@ -125,6 +126,6 @@ void monstro_end_popup(MonstroContext* ctx) {
 bool monstro_is_popup_open(MonstroContext* ctx, const char* str_id) {
     if (!ctx || !str_id) return false;
     
-    uint64_t popup_id = ctx->getId(monstro_hash_string(str_id));
+    uint64_t popup_id = ctx->current_window->getChildId(str_id);
     return is_popup_open_internal(ctx, popup_id);
 }

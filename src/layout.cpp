@@ -11,7 +11,7 @@ void monstro_begin_layout(MonstroContext* ctx, MonstroLayoutDirection direction)
 
 void monstro_begin_layout_at(MonstroContext* ctx, float x, float y, MonstroLayoutDirection direction) {
     if (!ctx || !ctx->current_window) return;
-    ctx->current_window->beginLayoutAt(x, y, direction);
+    ctx->current_window->beginLayout(x, y, direction);
 }
 
 void monstro_end_layout(MonstroContext* ctx) {
@@ -25,39 +25,23 @@ void monstro_add_item(MonstroContext* ctx, float width, float height) {
 }
 
 MonstroVec2 monstro_get_cursor_pos(MonstroContext* ctx) {
-    MonstroVec2 result = {0.0f, 0.0f};
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
-    if (layout) {
-        result.x = layout->pos_x + layout->cursor_x;
-        result.y = layout->pos_y + layout->cursor_y;
-    }
-    return result;
+    if (!ctx || !ctx->current_window) return {0.0f, 0.0f};
+    return ctx->current_window->getCursorPos();
 }
 
 void monstro_set_cursor_pos(MonstroContext* ctx, float x, float y) {
-    MonstroLayoutInternal* layout = ctx ? ctx->getCurrentLayout() : nullptr;
-    if (!layout) return;
-    layout->cursor_x = x - layout->pos_x;
-    layout->cursor_y = y - layout->pos_y;
+    if (!ctx || !ctx->current_window) return;
+    ctx->current_window->setCursorPos(x, y);
 }
 
 MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext* ctx) {
-    MonstroVec2 result = {0.0f, 0.0f};
-    if (!ctx || !ctx->current_window) return result;
-    MonstroLayoutInternal* layout = ctx->getCurrentLayout();
-    if (layout) {
-        result.x = ctx->current_window->pos_x + layout->pos_x + layout->cursor_x;
-        result.y = ctx->current_window->pos_y + layout->pos_y + layout->cursor_y;
-    }
-    return result;
+    if (!ctx || !ctx->current_window) return {0.0f, 0.0f};
+    return ctx->current_window->getCursorScreenPos();
 }
 
 void monstro_set_cursor_screen_pos(MonstroContext* ctx, float x, float y) {
     if (!ctx || !ctx->current_window) return;
-    MonstroLayoutInternal* layout = ctx->getCurrentLayout();
-    if (!layout) return;
-    layout->cursor_x = x - ctx->current_window->pos_x - layout->pos_x;
-    layout->cursor_y = y - ctx->current_window->pos_y - layout->pos_y;
+    ctx->current_window->setCursorScreenPos(x, y);
 }
 
 void monstro_indent(MonstroContext* ctx, float indent_width) {
@@ -113,7 +97,7 @@ MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
     MonstroLayoutInternal* layout = ctx->getCurrentLayout();
     if (!layout) return {0, 0, 0, 0};
     
-    float x = ctx->current_window->pos_x + layout->pos_x + layout->cursor_x;
-    float y = ctx->current_window->pos_y + layout->pos_y + layout->cursor_y;
+    float x = ctx->current_window->pos.x + layout->pos_x + layout->cursor_x;
+    float y = ctx->current_window->pos.y + layout->pos_y + layout->cursor_y;
     return {x, y, layout->size_x, 0};
 }
