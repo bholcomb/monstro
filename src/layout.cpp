@@ -175,12 +175,10 @@ float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection
     }
 }
 
-MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
-    if (!ctx || !ctx->current_window) return {0, 0, 0, 0};
-    monstro::Layout* layout = ctx->getCurrentLayout();
-    if (!layout) return {0, 0, 0, 0};
-    
-    float x = ctx->current_window->pos.x + layout->myPosX + layout->myCursorX + layout->myScrollOffsetX;
-    float y = ctx->current_window->pos.y + layout->myPosY + layout->myCursorY + layout->myScrollOffsetY;
-    return {x, y, layout->mySizeX, 0};
+void monstro_draw_disabled_overlay(MonstroContext* ctx, MonstroRect rect) {
+    if (!ctx || !ctx->disabled || !ctx->current_window) return;
+    MonstroColor bg = ctx->style.window.background;
+    bg.a = 0.5f;
+    ctx->current_window->canvas.addRectFilled(rect, monstro_color_to_u32(bg), 0.0f, MONSTRO_CORNER_NONE);
 }
+

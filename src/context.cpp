@@ -55,6 +55,14 @@ void Context::beginFrame(float dt) {
     want_capture_keyboard = false;
     want_text_input = false;
 
+    last_item_id = 0;
+    last_item_rect = {};
+    last_item_hovered = false;
+    last_item_active = false;
+    last_item_clicked = false;
+    last_item_edited = false;
+    last_item_deactivated_after_edit = false;
+
     tooltip.beginFrame();
 
     if (window_stack_top != 0) {
@@ -62,6 +70,9 @@ void Context::beginFrame(float dt) {
     }
     if (!id_stack.isBalanced()) {
         throw std::runtime_error("Unbalanced ID stack: missing monstro_pop_id() calls");
+    }
+    if (disabled_stack_depth != 0) {
+        throw std::runtime_error("Unbalanced disabled stack: missing monstro_end_disabled() calls");
     }
 
     next_window_size_x = display_width;
@@ -359,3 +370,87 @@ uint64_t monstro_get_id(MonstroContext* ctx, const char* name) {
 }
 
 } // extern "C"
+
+/* ------------------------------------------------------------------------- */
+/* Item State Queries                                                        */
+/* ------------------------------------------------------------------------- */
+
+void monstro_set_last_item(MonstroContext* ctx, uint64_t id, MonstroRect rect,
+                           bool hovered, bool active, bool clicked, bool edited) {
+    if (!ctx) return;
+    ctx->last_item_id = id;
+    ctx->last_item_rect = rect;
+    ctx->last_item_hovered = hovered;
+    ctx->last_item_active = active;
+    ctx->last_item_clicked = clicked;
+    ctx->last_item_edited = edited;
+
+    bool was_active = (ctx->active_id_prev_frame == id && ctx->active_id != id);
+    ctx->last_item_deactivated_after_edit = was_active && edited;
+}
+
+bool monstro_is_item_hovered(MonstroContext* ctx) {
+    return ctx ? ctx->last_item_hovered : false;
+}
+
+bool monstro_is_item_active(MonstroContext* ctx) {
+    return ctx ? ctx->last_item_active : false;
+}
+
+bool monstro_is_item_clicked(MonstroContext* ctx, MonstroMouseButton button) {
+    if (!ctx) return false;
+    return ctx->last_item_hovered && monstro_is_mouse_clicked(ctx, button, false);
+}
+
+bool monstro_is_item_edited(MonstroContext* ctx) {
+    return ctx ? ctx->last_item_edited : false;
+}
+
+bool monstro_is_item_deactivated_after_edit(MonstroContext* ctx) {
+    return ctx ? ctx->last_item_deactivated_after_edit : false;
+}
+
+MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
+    if (!ctx) return {0, 0, 0, 0};
+    return ctx->last_item_rect;
+}
+
+MonstroVec2 monstro_get_item_rect_min(MonstroContext* ctx) {
+    if (!ctx) return {0, 0};
+    return {ctx->last_item_rect.x, ctx->last_item_rect.y};
+}
+
+MonstroVec2 monstro_get_item_rect_max(MonstroContext* ctx) {
+    if (!ctx) return {0, 0};
+    return {ctx->last_item_rect.x + ctx->last_item_rect.w,
+            ctx->last_item_rect.y + ctx->last_item_rect.h};
+}
+
+MonstroVec2 monstro_get_item_rect_size(MonstroContext* ctx) {
+    if (!ctx) return {0, 0};
+    return {ctx->last_item_rect.w, ctx->last_item_rect.h};
+}
+
+/* ------------------------------------------------------------------------- */
+/* Disabled State                                                            */
+/* ------------------------------------------------------------------------- */
+
+void monstro_begin_disabled(MonstroContext* ctx, bool disabled) {
+    if (!ctx) return;
+    ctx->disabled_stack_depth++;
+    if (disabled) {
+        ctx->disabled = true;
+    }
+}
+
+void monstro_end_disabled(MonstroContext* ctx) {
+    if (!ctx || ctx->disabled_stack_depth <= 0) return;
+    ctx->disabled_stack_depth--;
+    if (ctx->disabled_stack_depth == 0) {
+        ctx->disabled = false;
+    }
+}
+
+bool monstro_is_disabled(MonstroContext* ctx) {
+    return ctx ? ctx->disabled : false;
+}

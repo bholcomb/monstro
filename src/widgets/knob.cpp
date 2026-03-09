@@ -20,7 +20,7 @@ static bool knob_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
     *out_hovered = false;
     *out_held = false;
 
-    if (win != ctx->hovered_window) return false;
+    if (ctx->disabled || win != ctx->hovered_window) return false;
 
     float mx = ctx->mouse.pos_x;
     float my = ctx->mouse.pos_y;
@@ -184,6 +184,10 @@ bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
     }
 
     monstro_add_item(ctx, total_w, total_h);
+
+    MonstroRect widget_rect = {pos.x, pos.y, total_w, total_h};
+    monstro_draw_disabled_overlay(ctx, widget_rect);
+    monstro_set_last_item(ctx, id, widget_rect, hovered, held, held, *value != old_value);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

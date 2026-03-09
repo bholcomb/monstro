@@ -60,7 +60,7 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
     MonstroRect row_rect = {pos.x, pos.y, row_w, row_h};
 
     bool hovered = false;
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= row_rect.x && mx < row_rect.x + row_rect.w &&
@@ -109,7 +109,9 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
         canvas->addTextEx(font, label_rect, monstro_color_to_u32(text_col), display, MONSTRO_ALIGN_DEFAULT);
     }
 
+    monstro_draw_disabled_overlay(ctx, row_rect);
     monstro_add_item(ctx, row_w, row_h);
+    monstro_set_last_item(ctx, id, row_rect, hovered, false, clicked, false);
 
     if (hovered) {
         monstro_tooltip(ctx, nullptr);
@@ -181,7 +183,7 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
     MonstroRect row_rect = {pos.x, pos.y, avail_w, row_h};
 
     bool hovered = false;
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= row_rect.x && mx < row_rect.x + row_rect.w &&
@@ -227,7 +229,7 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
         MonstroRect close_rect = {close_x, close_y, close_size, close_size};
 
         bool close_hovered = false;
-        if (win == ctx->hovered_window) {
+        if (!ctx->disabled && win == ctx->hovered_window) {
             float mx = ctx->mouse.pos_x;
             float my = ctx->mouse.pos_y;
             close_hovered = mx >= close_rect.x && mx < close_rect.x + close_rect.w &&
@@ -250,7 +252,9 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
         canvas->addLine({cx + cs, cy}, {cx, cy + cs}, x_col, 1.0f);
     }
 
+    monstro_draw_disabled_overlay(ctx, row_rect);
     monstro_add_item(ctx, avail_w, row_h);
+    monstro_set_last_item(ctx, id, row_rect, hovered, false, clicked, false);
 
     return is_open;
 }

@@ -13,7 +13,7 @@ static bool slider_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
     *out_hovered = false;
     *out_held = false;
 
-    if (win != ctx->hovered_window) return false;
+    if (ctx->disabled || win != ctx->hovered_window) return false;
 
     float mx = ctx->mouse.pos_x;
     float my = ctx->mouse.pos_y;
@@ -134,6 +134,10 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
     }
 
     monstro_add_item(ctx, total_w, slider_h);
+
+    MonstroRect full_r = {pos.x, pos.y, total_w, slider_h};
+    monstro_draw_disabled_overlay(ctx, full_r);
+    monstro_set_last_item(ctx, id, full_r, hovered, held, dragging, *value != old_value);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

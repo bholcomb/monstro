@@ -91,7 +91,7 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
 
     // Hit testing
     bool hovered = false;
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w &&
@@ -130,6 +130,11 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
 
     // Keyboard input when active
     if (is_active) {
+        if (ctx->disabled) {
+            edit->deactivate();
+            is_active = false;
+            ctx->want_text_input = false;
+        } else {
         ctx->want_text_input = true;
         ctx->want_capture_keyboard = true;
         edit->myCursorBlinkTimer += ctx->delta_time;
@@ -279,6 +284,7 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
             memcpy(display_buf, buf, dlen);
             display_buf[dlen] = '\0';
         }
+        }
     }
 
     // Drawing
@@ -351,6 +357,10 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
 
     monstro_add_item(ctx, total_w, field_h);
 
+    MonstroRect widget_rect = {pos.x, pos.y, total_w, field_h};
+    monstro_draw_disabled_overlay(ctx, widget_rect);
+    monstro_set_last_item(ctx, id, widget_rect, hovered, is_active, false, value_changed);
+
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);
     }
@@ -393,7 +403,7 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
 
     // Hit testing
     bool hovered = false;
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w &&
@@ -416,6 +426,11 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
     }
 
     if (is_active) {
+        if (ctx->disabled) {
+            edit->deactivate();
+            is_active = false;
+            ctx->want_text_input = false;
+        } else {
         ctx->want_text_input = true;
         ctx->want_capture_keyboard = true;
         edit->myCursorBlinkTimer += ctx->delta_time;
@@ -506,6 +521,7 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
                 edit->myCursorBlinkTimer = 0.0f;
             }
         }
+        }
     }
 
     // Drawing
@@ -594,6 +610,10 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
     }
 
     monstro_add_item(ctx, total_w, field_h);
+
+    MonstroRect widget_rect = {pos.x, pos.y, total_w, field_h};
+    monstro_draw_disabled_overlay(ctx, widget_rect);
+    monstro_set_last_item(ctx, id, widget_rect, hovered, is_active, false, value_changed);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

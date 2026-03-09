@@ -6,7 +6,7 @@ static bool checkbox_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
                               bool* out_hovered, bool* out_held) {
     monstro::Window* win = ctx->current_window;
     
-    if (win != ctx->hovered_window) {
+    if (ctx->disabled || win != ctx->hovered_window) {
         *out_hovered = false;
         *out_held = false;
         return false;
@@ -108,6 +108,8 @@ bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const
     canvas->addText(font, text_pos, monstro_color_to_u32(style->text.color), display);
     
     monstro_add_item(ctx, total_w, total_h);
+    monstro_draw_disabled_overlay(ctx, r);
+    monstro_set_last_item(ctx, id, r, hovered, held, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

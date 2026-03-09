@@ -147,6 +147,17 @@ struct Context {
     uint64_t active_id_prev_frame = 0;
     bool active_id_is_alive = false;
 
+    uint64_t last_item_id = 0;
+    MonstroRect last_item_rect = {};
+    bool last_item_hovered = false;
+    bool last_item_active = false;
+    bool last_item_clicked = false;
+    bool last_item_edited = false;
+    bool last_item_deactivated_after_edit = false;
+
+    bool disabled = false;
+    int disabled_stack_depth = 0;
+
     MouseState mouse;
     KeyboardState keyboard;
     MonstroMouseCursor mouse_cursor = MONSTRO_MOUSE_CURSOR_ARROW;

@@ -64,6 +64,28 @@ typedef enum MonstroButtonFlags {
 } MonstroButtonFlags;
 
 /* ------------------------------------------------------------------------- */
+/* Item State Queries (call after the widget)                                */
+/* ------------------------------------------------------------------------- */
+
+bool monstro_is_item_hovered(MonstroContext* ctx);
+bool monstro_is_item_active(MonstroContext* ctx);
+bool monstro_is_item_clicked(MonstroContext* ctx, MonstroMouseButton button);
+bool monstro_is_item_edited(MonstroContext* ctx);
+bool monstro_is_item_deactivated_after_edit(MonstroContext* ctx);
+MonstroRect monstro_get_item_rect(MonstroContext* ctx);
+MonstroVec2 monstro_get_item_rect_min(MonstroContext* ctx);
+MonstroVec2 monstro_get_item_rect_max(MonstroContext* ctx);
+MonstroVec2 monstro_get_item_rect_size(MonstroContext* ctx);
+
+/* ------------------------------------------------------------------------- */
+/* Disabled State                                                            */
+/* ------------------------------------------------------------------------- */
+
+void monstro_begin_disabled(MonstroContext* ctx, bool disabled);
+void monstro_end_disabled(MonstroContext* ctx);
+bool monstro_is_disabled(MonstroContext* ctx);
+
+/* ------------------------------------------------------------------------- */
 /* Button                                                                    */
 /* ------------------------------------------------------------------------- */
 

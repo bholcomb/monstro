@@ -33,7 +33,7 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
     bool hovered = false;
     bool pressed = false;
 
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
@@ -84,6 +84,8 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
     }
 
     monstro_add_item(ctx, total_w, total_h);
+    monstro_draw_disabled_overlay(ctx, r);
+    monstro_set_last_item(ctx, id, r, hovered, false, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

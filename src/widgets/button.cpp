@@ -6,7 +6,7 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
                             bool* out_hovered, bool* out_held, MonstroButtonFlags flags) {
     monstro::Window* win = ctx->current_window;
     
-    if ((flags & MONSTRO_BUTTON_DISABLED) || win != ctx->hovered_window) {
+    if ((flags & MONSTRO_BUTTON_DISABLED) || ctx->disabled || win != ctx->hovered_window) {
         *out_hovered = false;
         *out_held = false;
         return false;
@@ -126,8 +126,10 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     
     draw_button_background(canvas, r, style, hovered, held);
     draw_button_text(canvas, font, r, style, display, hovered, held);
+    monstro_draw_disabled_overlay(ctx, r);
     
     monstro_add_item(ctx, w, h);
+    monstro_set_last_item(ctx, id, r, hovered, held, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);
@@ -160,8 +162,10 @@ bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, f
     
     draw_button_background(canvas, r, style, hovered, held);
     draw_button_text(canvas, font, r, style, display, hovered, held);
+    monstro_draw_disabled_overlay(ctx, r);
     
     monstro_add_item(ctx, width, height);
+    monstro_set_last_item(ctx, id, r, hovered, held, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);
@@ -202,8 +206,10 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
     MonstroVec2 uv_min = {0.0f, 0.0f};
     MonstroVec2 uv_max = {1.0f, 1.0f};
     canvas->addImage(texture_id, ir, uv_min, uv_max, 0xFFFFFFFF);
+    monstro_draw_disabled_overlay(ctx, r);
     
     monstro_add_item(ctx, width, height);
+    monstro_set_last_item(ctx, id, r, hovered, held, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

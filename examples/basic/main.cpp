@@ -883,6 +883,29 @@ static void updateUI(App* app, float deltaTime) {
             monstro_end_child(ctx);
         }
 
+        monstro_separator_text(ctx, "Disabled State");
+
+        monstro_begin_disabled(ctx, true);
+        monstro_button(ctx, "Disabled Button", nullptr);
+        monstro_checkbox(ctx, "Disabled Checkbox", &app->checkboxValue, nullptr);
+        monstro_slider_float(ctx, "Disabled Slider", &app->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
+        monstro_end_disabled(ctx);
+
+        monstro_separator_text(ctx, "Item State Queries");
+
+        if (monstro_button(ctx, "Hover/Click Me##statequery", nullptr)) {
+            printf("Item state: clicked!\n");
+        }
+        {
+            bool h = monstro_is_item_hovered(ctx);
+            bool a = monstro_is_item_active(ctx);
+            MonstroRect r = monstro_get_item_rect(ctx);
+            char state_buf[128];
+            snprintf(state_buf, sizeof(state_buf), "Hovered: %s  Active: %s  Rect: %.0f,%.0f %.0fx%.0f",
+                     h ? "yes" : "no", a ? "yes" : "no", r.x, r.y, r.w, r.h);
+            monstro_label(ctx, state_buf);
+        }
+
         monstro_separator_text(ctx, "Modal Dialog");
 
         if (monstro_button(ctx, "Open Modal", nullptr)) {

@@ -28,7 +28,10 @@ void monstro_label(MonstroContext* ctx, const char* text) {
     uint32_t color = monstro_color_to_u32(style->text.color);
     canvas->addTextEx(font, text_rect, color, text, style->text.alignment);
     
+    MonstroRect item_rect = {pos.x, pos.y, outer_w, outer_h};
+    monstro_draw_disabled_overlay(ctx, item_rect);
     monstro_add_item(ctx, outer_w, outer_h);
+    monstro_set_last_item(ctx, 0, item_rect, false, false, false, false);
 }
 
 void monstro_label_sized(MonstroContext* ctx, const char* text, float width, float height) {
@@ -47,7 +50,9 @@ void monstro_label_sized(MonstroContext* ctx, const char* text, float width, flo
     uint32_t color = monstro_color_to_u32(style->text.color);
     canvas->addTextEx(font, text_rect, color, text, style->text.alignment);
 
+    monstro_draw_disabled_overlay(ctx, text_rect);
     monstro_add_item(ctx, width, height);
+    monstro_set_last_item(ctx, 0, text_rect, false, false, false, false);
 }
 
 void monstro_label_wrapped(MonstroContext* ctx, const char* text, float wrap_width) {
@@ -85,7 +90,10 @@ void monstro_label_wrapped(MonstroContext* ctx, const char* text, float wrap_wid
     uint32_t color = monstro_color_to_u32(style->text.color);
     canvas->addTextWrapped(font, text_pos, color, text, wrap_width);
 
+    MonstroRect wrap_item_rect = {pos.x, pos.y, outer_w, outer_h};
+    monstro_draw_disabled_overlay(ctx, wrap_item_rect);
     monstro_add_item(ctx, outer_w, outer_h);
+    monstro_set_last_item(ctx, 0, wrap_item_rect, false, false, false, false);
 }
 
 void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor color) {
@@ -115,5 +123,8 @@ void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor c
     uint32_t col = monstro_color_to_u32(color);
     canvas->addTextEx(font, text_rect, col, text, style->text.alignment);
 
+    MonstroRect colored_item_rect = {pos.x, pos.y, outer_w, outer_h};
+    monstro_draw_disabled_overlay(ctx, colored_item_rect);
     monstro_add_item(ctx, outer_w, outer_h);
+    monstro_set_last_item(ctx, 0, colored_item_rect, false, false, false, false);
 }

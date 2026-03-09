@@ -12,7 +12,7 @@ static bool spinner_button(MonstroContext* ctx, monstro::Canvas* canvas,
     bool hovered = false;
     bool pressed = false;
 
-    if (ctx->current_window == ctx->hovered_window) {
+    if (!ctx->disabled && ctx->current_window == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= rect.x && mx < rect.x + rect.w &&
@@ -27,7 +27,7 @@ static bool spinner_button(MonstroContext* ctx, monstro::Canvas* canvas,
     }
 
     bool held = false;
-    if (ctx->active_id == id) {
+    if (!ctx->disabled && ctx->active_id == id) {
         if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT)) {
             held = true;
         } else {
@@ -130,7 +130,7 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
 
     // Field interaction
     bool hovered = false;
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w &&
@@ -139,6 +139,13 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
     }
 
     if (is_active) {
+        if (ctx->disabled) {
+            *value = (float)atof(edit->myBuf);
+            edit->deactivate();
+            is_active = false;
+            ctx->want_text_input = false;
+            value_changed = true;
+        } else {
         ctx->want_text_input = true;
         ctx->want_capture_keyboard = true;
         edit->myCursorBlinkTimer += ctx->delta_time;
@@ -224,6 +231,7 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
             ctx->want_text_input = false;
             value_changed = true;
         }
+        }
     } else {
         if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false)) {
             static char num_buf[64];
@@ -289,6 +297,11 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
     }
 
     monstro_add_item(ctx, total_w, field_h);
+
+    MonstroRect widget_rect = {pos.x, pos.y, total_w, field_h};
+    monstro_draw_disabled_overlay(ctx, widget_rect);
+    bool held = is_active || (ctx->active_id == dec_id || ctx->active_id == inc_id);
+    monstro_set_last_item(ctx, id, widget_rect, hovered, held, false, value_changed);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);

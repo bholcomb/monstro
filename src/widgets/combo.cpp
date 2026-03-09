@@ -50,7 +50,7 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     bool hovered = false;
     bool pressed = false;
     
-    if (win == ctx->hovered_window) {
+    if (!ctx->disabled && win == ctx->hovered_window) {
         float mx = ctx->mouse.pos_x;
         float my = ctx->mouse.pos_y;
         hovered = mx >= combo_rect.x && mx < combo_rect.x + combo_rect.w && 
@@ -105,7 +105,11 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     canvas->addTriangleFilled(p1, p2, p3, monstro_color_to_u32(label_color));
     
     monstro_add_item(ctx, total_width, total_height);
-    
+
+    MonstroRect widget_rect = {pos.x, pos.y, total_width, total_height};
+    monstro_draw_disabled_overlay(ctx, widget_rect);
+    monstro_set_last_item(ctx, id, widget_rect, hovered, opened, pressed, false);
+
     if (pressed && !opened) {
         monstro_open_popup(ctx, label);
         return false;

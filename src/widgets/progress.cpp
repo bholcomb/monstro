@@ -63,5 +63,7 @@ void monstro_progress_bar(MonstroContext* ctx, float fraction, float width, floa
         canvas->addTextEx(font, bar_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_CENTER);
     }
 
+    monstro_draw_disabled_overlay(ctx, bar_rect);
     monstro_add_item(ctx, bar_w, bar_h);
+    monstro_set_last_item(ctx, 0, bar_rect, false, false, false, false);
 }

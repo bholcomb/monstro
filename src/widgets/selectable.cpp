@@ -9,7 +9,7 @@ static bool button_behavior(MonstroContext* ctx, MonstroRect r, uint64_t id,
     *out_hovered = false;
     *out_held = false;
     
-    if (flags & MONSTRO_SELECTABLE_DISABLED) {
+    if ((flags & MONSTRO_SELECTABLE_DISABLED) || ctx->disabled) {
         return false;
     }
     
@@ -112,6 +112,8 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
     }
     
     monstro_add_item(ctx, outer.w, outer.h);
+    monstro_draw_disabled_overlay(ctx, outer);
+    monstro_set_last_item(ctx, id, outer, hovered, false, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);
@@ -173,6 +175,8 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
     }
     
     monstro_add_item(ctx, outer.w, outer.h);
+    monstro_draw_disabled_overlay(ctx, outer);
+    monstro_set_last_item(ctx, id, outer, hovered, false, pressed, false);
 
     if (hovered && tooltip) {
         monstro_tooltip(ctx, tooltip);
