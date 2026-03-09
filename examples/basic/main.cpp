@@ -552,9 +552,25 @@ static void updateUI(App* app, float deltaTime) {
         // Menu bar
         if (monstro_begin_menu_bar(ctx)) {
             if (monstro_begin_menu(ctx, "File", true)) {
+                if (monstro_menu_item(ctx, "Load", nullptr, true)) {
+                    printf("Menu: Load clicked\n");
+                }
                 if (monstro_menu_item(ctx, "Save", nullptr, true)) {
                     printf("Menu: Save clicked\n");
                 }
+                if(monstro_begin_menu(ctx, "Options", true))
+                {
+                    if(monstro_menu_item(ctx, "Option 1", nullptr, true))
+                    {
+                        printf("Menu: Option 1 clicked\n");
+                    }
+                    if(monstro_menu_item(ctx, "Option 2", nullptr, true))
+                    {
+                        printf("Menu: Option 2 clicked\n");
+                    }
+                    monstro_end_menu(ctx);
+                }
+                monstro_separator(ctx);
                 if (monstro_menu_item(ctx, "Exit", nullptr, true)) {
                     printf("Menu: Exit clicked\n");
                 }

@@ -54,24 +54,42 @@ bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     if (text_size.x == 0.0f) text_size.x = (float)strlen(label) * 8.0f;
     if (text_size.y == 0.0f) text_size.y = 16.0f;
     
+    float sel_pad_x = style->selectable.padding[0];
     float sel_pad_y = style->selectable.padding[1];
 
-    float menu_bar_h = win->getMenuBarHeight();
-    if (menu_bar_h == 0.0f) {
-        menu_bar_h = text_size.y + style->menu.padding[1] * 2.0f;
-    }
+    bool is_submenu = (win->flags & MONSTRO_WINDOW_POPUP) != 0;
 
     float label_width = text_size.x;
-    float label_height = menu_bar_h - sel_pad_y * 2.0f;
-    if (label_height < 0.0f) label_height = 0.0f;
-    
+    float label_height;
+
+    if (is_submenu) {
+        float menu_pad_y = style->menu.padding[1];
+        label_height = text_size.y + (menu_pad_y - sel_pad_y) * 2.0f;
+        if (label_height < text_size.y) label_height = text_size.y;
+    } else {
+        float menu_bar_h = win->getMenuBarHeight();
+        if (menu_bar_h == 0.0f) {
+            menu_bar_h = text_size.y + style->menu.padding[1] * 2.0f;
+        }
+        label_height = menu_bar_h - sel_pad_y * 2.0f;
+        if (label_height < 0.0f) label_height = 0.0f;
+    }
+
     bool pressed = false;
     bool opened = monstro_is_popup_open(ctx, label);
     
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
-    MonstroRect menu_bar_rect = win->getMenuBarRect();
-    float popup_x = pos.x;
-    float popup_y = pos.y + menu_bar_rect.h;
+    float popup_x, popup_y;
+
+    if (is_submenu) {
+        float outer_w = label_width + sel_pad_x * 2.0f;
+        popup_x = pos.x + outer_w;
+        popup_y = pos.y;
+    } else {
+        MonstroRect menu_bar_rect = win->getMenuBarRect();
+        popup_x = pos.x;
+        popup_y = pos.y + menu_bar_rect.h;
+    }
     
     bool should_open = false;
     MonstroSelectableFlags sel_flags = (MonstroSelectableFlags)(
