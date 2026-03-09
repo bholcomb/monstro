@@ -23,10 +23,10 @@ void monstro_label(MonstroContext* ctx, const char* text) {
     float outer_h = text_size.y + padding_y * 2.0f;
     
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
-    MonstroVec2 text_pos = {pos.x + padding_x, pos.y + padding_y};
+    MonstroRect text_rect = {pos.x + padding_x, pos.y + padding_y, text_size.x, text_size.y};
     
     uint32_t color = monstro_color_to_u32(style->text.color);
-    canvas->addText(font, text_pos, color, text);
+    canvas->addTextEx(font, text_rect, color, text, style->text.alignment);
     
     monstro_add_item(ctx, outer_w, outer_h);
 }

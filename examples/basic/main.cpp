@@ -818,6 +818,7 @@ static void updateUI(App* app, float deltaTime) {
             monstro_push_style_vec2(ctx, s->button.padding, 0.0f, 0.0f);
             monstro_push_style_vec2(ctx, s->edit.padding, 0.0f, 0.0f);
             monstro_push_style_vec2(ctx, s->property.padding, 0.0f, 0.0f);
+            monstro_push_style_int(ctx, (int*)&s->text.alignment, MONSTRO_ALIGN_CENTER);
 
             const char* row_ids[] = {"name0##", "name1##", "name2##"};
             const char* val_ids[] = {"val0##",  "val1##",  "val2##"};
@@ -838,7 +839,7 @@ static void updateUI(App* app, float deltaTime) {
                 }
             }
 
-            monstro_pop_style_var(ctx, 3);
+            monstro_pop_style_var(ctx, 4);
 
             monstro_end_table(ctx);
         }
