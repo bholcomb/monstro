@@ -79,6 +79,8 @@ struct App {
     float sliderValue;
     float sliderValue2;
     int sliderInt;
+    float knobValue;
+    float knobValue2;
     int radioValue;
     int comboSelected;
 };
@@ -609,6 +611,10 @@ static void updateUI(App* app, float deltaTime) {
         monstro_slider_float(ctx, "Volume", &app->sliderValue, 0.0f, 1.0f, "%.2f", "Adjust volume");
         monstro_slider_float(ctx, "Speed", &app->sliderValue2, 0.0f, 100.0f, "%.1f", "Adjust speed");
         monstro_slider_int(ctx, "Count", &app->sliderInt, 0, 10, "%d", "Set count");
+        
+        monstro_separator_text(ctx, "Knobs");
+        monstro_knob(ctx, "Gain", &app->knobValue, 0.0f, 1.0f, "%.2f", "Adjust gain");
+        monstro_knob(ctx, "Rate", &app->knobValue2, 0.0f, 100.0f, "%.1f", "Adjust rate");
         
         monstro_separator_text(ctx, "Radio Buttons");
         

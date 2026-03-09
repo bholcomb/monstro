@@ -74,22 +74,18 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
 /* ------------------------------------------------------------------------- */
 
 void monstro_label(MonstroContext* ctx, const char* text);
-void monstro_label_ex(MonstroContext* ctx, const char* text, uint32_t color);
 
 /* ------------------------------------------------------------------------- */
 /* Image                                                                     */
 /* ------------------------------------------------------------------------- */
 
 void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float height);
-void monstro_image_ex(MonstroContext* ctx, uint64_t texture_id, float width, float height,
-                      float uv0_x, float uv0_y, float uv1_x, float uv1_y, uint32_t tint_col);
 
 /* ------------------------------------------------------------------------- */
 /* Icon                                                                      */
 /* ------------------------------------------------------------------------- */
 
 void monstro_icon(MonstroContext* ctx, uint64_t texture_id, float size);
-void monstro_icon_colored(MonstroContext* ctx, uint64_t texture_id, float size, uint32_t color);
 
 /* ------------------------------------------------------------------------- */
 /* Checkbox                                                                  */
