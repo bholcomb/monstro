@@ -76,6 +76,13 @@ bool Window::begin(bool* p_closed) {
     if (layout_stack_top >= 0) {
         layout_stack[layout_stack_top].myScrollOffsetX = 0.0f;
         layout_stack[layout_stack_top].myScrollOffsetY = -scroll_y;
+        float avail_w = size.x - pad_style->window.padding[0] * 2.0f;
+        if (content_height > (size.y - getTitleBarHeight() - getMenuBarHeight())) {
+            avail_w -= pad_style->window.scrollbar_size[0];
+        }
+        layout_stack[layout_stack_top].myAvailableWidth = avail_w;
+        layout_stack[layout_stack_top].myAvailableHeight = size.y - pad_style->window.padding[1] * 2.0f
+            - getTitleBarHeight() - getMenuBarHeight();
     }
 
     if (last_frame_active != ctx->frame) {
@@ -507,18 +514,26 @@ void Window::beginLayout(MonstroLayoutDirection direction) {
     float parent_scroll_x = 0.0f;
     float parent_scroll_y = 0.0f;
 
+    float parent_avail_w = 0.0f;
+    float parent_avail_h = 0.0f;
+
     if (layout_stack_top >= 0) {
         MonstroVec2 cursor = getCursorPos();
         start_x = cursor.x;
         start_y = cursor.y;
         parent_scroll_x = layout_stack[layout_stack_top].myScrollOffsetX;
         parent_scroll_y = layout_stack[layout_stack_top].myScrollOffsetY;
+        Layout& parent = layout_stack[layout_stack_top];
+        parent_avail_w = parent.myAvailableWidth;
+        parent_avail_h = parent.myAvailableHeight;
     }
 
     layout_stack_top++;
     layout_stack[layout_stack_top].init(direction, start_x, start_y);
     layout_stack[layout_stack_top].myScrollOffsetX = parent_scroll_x;
     layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
+    layout_stack[layout_stack_top].myAvailableWidth = parent_avail_w;
+    layout_stack[layout_stack_top].myAvailableHeight = parent_avail_h;
 }
 
 void Window::beginLayout(float x, float y, MonstroLayoutDirection direction) {

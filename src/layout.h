@@ -12,6 +12,7 @@ struct Layout {
     float myCursorX, myCursorY;
     float myMaxX, myMaxY;
     float myScrollOffsetX = 0.0f, myScrollOffsetY = 0.0f;
+    float myAvailableWidth = 0.0f, myAvailableHeight = 0.0f;
 
     void init(MonstroLayoutDirection direction, float posX, float posY);
     void addItem(float width, float height);

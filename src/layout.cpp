@@ -19,6 +19,8 @@ void Layout::init(MonstroLayoutDirection direction, float posX, float posY) {
     myMaxY = 0.0f;
     myScrollOffsetX = 0.0f;
     myScrollOffsetY = 0.0f;
+    myAvailableWidth = 0.0f;
+    myAvailableHeight = 0.0f;
 }
 
 void Layout::addItem(float width, float height) {
@@ -128,11 +130,11 @@ void monstro_spacer(MonstroContext* ctx, float size) {
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction) {
     monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
     if (!layout) return 0.0f;
-    
+
     if (direction == MONSTRO_LAYOUT_HORIZONTAL) {
-        return layout->mySizeX * (percent / 100.0f);
+        return layout->myAvailableWidth * (percent / 100.0f);
     } else {
-        return layout->mySizeY * (percent / 100.0f);
+        return layout->myAvailableHeight * (percent / 100.0f);
     }
 }
 
