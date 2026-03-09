@@ -616,6 +616,11 @@ static void updateUI(App* app, float deltaTime) {
         monstro_knob(ctx, "Gain", &app->knobValue, 0.0f, 1.0f, "%.2f", "Adjust gain");
         monstro_knob(ctx, "Rate", &app->knobValue2, 0.0f, 100.0f, "%.1f", "Adjust rate");
         
+        monstro_separator_text(ctx, "Progress Bars");
+        monstro_progress_bar(ctx, app->knobValue, 100.0f, 20.0f, "Gain: %.2f");
+        monstro_progress_bar(ctx, app->knobValue2 / 100.0f, 100.0f, 20.0f, NULL);
+
+
         monstro_separator_text(ctx, "Radio Buttons");
         
         if(monstro_radio_button(ctx, "Option A", &app->radioValue, 0, nullptr))
