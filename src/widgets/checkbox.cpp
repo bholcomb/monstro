@@ -56,10 +56,11 @@ bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const
 
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
+    const char* display = monstro_display_text(label);
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
     float box_size = text_h;
-    float text_w = monstro_font_measure_text(font, label, 0.0f).x;
-    if (text_w == 0.0f) text_w = (float)strlen(label) * 8.0f;
+    float text_w = monstro_font_measure_text(font, display, 0.0f).x;
+    if (text_w == 0.0f) text_w = (float)strlen(display) * 8.0f;
     float spacing = style->checkbox.spacing;
     
     float total_w = box_size + spacing + text_w;
@@ -104,7 +105,7 @@ bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const
     }
     
     MonstroVec2 text_pos = {pos.x + box_size + spacing, pos.y + (total_h - text_h) * 0.5f};
-    canvas->addText(font, text_pos, monstro_color_to_u32(style->text.color), label);
+    canvas->addText(font, text_pos, monstro_color_to_u32(style->text.color), display);
     
     monstro_add_item(ctx, total_w, total_h);
 

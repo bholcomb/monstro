@@ -70,6 +70,14 @@ void monstro_add_item(MonstroContext* ctx, float width, float height) {
     ctx->current_window->addItem(width, height);
 }
 
+const char* monstro_display_text(const char* label) {
+    if (!label) return label;
+    for (const char* p = label; *p; p++) {
+        if (p[0] == '#' && p[1] == '#') return p + 2;
+    }
+    return label;
+}
+
 MonstroVec2 monstro_get_cursor_pos(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return {0.0f, 0.0f};
     return ctx->current_window->getCursorPos();

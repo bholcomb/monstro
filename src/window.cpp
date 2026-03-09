@@ -406,7 +406,9 @@ MonstroVec2 Window::getCursorScreenPos() const {
 }
 
 void Window::setCursorScreenPos(float x, float y) {
-    setCursorPos(x - pos.x, y - pos.y);
+    if (layout_stack_top < 0) return;
+    const Layout* l = &layout_stack[layout_stack_top];
+    setCursorPos(x - pos.x - l->myScrollOffsetX, y - pos.y - l->myScrollOffsetY);
 }
 
 /* ------------------------------------------------------------------------- */

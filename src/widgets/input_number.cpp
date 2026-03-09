@@ -82,13 +82,14 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
     if (!format) format = "%.3f";
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     uint64_t dec_id = id ^ 0x100;
     uint64_t inc_id = id ^ 0x200;
 
     monstro_add_item(ctx, ps->padding[0], ps->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-    float label_w = font ? monstro_font_measure_text(font, label, 0.0f).x : (float)strlen(label) * 8.0f;
+    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     bool has_buttons = step > 0.0f;
     float btn_w = has_buttons ? text_h : 0.0f;
@@ -284,7 +285,7 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
     if (font && label[0] != '#') {
         MonstroRect label_rect = {pos.x, pos.y, label_w, field_h};
         MonstroColor lc = hovered ? ps->label_hover : ps->label_normal;
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(lc), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(lc), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     monstro_add_item(ctx, total_w, field_h);

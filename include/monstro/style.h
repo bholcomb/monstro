@@ -440,8 +440,12 @@ typedef struct MonstroStyle {
 MonstroStyle* monstro_get_style(MonstroContext* ctx);
 void monstro_set_style(MonstroContext* ctx, const MonstroStyle* style);
 
-void monstro_push_style(MonstroContext* ctx);
-void monstro_pop_style(MonstroContext* ctx);
+void monstro_push_style_float(MonstroContext* ctx, float* var, float new_value);
+void monstro_push_style_vec2(MonstroContext* ctx, float var[2], float x, float y);
+void monstro_push_style_color(MonstroContext* ctx, MonstroColor* var, MonstroColor new_value);
+void monstro_push_style_item(MonstroContext* ctx, MonstroStyleItem* var, MonstroStyleItem new_value);
+void monstro_push_style_int(MonstroContext* ctx, int* var, int new_value);
+void monstro_pop_style_var(MonstroContext* ctx, int count);
 
 void monstro_style_set_default(MonstroStyle* style);
 void monstro_style_set_dark(MonstroStyle* style);

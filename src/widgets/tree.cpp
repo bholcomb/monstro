@@ -28,6 +28,7 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
     MonstroFont* font = style->font;
     monstro::Canvas* canvas = &win->canvas;
 
+    const char* display = monstro_display_text(label);
     bool is_leaf = (flags & MONSTRO_TREE_LEAF) != 0;
     bool default_open = (flags & MONSTRO_TREE_DEFAULT_OPEN) != 0;
     bool force_selected = (flags & MONSTRO_TREE_SELECTED) != 0;
@@ -46,10 +47,10 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
 
     MonstroVec2 text_size = {0.0f, text_h};
     if (font) {
-        text_size = monstro_font_measure_text(font, label, 0.0f);
+        text_size = monstro_font_measure_text(font, display, 0.0f);
         if (text_size.y < text_h) text_size.y = text_h;
     } else {
-        text_size.x = (float)strlen(label) * 8.0f;
+        text_size.x = (float)strlen(display) * 8.0f;
     }
 
     float row_w = arrow_size + arrow_pad + text_size.x + ts->padding[0] * 2.0f;
@@ -105,7 +106,7 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
     float label_x = content_x + arrow_size + arrow_pad;
     if (font) {
         MonstroRect label_rect = {label_x, content_y, text_size.x, text_size.y};
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(text_col), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(text_col), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     monstro_add_item(ctx, row_w, row_h);
@@ -147,6 +148,7 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
     monstro::Canvas* canvas = &win->canvas;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     MonstroTreeNodeState* state = ctx->findOrCreateTreeState(id, true);
     if (!state) return false;
     bool is_open = state->open;
@@ -161,10 +163,10 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
 
     MonstroVec2 text_size = {0.0f, text_h};
     if (font) {
-        text_size = monstro_font_measure_text(font, label, 0.0f);
+        text_size = monstro_font_measure_text(font, display, 0.0f);
         if (text_size.y < text_h) text_size.y = text_h;
     } else {
-        text_size.x = (float)strlen(label) * 8.0f;
+        text_size.x = (float)strlen(display) * 8.0f;
     }
 
     float avail_w = win->size.x - style->window.padding[0] * 2.0f;
@@ -215,7 +217,7 @@ bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_v
     float label_x = content_x + arrow_size + arrow_pad;
     if (font) {
         MonstroRect label_rect = {label_x, content_y, text_size.x, text_size.y};
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(text_col), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(text_col), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     if (p_visible) {

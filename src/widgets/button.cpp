@@ -110,9 +110,10 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
-    float text_w = monstro_font_measure_text(font, label, 0.0f).x;
+    float text_w = monstro_font_measure_text(font, display, 0.0f).x;
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
     float w = text_w + style->button.padding[0] * 2.0f;
     float h = text_h + style->button.padding[1] * 2.0f;
@@ -124,7 +125,7 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     bool pressed = button_behavior(ctx, r, id, &hovered, &held, (MonstroButtonFlags)0);
     
     draw_button_background(canvas, r, style, hovered, held);
-    draw_button_text(canvas, font, r, style, label, hovered, held);
+    draw_button_text(canvas, font, r, style, display, hovered, held);
     
     monstro_add_item(ctx, w, h);
 
@@ -149,6 +150,7 @@ bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, f
     monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
     
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     MonstroRect r = {pos.x, pos.y, width, height};
     
@@ -157,7 +159,7 @@ bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, f
     bool pressed = button_behavior(ctx, r, id, &hovered, &held, (MonstroButtonFlags)0);
     
     draw_button_background(canvas, r, style, hovered, held);
-    draw_button_text(canvas, font, r, style, label, hovered, held);
+    draw_button_text(canvas, font, r, style, display, hovered, held);
     
     monstro_add_item(ctx, width, height);
 

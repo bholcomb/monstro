@@ -51,8 +51,9 @@ bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     
     (void)enabled; // TODO: use for disabled styling
     
-    MonstroVec2 text_size = monstro_font_measure_text(font, label, 0.0f);
-    if (text_size.x == 0.0f) text_size.x = (float)strlen(label) * 8.0f;
+    const char* display = monstro_display_text(label);
+    MonstroVec2 text_size = monstro_font_measure_text(font, display, 0.0f);
+    if (text_size.x == 0.0f) text_size.x = (float)strlen(display) * 8.0f;
     if (text_size.y == 0.0f) text_size.y = 16.0f;
     
     float sel_pad_x = style->selectable.padding[0];
@@ -137,8 +138,9 @@ bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, b
     MonstroStyle* style = &ctx->style;
     MonstroFont* font = style->font;
     
-    MonstroVec2 label_size = monstro_font_measure_text(font, label, 0.0f);
-    if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
+    const char* display = monstro_display_text(label);
+    MonstroVec2 label_size = monstro_font_measure_text(font, display, 0.0f);
+    if (label_size.x == 0.0f) label_size.x = (float)strlen(display) * 8.0f;
     if (label_size.y == 0.0f) label_size.y = 16.0f;
     
     MonstroSelectableFlags sel_flags = MONSTRO_SELECTABLE_MENU_ITEM;

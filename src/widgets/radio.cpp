@@ -14,14 +14,15 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
     MonstroStyleToggle* os = &style->option;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
 
     monstro_add_item(ctx, os->padding[0], os->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
     float circle_d = text_h;
     float radius = circle_d * 0.5f;
-    float text_w = monstro_font_measure_text(font, label, 0.0f).x;
-    if (text_w == 0.0f) text_w = (float)strlen(label) * 8.0f;
+    float text_w = monstro_font_measure_text(font, display, 0.0f).x;
+    if (text_w == 0.0f) text_w = (float)strlen(display) * 8.0f;
 
     float total_w = circle_d + os->spacing + text_w;
     float total_h = fmaxf(circle_d, text_h);
@@ -79,7 +80,7 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
 
     if (font) {
         MonstroVec2 text_pos = {pos.x + circle_d + os->spacing, pos.y + (total_h - text_h) * 0.5f};
-        canvas->addText(font, text_pos, monstro_color_to_u32(hovered ? os->text_hover : os->text_normal), label);
+        canvas->addText(font, text_pos, monstro_color_to_u32(hovered ? os->text_hover : os->text_normal), display);
     }
 
     monstro_add_item(ctx, total_w, total_h);

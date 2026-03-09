@@ -13,15 +13,16 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     MonstroFont* font = style->font;
     
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
 
     monstro_add_item(ctx, style->combo.content_padding[0], style->combo.content_padding[1]);
 
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     MonstroVec2 label_size = {0.0f, 0.0f};
-    if (label[0] != '#' || label[1] != '#') {
-        label_size = monstro_font_measure_text(font, label, 0.0f);
-        if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
+    if (display[0] != '\0') {
+        label_size = monstro_font_measure_text(font, display, 0.0f);
+        if (label_size.x == 0.0f) label_size.x = (float)strlen(display) * 8.0f;
         if (label_size.y == 0.0f) label_size.y = 16.0f;
     }
     
@@ -86,7 +87,7 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     
     if (label_size.x > 0) {
         MonstroVec2 label_pos = {pos.x, pos.y + (total_height - label_size.y) * 0.5f};
-        canvas->addText(font, label_pos, monstro_color_to_u32(style->text.color), label);
+        canvas->addText(font, label_pos, monstro_color_to_u32(style->text.color), display);
     }
     
     if (preview_value) {

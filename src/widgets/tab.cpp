@@ -86,6 +86,7 @@ bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open
     monstro::Canvas* canvas = &win->canvas;
 
     uint64_t tab_id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
 
     if (bar->selected_tab == 0) {
         bar->selected_tab = tab_id;
@@ -93,8 +94,8 @@ bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open
 
     bool is_selected = (bar->selected_tab == tab_id);
 
-    MonstroVec2 text_size = monstro_font_measure_text(font, label, 0.0f);
-    if (text_size.x == 0.0f) text_size.x = (float)strlen(label) * 8.0f;
+    MonstroVec2 text_size = monstro_font_measure_text(font, display, 0.0f);
+    if (text_size.x == 0.0f) text_size.x = (float)strlen(display) * 8.0f;
     if (text_size.y == 0.0f) text_size.y = 16.0f;
 
     float tab_w = text_size.x + style->tab.padding[0] * 2.0f;
@@ -159,7 +160,7 @@ bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open
     };
 
     if (font) {
-        canvas->addTextEx(font, label_rect, text_color, label, MONSTRO_ALIGN_LEFT);
+        canvas->addTextEx(font, label_rect, text_color, display, MONSTRO_ALIGN_LEFT);
     }
 
     if (p_open) {

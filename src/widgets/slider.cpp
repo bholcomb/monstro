@@ -56,12 +56,13 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
     MonstroStyleSlider* ss = &style->slider;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
 
     monstro_add_item(ctx, ss->padding[0], ss->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-    float label_w = monstro_font_measure_text(font, label, 0.0f).x;
-    if (label_w == 0.0f) label_w = (float)strlen(label) * 8.0f;
+    float label_w = monstro_font_measure_text(font, display, 0.0f).x;
+    if (label_w == 0.0f) label_w = (float)strlen(display) * 8.0f;
 
     float slider_h = height > 0.0f ? height : std::max(text_h, ss->cursor_size[1]) + ss->padding[1] * 2.0f;
     float slider_w = width > 0.0f ? width : 120.0f;
@@ -129,7 +130,7 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
 
     // Label
     if (font) {
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), label, MONSTRO_ALIGN_LEFT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_LEFT);
     }
 
     monstro_add_item(ctx, total_w, slider_h);

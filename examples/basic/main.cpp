@@ -89,6 +89,9 @@ struct App {
     int intInput;
     float floatInput;
     double doubleInput;
+
+    char tableNames[3][64];
+    float tableValues[3];
 };
 
 static App* g_app = nullptr;
@@ -757,6 +760,88 @@ static void updateUI(App* app, float deltaTime) {
             }
             monstro_end_tab_bar(ctx);
         }
+
+        monstro_separator_text(ctx, "Table");
+
+        if (monstro_begin_table(ctx, "demoTable", 3,
+                (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE),
+                0.0f, 0.0f)) {
+            monstro_table_setup_column(ctx, "Name",   MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+            monstro_table_setup_column(ctx, "Value",  MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+            monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
+            monstro_table_headers_row(ctx);
+
+
+            MonstroStyle* s = monstro_get_style(ctx);
+            monstro_push_style_vec2(ctx, s->button.padding, 0.0f, 0.0f);
+
+            monstro_table_next_row(ctx);
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "Alpha");
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "1.00");
+            monstro_table_next_column(ctx);
+            if (monstro_button(ctx, "a##Reset", nullptr)) { printf("Reset Alpha\n"); }
+
+            monstro_table_next_row(ctx);
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "Beta");
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "2.50");
+            monstro_table_next_column(ctx);
+            if (monstro_button(ctx, "b##Reset", nullptr)) { printf("Reset Beta\n"); }
+
+            monstro_table_next_row(ctx);
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "Gamma");
+            monstro_table_next_column(ctx);
+            monstro_label(ctx, "0.75");
+            monstro_table_next_column(ctx);
+            if (monstro_button(ctx, "g##Reset", nullptr)) { printf("Reset Gamma\n"); }
+
+            monstro_pop_style_var(ctx, 1);
+
+            monstro_end_table(ctx);
+        }
+
+        monstro_separator_text(ctx, "Editable Table");
+
+        if (monstro_begin_table(ctx, "editTable", 3,
+                (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE),
+                0.0f, 0.0f)) {
+            monstro_table_setup_column(ctx, "Name",   MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+            monstro_table_setup_column(ctx, "Value",  MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+            monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
+            monstro_table_headers_row(ctx);
+
+            MonstroStyle* s = monstro_get_style(ctx);
+            monstro_push_style_vec2(ctx, s->button.padding, 0.0f, 0.0f);
+            monstro_push_style_vec2(ctx, s->edit.padding, 0.0f, 0.0f);
+            monstro_push_style_vec2(ctx, s->property.padding, 0.0f, 0.0f);
+
+            const char* row_ids[] = {"name0##", "name1##", "name2##"};
+            const char* val_ids[] = {"val0##",  "val1##",  "val2##"};
+            const char* btn_ids[] = {"rst0##Reset", "rst1##Reset", "rst2##Reset"};
+            float defaults[] = {1.00f, 2.50f, 0.75f};
+
+            for (int i = 0; i < 3; i++) {
+                monstro_table_next_row(ctx);
+                monstro_table_next_column(ctx);
+                monstro_input_text(ctx, row_ids[i], app->tableNames[i], sizeof(app->tableNames[i]),
+                                   MONSTRO_INPUT_TEXT_NONE, nullptr);
+                monstro_table_next_column(ctx);
+                monstro_input_float(ctx, val_ids[i], &app->tableValues[i],
+                                    0.0f, 0.0f, "%.2f", nullptr);
+                monstro_table_next_column(ctx);
+                if (monstro_button(ctx, btn_ids[i], nullptr)) {
+                    app->tableValues[i] = defaults[i];
+                }
+            }
+
+            monstro_pop_style_var(ctx, 3);
+
+            monstro_end_table(ctx);
+        }
     }
     monstro_end_window(ctx);
     
@@ -866,6 +951,12 @@ int main(int argc, char* argv[]) {
     app.fontAtlasTexture = VE_INVALID_TEXTURE_INDEX;
     app.fontAtlasTextureId = 0;
     app.font = nullptr;
+    strncpy(app.tableNames[0], "Alpha", sizeof(app.tableNames[0]));
+    strncpy(app.tableNames[1], "Beta", sizeof(app.tableNames[1]));
+    strncpy(app.tableNames[2], "Gamma", sizeof(app.tableNames[2]));
+    app.tableValues[0] = 1.00f;
+    app.tableValues[1] = 2.50f;
+    app.tableValues[2] = 0.75f;
     g_app = &app;
     
     printf("Monstro UI Example\n");

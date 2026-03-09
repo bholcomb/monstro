@@ -56,6 +56,7 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
     monstro::EditState* edit = &ctx->edit_state;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     bool is_read_only = (flags & MONSTRO_INPUT_TEXT_READ_ONLY) != 0;
     bool is_password = (flags & MONSTRO_INPUT_TEXT_PASSWORD) != 0;
     bool enter_returns = (flags & MONSTRO_INPUT_TEXT_ENTER_RETURNS) != 0;
@@ -64,7 +65,7 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
     monstro_add_item(ctx, es->padding[0], es->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-    float label_w = font ? monstro_font_measure_text(font, label, 0.0f).x : (float)strlen(label) * 8.0f;
+    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     float field_w = 120.0f;
     float field_h = text_h + es->padding[1] * 2.0f;
@@ -343,10 +344,9 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
 
     canvas->popClipRect();
 
-    // Label
-    if (font && label[0] != '#') {
+    if (font && display[0] != '\0') {
         MonstroRect label_rect = {pos.x, pos.y, label_w, field_h};
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     monstro_add_item(ctx, total_w, field_h);
@@ -372,12 +372,13 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
     monstro::EditState* edit = &ctx->edit_state;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
     bool is_read_only = (flags & MONSTRO_INPUT_TEXT_READ_ONLY) != 0;
 
     monstro_add_item(ctx, es->padding[0], es->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-    float label_w = font ? monstro_font_measure_text(font, label, 0.0f).x : (float)strlen(label) * 8.0f;
+    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     float field_w = width > 0.0f ? width : 200.0f;
     float field_h = height > 0.0f ? height : text_h * 4.0f + es->padding[1] * 2.0f;
@@ -587,10 +588,9 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
 
     canvas->popClipRect();
 
-    // Label
-    if (font && label[0] != '#') {
+    if (font && display[0] != '\0') {
         MonstroRect label_rect = {pos.x, pos.y, label_w, field_h};
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     monstro_add_item(ctx, total_w, field_h);

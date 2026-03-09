@@ -71,8 +71,9 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
     MonstroFont* font = style->font;
     
     uint64_t id = win->getChildId(label);
-    MonstroVec2 label_size = monstro_font_measure_text(font, label, 0.0f);
-    if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
+    const char* display = monstro_display_text(label);
+    MonstroVec2 label_size = monstro_font_measure_text(font, display, 0.0f);
+    if (label_size.x == 0.0f) label_size.x = (float)strlen(display) * 8.0f;
     if (label_size.y == 0.0f) label_size.y = 16.0f;
     
     float pad_x = style->selectable.padding[0];
@@ -98,7 +99,7 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
     
     MonstroVec2 text_pos = {inner.x, inner.y};
     canvas->addText(font, text_pos, 
-                            monstro_color_to_u32(style->selectable.text_normal), label);
+                            monstro_color_to_u32(style->selectable.text_normal), display);
     
     if (pressed && !(flags & MONSTRO_SELECTABLE_DONT_CLOSE_POPUP)) {
         if (win->flags & MONSTRO_WINDOW_POPUP) {
@@ -131,8 +132,9 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
     MonstroFont* font = style->font;
     
     uint64_t id = win->getChildId(label);
-    MonstroVec2 label_size = monstro_font_measure_text(font, label, 0.0f);
-    if (label_size.x == 0.0f) label_size.x = (float)strlen(label) * 8.0f;
+    const char* display = monstro_display_text(label);
+    MonstroVec2 label_size = monstro_font_measure_text(font, display, 0.0f);
+    if (label_size.x == 0.0f) label_size.x = (float)strlen(display) * 8.0f;
     if (label_size.y == 0.0f) label_size.y = 16.0f;
     
     float pad_x = style->selectable.padding[0];
@@ -158,7 +160,7 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
     
     MonstroVec2 text_pos = {inner.x, inner.y};
     canvas->addText(font, text_pos, 
-                            monstro_color_to_u32(style->selectable.text_normal), label);
+                            monstro_color_to_u32(style->selectable.text_normal), display);
     
     if (pressed && !(flags & MONSTRO_SELECTABLE_DONT_CLOSE_POPUP)) {
         if (win->flags & MONSTRO_WINDOW_POPUP) {

@@ -211,6 +211,85 @@ MonstroStyle* monstro_get_style(MonstroContext* ctx) {
     return ctx ? &ctx->style : nullptr;
 }
 
+void monstro_set_style(MonstroContext* ctx, const MonstroStyle* style) {
+    if (ctx && style) ctx->style = *style;
+}
+
+void monstro_push_style_float(MonstroContext* ctx, float* var, float new_value) {
+    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
+    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
+    entry->ptr = var;
+    entry->type = MONSTRO_STYLE_VAR_FLOAT;
+    entry->old_value.f = *var;
+    *var = new_value;
+}
+
+void monstro_push_style_vec2(MonstroContext* ctx, float var[2], float x, float y) {
+    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
+    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
+    entry->ptr = var;
+    entry->type = MONSTRO_STYLE_VAR_VEC2;
+    entry->old_value.v2[0] = var[0];
+    entry->old_value.v2[1] = var[1];
+    var[0] = x;
+    var[1] = y;
+}
+
+void monstro_push_style_color(MonstroContext* ctx, MonstroColor* var, MonstroColor new_value) {
+    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
+    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
+    entry->ptr = var;
+    entry->type = MONSTRO_STYLE_VAR_COLOR;
+    entry->old_value.color = *var;
+    *var = new_value;
+}
+
+void monstro_push_style_item(MonstroContext* ctx, MonstroStyleItem* var, MonstroStyleItem new_value) {
+    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
+    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
+    entry->ptr = var;
+    entry->type = MONSTRO_STYLE_VAR_ITEM;
+    entry->old_value.item = *var;
+    *var = new_value;
+}
+
+void monstro_push_style_int(MonstroContext* ctx, int* var, int new_value) {
+    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
+    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
+    entry->ptr = var;
+    entry->type = MONSTRO_STYLE_VAR_INT;
+    entry->old_value.i = *var;
+    *var = new_value;
+}
+
+void monstro_pop_style_var(MonstroContext* ctx, int count) {
+    if (!ctx) return;
+    for (int i = 0; i < count && ctx->style_var_stack_top > 0; i++) {
+        ctx->style_var_stack_top--;
+        MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top];
+        switch (entry->type) {
+            case MONSTRO_STYLE_VAR_FLOAT:
+                *(float*)entry->ptr = entry->old_value.f;
+                break;
+            case MONSTRO_STYLE_VAR_VEC2: {
+                float* v = (float*)entry->ptr;
+                v[0] = entry->old_value.v2[0];
+                v[1] = entry->old_value.v2[1];
+                break;
+            }
+            case MONSTRO_STYLE_VAR_COLOR:
+                *(MonstroColor*)entry->ptr = entry->old_value.color;
+                break;
+            case MONSTRO_STYLE_VAR_ITEM:
+                *(MonstroStyleItem*)entry->ptr = entry->old_value.item;
+                break;
+            case MONSTRO_STYLE_VAR_INT:
+                *(int*)entry->ptr = entry->old_value.i;
+                break;
+        }
+    }
+}
+
 } // extern "C"
 
 /* ------------------------------------------------------------------------- */

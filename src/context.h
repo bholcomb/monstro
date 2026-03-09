@@ -13,9 +13,51 @@
 #include "tooltip.h"
 #include "editstate.h"
 
+enum MonstroStyleVarType {
+    MONSTRO_STYLE_VAR_FLOAT,
+    MONSTRO_STYLE_VAR_VEC2,
+    MONSTRO_STYLE_VAR_COLOR,
+    MONSTRO_STYLE_VAR_ITEM,
+    MONSTRO_STYLE_VAR_INT
+};
+
+struct MonstroStyleVarBackup {
+    void* ptr;
+    MonstroStyleVarType type;
+    union {
+        float f;
+        float v2[2];
+        MonstroColor color;
+        MonstroStyleItem item;
+        int i;
+    } old_value;
+};
+
 struct MonstroTreeNodeState {
     uint64_t id = 0;
     bool open = false;
+    int last_frame_active = 0;
+};
+
+struct MonstroTableColumn {
+    char label[128] = {};
+    MonstroTableColumnFlags flags = MONSTRO_TABLE_COLUMN_NONE;
+    float width = 0.0f;
+    float init_width = 0.0f;
+};
+
+struct MonstroTableState {
+    uint64_t id = 0;
+    MonstroTableFlags flags = MONSTRO_TABLE_NONE;
+    int column_count = 0;
+    int setup_column_count = 0;
+    int current_column = -1;
+    int current_row = -1;
+    MonstroTableColumn columns[MONSTRO_MAX_TABLE_COLUMNS] = {};
+
+    float table_x = 0.0f, table_y = 0.0f;
+    float table_w = 0.0f;
+    float row_y = 0.0f;
     int last_frame_active = 0;
 };
 
@@ -71,8 +113,8 @@ struct Context {
     IdStack id_stack;
 
     MonstroStyle style = {};
-    MonstroStyle style_stack[MONSTRO_MAX_STYLE_STACK_DEPTH] = {};
-    int style_stack_top = 0;
+    MonstroStyleVarBackup style_var_stack[MONSTRO_MAX_STYLE_VAR_STACK] = {};
+    int style_var_stack_top = 0;
 
     Window windows[MONSTRO_MAX_WINDOWS] = {};
     int window_count = 0;
@@ -94,6 +136,10 @@ struct Context {
     MonstroTreeNodeState tree_states[MONSTRO_MAX_TREE_STATES] = {};
     int tree_state_count = 0;
     MonstroTreeNodeState* findOrCreateTreeState(uint64_t id, bool default_open);
+
+    MonstroTableState tables[MONSTRO_MAX_TABLES] = {};
+    int table_count = 0;
+    MonstroTableState* current_table = nullptr;
 
     uint64_t hovered_id = 0;
     uint64_t hovered_id_prev_frame = 0;

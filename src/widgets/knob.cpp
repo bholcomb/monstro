@@ -80,6 +80,7 @@ bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
     MonstroStyleKnob* ks = &style->knob;
 
     uint64_t id = win->getChildId(label);
+    const char* display = monstro_display_text(label);
 
     monstro_add_item(ctx, ks->padding[0], ks->padding[1]);
 
@@ -87,7 +88,7 @@ bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
     float knob_radius = knob_diameter * 0.5f;
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-    float label_w = font ? monstro_font_measure_text(font, label, 0.0f).x : (float)strlen(label) * 8.0f;
+    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     float total_w = label_w + ks->padding[0] + knob_diameter;
     float total_h = knob_diameter;
@@ -179,7 +180,7 @@ bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
     // Label to the left of the knob
     if (font && label[0] != '#') {
         MonstroRect label_rect = {pos.x, pos.y, label_w, knob_diameter};
-        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), label, MONSTRO_ALIGN_DEFAULT);
+        canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_DEFAULT);
     }
 
     monstro_add_item(ctx, total_w, total_h);
