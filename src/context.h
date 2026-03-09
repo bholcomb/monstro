@@ -13,6 +13,12 @@
 #include "tooltip.h"
 #include "editstate.h"
 
+struct MonstroTreeNodeState {
+    uint64_t id = 0;
+    bool open = false;
+    int last_frame_active = 0;
+};
+
 struct MonstroTabBarState {
     uint64_t id;
     uint64_t selected_tab;
@@ -84,6 +90,10 @@ struct Context {
     MonstroTabBarState tab_bars[MONSTRO_MAX_TAB_BARS] = {};
     int tab_bar_count = 0;
     MonstroTabBarState* current_tab_bar = nullptr;
+
+    MonstroTreeNodeState tree_states[MONSTRO_MAX_TREE_STATES] = {};
+    int tree_state_count = 0;
+    MonstroTreeNodeState* findOrCreateTreeState(uint64_t id, bool default_open);
 
     uint64_t hovered_id = 0;
     uint64_t hovered_id_prev_frame = 0;

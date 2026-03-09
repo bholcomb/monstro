@@ -490,6 +490,8 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->tree.text_hover = TEXT_SEL;
     style->tree.text_active = TEXT_SEL;
     style->tree.text_selected = TEXT_SEL;
+    style->tree.sym_closed = 0;
+    style->tree.sym_open = 0;
     style->tree.indent = 10.0f;
     style->tree.padding[0] = 4.0f;
     style->tree.padding[1] = 4.0f;

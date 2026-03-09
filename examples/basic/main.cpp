@@ -696,6 +696,29 @@ static void updateUI(App* app, float deltaTime) {
         }
         monstro_end_layout(ctx);
         
+        monstro_separator_text(ctx, "Tree View");
+
+        if (monstro_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN)) {
+            if (monstro_tree_node(ctx, "Meshes", MONSTRO_TREE_NONE)) {
+                monstro_tree_node(ctx, "Cube", MONSTRO_TREE_LEAF);
+                monstro_tree_node(ctx, "Sphere", MONSTRO_TREE_LEAF);
+                monstro_tree_node(ctx, "Plane", MONSTRO_TREE_LEAF);
+                monstro_tree_pop(ctx);
+            }
+            if (monstro_tree_node(ctx, "Lights", MONSTRO_TREE_NONE)) {
+                monstro_tree_node(ctx, "Sun", (MonstroTreeFlags)(MONSTRO_TREE_LEAF | MONSTRO_TREE_SELECTED));
+                monstro_tree_node(ctx, "Point Light", MONSTRO_TREE_LEAF);
+                monstro_tree_pop(ctx);
+            }
+            monstro_tree_node(ctx, "Camera", MONSTRO_TREE_LEAF);
+            monstro_tree_pop(ctx);
+        }
+
+        if (monstro_collapsing_header(ctx, "Extra Settings", nullptr)) {
+            monstro_label(ctx, "These are extra settings.");
+            monstro_checkbox(ctx, "Wireframe", &app->checkboxValue, nullptr);
+        }
+
         monstro_separator_text(ctx, "Tabs");
         
         if (monstro_begin_tab_bar(ctx, "demoTabs", MONSTRO_TAB_BAR_NONE)) {

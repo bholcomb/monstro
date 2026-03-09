@@ -75,6 +75,22 @@ void Context::beginFrame(float dt) {
     root_window = findWindow("root");
 }
 
+MonstroTreeNodeState* Context::findOrCreateTreeState(uint64_t id, bool default_open) {
+    for (int i = 0; i < tree_state_count; i++) {
+        if (tree_states[i].id == id) {
+            tree_states[i].last_frame_active = frame;
+            return &tree_states[i];
+        }
+    }
+    if (tree_state_count >= MONSTRO_MAX_TREE_STATES) return nullptr;
+
+    MonstroTreeNodeState* state = &tree_states[tree_state_count++];
+    state->id = id;
+    state->open = default_open;
+    state->last_frame_active = frame;
+    return state;
+}
+
 void Context::endFrame() {
     tooltip.endFrame(this);
 
