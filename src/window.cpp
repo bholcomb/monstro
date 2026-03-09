@@ -73,6 +73,10 @@ bool Window::begin(bool* p_closed) {
 
     MonstroStyle* pad_style = &ctx->style;
     beginLayout(pad_style->window.padding[0], pad_style->window.padding[1], MONSTRO_LAYOUT_VERTICAL);
+    if (layout_stack_top >= 0) {
+        layout_stack[layout_stack_top].myScrollOffsetX = 0.0f;
+        layout_stack[layout_stack_top].myScrollOffsetY = -scroll_y;
+    }
 
     if (last_frame_active != ctx->frame) {
         last_frame_active = ctx->frame;
@@ -115,23 +119,58 @@ bool Window::begin(bool* p_closed) {
     skip_items = collapsed;
 
     drawForeground();
+
+    content_clip_pushed = false;
+    if (!collapsed && !(flags & MONSTRO_WINDOW_MENU_BAR)) {
+        pushContentClipRect();
+    }
+
+    if (!collapsed && ctx->hovered_window == this) {
+        bool scroll_with_mouse = (flags & MONSTRO_WINDOW_SCROLL_WITH_MOUSE) != 0;
+        if (scroll_with_mouse && ctx->mouse.wheel_y != 0.0f) {
+            float scroll_speed = 40.0f;
+            scroll_y -= ctx->mouse.wheel_y * scroll_speed;
+
+            float header_h = getTitleBarHeight() + getMenuBarHeight();
+            float visible_h = size.y - header_h;
+            float max_scroll = content_height - visible_h;
+            if (max_scroll < 0.0f) max_scroll = 0.0f;
+            if (scroll_y > max_scroll) scroll_y = max_scroll;
+            if (scroll_y < 0.0f) scroll_y = 0.0f;
+        }
+    }
+
     return true;
 }
 
 bool Window::end() {
     MonstroStyle* style = &ctx->style;
 
-    canvas.popClipRect();
+    if (content_clip_pushed) {
+        canvas.popClipRect();
+    }
+
+    Layout* layout = getCurrentLayout();
+    if (layout) {
+        content_width = layout->mySizeX + style->window.padding[0] * 2.0f;
+        content_height = layout->mySizeY + style->window.padding[1] * 2.0f;
+    }
 
     if (flags & MONSTRO_WINDOW_AUTO_RESIZE) {
-        Layout* layout = getCurrentLayout();
-        if (layout) {
-            float new_width = layout->mySizeX + style->window.padding[0] * 2.0f;
-            float new_height = layout->mySizeY + style->window.padding[1] * 2.0f;
-            if (new_width > 0.0f) size.x = new_width;
-            if (new_height > 0.0f) size.y = new_height;
-        }
+        if (content_width > 0.0f) size.x = content_width;
+        if (content_height > 0.0f) size.y = content_height;
     }
+
+    float header_h = getTitleBarHeight() + getMenuBarHeight();
+    float visible_h = size.y - header_h;
+    float max_scroll = content_height - visible_h;
+    if (max_scroll < 0.0f) max_scroll = 0.0f;
+    if (scroll_y > max_scroll) scroll_y = max_scroll;
+    if (scroll_y < 0.0f) scroll_y = 0.0f;
+
+    drawScrollbar(max_scroll, visible_h, header_h);
+
+    canvas.popClipRect();
 
     layout_stack_top = -1;
     ctx->id_stack.pop();
@@ -141,6 +180,93 @@ bool Window::end() {
 /* ------------------------------------------------------------------------- */
 /* Drawing                                                                   */
 /* ------------------------------------------------------------------------- */
+
+void Window::drawScrollbar(float max_scroll, float visible_h, float header_h) {
+    if (max_scroll <= 0.0f) return;
+    if (collapsed) return;
+
+    MonstroStyle* style = &ctx->style;
+    MonstroStyleScrollbar* ss = &style->scrollv;
+    float bar_w = style->window.scrollbar_size[0];
+    if (bar_w <= 0.0f) bar_w = 10.0f;
+
+    float track_x = pos.x + size.x - bar_w;
+    float track_y = pos.y + header_h;
+    float track_h = visible_h;
+    MonstroRect track_rect = {track_x, track_y, bar_w, track_h};
+
+    if (ss->normal.type == MONSTRO_STYLE_ITEM_COLOR) {
+        canvas.addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color),
+                             ss->rounding, MONSTRO_CORNER_ALL);
+    }
+
+    float thumb_ratio = visible_h / content_height;
+    float thumb_h = track_h * thumb_ratio;
+    float min_thumb_h = 20.0f;
+    if (thumb_h < min_thumb_h) thumb_h = min_thumb_h;
+
+    float scroll_ratio = (max_scroll > 0.0f) ? (scroll_y / max_scroll) : 0.0f;
+    float thumb_y = track_y + scroll_ratio * (track_h - thumb_h);
+
+    MonstroRect thumb_rect = {track_x + ss->padding[0], thumb_y, bar_w - ss->padding[0] * 2.0f, thumb_h};
+
+    bool thumb_hovered = false;
+    bool thumb_held = false;
+    uint64_t sb_id = ctx->id_stack.getId("##vscroll");
+    ctx->keepAliveId(sb_id);
+
+    if (ctx->hovered_window == this) {
+        float mx = ctx->mouse.pos_x;
+        float my = ctx->mouse.pos_y;
+        thumb_hovered = mx >= track_rect.x && mx < track_rect.x + track_rect.w &&
+                        my >= track_rect.y && my < track_rect.y + track_rect.h;
+
+        if (thumb_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+            ctx->setActiveId(sb_id);
+        }
+    }
+
+    if (ctx->active_id == sb_id) {
+        if (ctx->mouse.isDown(MONSTRO_MOUSE_BUTTON_LEFT)) {
+            thumb_held = true;
+            float delta = ctx->mouse.delta_y;
+            float scrollable_track = track_h - thumb_h;
+            if (scrollable_track > 0.0f) {
+                scroll_y += delta * (max_scroll / scrollable_track);
+                if (scroll_y < 0.0f) scroll_y = 0.0f;
+                if (scroll_y > max_scroll) scroll_y = max_scroll;
+            }
+        } else {
+            ctx->setActiveId(0);
+        }
+    }
+
+    MonstroStyleItem* cursor_style = &ss->cursor_normal;
+    if (thumb_held) cursor_style = &ss->cursor_active;
+    else if (thumb_hovered) cursor_style = &ss->cursor_hover;
+
+    if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR) {
+        canvas.addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color),
+                             ss->rounding_cursor, MONSTRO_CORNER_ALL);
+    }
+
+    if (ss->border > 0.0f) {
+        canvas.addRect(track_rect, monstro_color_to_u32(ss->border_color),
+                       ss->rounding, MONSTRO_CORNER_ALL, ss->border);
+    }
+    if (ss->border_cursor > 0.0f) {
+        canvas.addRect(thumb_rect, monstro_color_to_u32(ss->cursor_border_color),
+                       ss->rounding_cursor, MONSTRO_CORNER_ALL, ss->border_cursor);
+    }
+}
+
+void Window::pushContentClipRect() {
+    if (content_clip_pushed) return;
+    float header_h = getTitleBarHeight() + getMenuBarHeight();
+    MonstroRect content_clip = {pos.x, pos.y + header_h, size.x, size.y - header_h};
+    canvas.pushClipRect(content_clip);
+    content_clip_pushed = true;
+}
 
 void Window::drawBackground() {
     MonstroStyle* style = &ctx->style;
@@ -266,8 +392,10 @@ void Window::setCursorPos(float x, float y) {
 }
 
 MonstroVec2 Window::getCursorScreenPos() const {
-    MonstroVec2 cursor = getCursorPos();
-    return {pos.x + cursor.x, pos.y + cursor.y};
+    if (layout_stack_top < 0) return {pos.x, pos.y};
+    const Layout* l = &layout_stack[layout_stack_top];
+    return {pos.x + l->myPosX + l->myCursorX + l->myScrollOffsetX,
+            pos.y + l->myPosY + l->myCursorY + l->myScrollOffsetY};
 }
 
 void Window::setCursorScreenPos(float x, float y) {
@@ -376,15 +504,21 @@ void Window::beginLayout(MonstroLayoutDirection direction) {
 
     float start_x = 0.0f;
     float start_y = 0.0f;
+    float parent_scroll_x = 0.0f;
+    float parent_scroll_y = 0.0f;
 
     if (layout_stack_top >= 0) {
         MonstroVec2 cursor = getCursorPos();
         start_x = cursor.x;
         start_y = cursor.y;
+        parent_scroll_x = layout_stack[layout_stack_top].myScrollOffsetX;
+        parent_scroll_y = layout_stack[layout_stack_top].myScrollOffsetY;
     }
 
     layout_stack_top++;
     layout_stack[layout_stack_top].init(direction, start_x, start_y);
+    layout_stack[layout_stack_top].myScrollOffsetX = parent_scroll_x;
+    layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
 }
 
 void Window::beginLayout(float x, float y, MonstroLayoutDirection direction) {

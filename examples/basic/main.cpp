@@ -32,7 +32,7 @@
 
 // Window settings
 #define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+#define WINDOW_HEIGHT 1024
 #define WINDOW_TITLE "Monstro UI Example"
 
 #ifdef DEBUG
@@ -83,6 +83,12 @@ struct App {
     float knobValue2;
     int radioValue;
     int comboSelected;
+
+    char textInput[256];
+    char multilineInput[1024];
+    int intInput;
+    float floatInput;
+    double doubleInput;
 };
 
 static App* g_app = nullptr;
@@ -546,7 +552,7 @@ static void updateUI(App* app, float deltaTime) {
     monstro_begin_frame(ctx, deltaTime);
     
     monstro_set_next_window_pos(ctx, 50.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
-    monstro_set_next_window_size(ctx, 450.0f, 700.0f, MONSTRO_COND_FIRST_USE_EVER);
+    monstro_set_next_window_size(ctx, 450.0f, 900.0f, MONSTRO_COND_FIRST_USE_EVER);
     
     MonstroWindowFlags windowFlags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
     if (monstro_begin_window(ctx, "Monstro Demo", nullptr, windowFlags)) {
@@ -644,6 +650,19 @@ static void updateUI(App* app, float deltaTime) {
                 printf("Combo selected: %s (%d)\n", items[app->comboSelected], app->comboSelected);
             }
         }
+
+        monstro_separator_text(ctx, "Text Input");
+        monstro_input_text(ctx, "Name", app->textInput, sizeof(app->textInput),
+                           MONSTRO_INPUT_TEXT_NONE, "Enter your name");
+        monstro_input_text(ctx, "Password", app->textInput, sizeof(app->textInput),
+                           MONSTRO_INPUT_TEXT_PASSWORD, "Enter password");
+        monstro_input_text_multiline(ctx, "Notes", app->multilineInput, sizeof(app->multilineInput),
+                                     200.0f, 80.0f, MONSTRO_INPUT_TEXT_NONE, "Enter notes");
+
+        monstro_separator_text(ctx, "Numeric Input");
+        monstro_input_int(ctx, "Count", &app->intInput, 1, 10, "Integer with +/- buttons");
+        monstro_input_float(ctx, "Amount", &app->floatInput, 0.1f, 1.0f, "%.2f", "Float with +/- buttons");
+        monstro_input_double(ctx, "Precise", &app->doubleInput, 0.001, 0.1, "%.6f", "Double precision");
 
         monstro_separator_text(ctx, "Layout Test");
         

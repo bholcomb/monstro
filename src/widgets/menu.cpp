@@ -35,8 +35,9 @@ void monstro_end_menu_bar(MonstroContext* ctx) {
     
     ctx->id_stack.pop();
     
-    // End layout like C#: win.endLayout() - this adds the menu bar size to parent layout
     win->endLayout();
+
+    win->pushContentClipRect();
 }
 
 bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {

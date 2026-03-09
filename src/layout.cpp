@@ -17,6 +17,8 @@ void Layout::init(MonstroLayoutDirection direction, float posX, float posY) {
     myCursorY = 0.0f;
     myMaxX = 0.0f;
     myMaxY = 0.0f;
+    myScrollOffsetX = 0.0f;
+    myScrollOffsetY = 0.0f;
 }
 
 void Layout::addItem(float width, float height) {
@@ -139,7 +141,7 @@ MonstroRect monstro_get_item_rect(MonstroContext* ctx) {
     monstro::Layout* layout = ctx->getCurrentLayout();
     if (!layout) return {0, 0, 0, 0};
     
-    float x = ctx->current_window->pos.x + layout->myPosX + layout->myCursorX;
-    float y = ctx->current_window->pos.y + layout->myPosY + layout->myCursorY;
+    float x = ctx->current_window->pos.x + layout->myPosX + layout->myCursorX + layout->myScrollOffsetX;
+    float y = ctx->current_window->pos.y + layout->myPosY + layout->myCursorY + layout->myScrollOffsetY;
     return {x, y, layout->mySizeX, 0};
 }

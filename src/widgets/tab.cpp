@@ -65,7 +65,6 @@ void monstro_end_tab_bar(MonstroContext* ctx) {
 
     MonstroTabBarState* bar = ctx->current_tab_bar;
     if (bar && bar->content_active) {
-        monstro_end_window(ctx);
         bar->content_active = false;
     }
 
@@ -195,27 +194,8 @@ bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open
         return false;
     }
 
-    float content_x = bar->header_start_y + bar->header_height;
-    float content_w = win->size.x;
-    float content_h = win->size.y - (content_x - win->pos.y);
-    if (content_h < 0.0f) content_h = 0.0f;
-
-    char child_name[320];
-    snprintf(child_name, sizeof(child_name), "tab_%s", label);
-
-    MonstroWindowFlags child_flags = (MonstroWindowFlags)(
-        MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_CHILD
-    );
-
-    monstro_set_next_window_pos(ctx, win->pos.x, content_x, MONSTRO_COND_ALWAYS);
-    monstro_set_next_window_size(ctx, content_w, content_h, MONSTRO_COND_ALWAYS);
-
-    bool opened = monstro_begin_window(ctx, child_name, nullptr, child_flags);
-    if (opened) {
-        bar->content_active = true;
-    }
-
-    return opened;
+    bar->content_active = true;
+    return true;
 }
 
 void monstro_end_tab_item(MonstroContext* ctx) {
@@ -223,7 +203,6 @@ void monstro_end_tab_item(MonstroContext* ctx) {
 
     MonstroTabBarState* bar = ctx->current_tab_bar;
     if (bar && bar->content_active) {
-        monstro_end_window(ctx);
         bar->content_active = false;
     }
 }

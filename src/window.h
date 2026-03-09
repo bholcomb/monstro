@@ -28,7 +28,10 @@ struct Window {
     MonstroVec2 pos = {0.0f, 0.0f};
     MonstroVec2 size = {0.0f, 0.0f};
     float scroll_x = 0.0f, scroll_y = 0.0f;
+    float content_height = 0.0f;
+    float content_width = 0.0f;
     bool collapsed = false;
+    bool content_clip_pushed = false;
 
     Window* parent = nullptr;
     Window* child = nullptr;
@@ -77,9 +80,12 @@ struct Window {
     void endLayout();
 
 
+    void pushContentClipRect();
+
 private:
     void drawBackground();
     void drawForeground();
+    void drawScrollbar(float max_scroll, float visible_h, float header_h);
 };
 
 } // namespace monstro

@@ -27,14 +27,16 @@ typedef enum MonstroSliderFlags {
     MONSTRO_SLIDER_VERTICAL = 1 << 0
 } MonstroSliderFlags;
 
-typedef enum MonstroTextboxFlags {
-    MONSTRO_TEXTBOX_NONE            = 0,
-    MONSTRO_TEXTBOX_READ_ONLY       = 1 << 0,
-    MONSTRO_TEXTBOX_PASSWORD        = 1 << 1,
-    MONSTRO_TEXTBOX_MULTILINE       = 1 << 2,
-    MONSTRO_TEXTBOX_AUTO_SELECT_ALL = 1 << 3,
-    MONSTRO_TEXTBOX_ENTER_RETURNS   = 1 << 4
-} MonstroTextboxFlags;
+typedef enum MonstroInputTextFlags {
+    MONSTRO_INPUT_TEXT_NONE              = 0,
+    MONSTRO_INPUT_TEXT_READ_ONLY         = 1 << 0,
+    MONSTRO_INPUT_TEXT_PASSWORD          = 1 << 1,
+    MONSTRO_INPUT_TEXT_AUTO_SELECT_ALL   = 1 << 2,
+    MONSTRO_INPUT_TEXT_ENTER_RETURNS     = 1 << 3,
+    MONSTRO_INPUT_TEXT_CHARS_DECIMAL     = 1 << 4,
+    MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL = 1 << 5,
+    MONSTRO_INPUT_TEXT_CHARS_NO_BLANK    = 1 << 6
+} MonstroInputTextFlags;
 
 typedef enum MonstroTreeFlags {
     MONSTRO_TREE_NONE         = 0,
@@ -130,13 +132,24 @@ bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
 void monstro_progress_bar(MonstroContext* ctx, float fraction, float width, float height, const char* overlay);
 
 /* ------------------------------------------------------------------------- */
-/* Textbox                                                                   */
+/* Text Input                                                                */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_textbox(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
-                     MonstroTextboxFlags flags, const char* tooltip);
-bool monstro_textbox_sized(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
-                           float width, float height, MonstroTextboxFlags flags, const char* tooltip);
+bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
+                        MonstroInputTextFlags flags, const char* tooltip);
+bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
+                                  float width, float height, MonstroInputTextFlags flags, const char* tooltip);
+
+/* ------------------------------------------------------------------------- */
+/* Numeric Input                                                             */
+/* ------------------------------------------------------------------------- */
+
+bool monstro_input_int(MonstroContext* ctx, const char* label, int* value,
+                       int step, int step_fast, const char* tooltip);
+bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
+                         float step, float step_fast, const char* format, const char* tooltip);
+bool monstro_input_double(MonstroContext* ctx, const char* label, double* value,
+                          double step, double step_fast, const char* format, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Selectable                                                                */

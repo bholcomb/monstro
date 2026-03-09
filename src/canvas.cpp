@@ -149,8 +149,25 @@ void Canvas::pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCorne
 
 void Canvas::pushClipRect(MonstroRect rect) {
     if (clip_rect_stack_top >= MONSTRO_MAX_CLIP_RECT_STACK - 1) return;
+
+    MonstroRect parent = clip_rect_stack[clip_rect_stack_top];
+    float x1 = (rect.x > parent.x) ? rect.x : parent.x;
+    float y1 = (rect.y > parent.y) ? rect.y : parent.y;
+    float x2_rect = rect.x + rect.w;
+    float y2_rect = rect.y + rect.h;
+    float x2_parent = parent.x + parent.w;
+    float y2_parent = parent.y + parent.h;
+    float x2 = (x2_rect < x2_parent) ? x2_rect : x2_parent;
+    float y2 = (y2_rect < y2_parent) ? y2_rect : y2_parent;
+
+    MonstroRect clipped;
+    clipped.x = x1;
+    clipped.y = y1;
+    clipped.w = (x2 > x1) ? (x2 - x1) : 0.0f;
+    clipped.h = (y2 > y1) ? (y2 - y1) : 0.0f;
+
     clip_rect_stack_top++;
-    clip_rect_stack[clip_rect_stack_top] = rect;
+    clip_rect_stack[clip_rect_stack_top] = clipped;
 }
 
 void Canvas::pushClipRectFullscreen() {

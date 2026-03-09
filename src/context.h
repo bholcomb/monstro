@@ -11,6 +11,7 @@
 #include "helpers.h"
 #include "idStack.h"
 #include "tooltip.h"
+#include "editstate.h"
 
 struct MonstroTabBarState {
     uint64_t id;
@@ -114,6 +115,7 @@ struct Context {
     MonstroFont* default_font = nullptr;
 
     TooltipState tooltip;
+    EditState edit_state;
 };
 
 } // namespace monstro
