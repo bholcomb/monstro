@@ -206,6 +206,20 @@ float monstro_get_tree_indent(MonstroContext* ctx);
 void monstro_set_tree_indent(MonstroContext* ctx, float indent);
 
 /* ------------------------------------------------------------------------- */
+/* Group                                                                     */
+/* ------------------------------------------------------------------------- */
+
+typedef enum MonstroGroupFlags {
+    MONSTRO_GROUP_NONE       = 0,
+    MONSTRO_GROUP_BORDER     = 1 << 0,
+    MONSTRO_GROUP_BACKGROUND = 1 << 1,
+    MONSTRO_GROUP_DEFAULT    = MONSTRO_GROUP_BORDER
+} MonstroGroupFlags;
+
+void monstro_begin_group(MonstroContext* ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags);
+void monstro_end_group(MonstroContext* ctx);
+
+/* ------------------------------------------------------------------------- */
 /* Tabs                                                                      */
 /* ------------------------------------------------------------------------- */
 

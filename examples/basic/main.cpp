@@ -719,6 +719,23 @@ static void updateUI(App* app, float deltaTime) {
             monstro_checkbox(ctx, "Wireframe", &app->checkboxValue, nullptr);
         }
 
+        monstro_separator_text(ctx, "Groups");
+
+        monstro_begin_group(ctx, MONSTRO_LAYOUT_VERTICAL, MONSTRO_GROUP_BORDER);
+        {
+            monstro_label(ctx, "Bordered Group");
+            monstro_checkbox(ctx, "Option 1", &app->checkboxValue, nullptr);
+        }
+        monstro_end_group(ctx);
+
+        monstro_begin_group(ctx, MONSTRO_LAYOUT_HORIZONTAL, (MonstroGroupFlags)(MONSTRO_GROUP_BORDER | MONSTRO_GROUP_BACKGROUND));
+        {
+            if (monstro_button(ctx, "A", nullptr)) { printf("A\n"); }
+            if (monstro_button(ctx, "B", nullptr)) { printf("B\n"); }
+            if (monstro_button(ctx, "C", nullptr)) { printf("C\n"); }
+        }
+        monstro_end_group(ctx);
+
         monstro_separator_text(ctx, "Tabs");
         
         if (monstro_begin_tab_bar(ctx, "demoTabs", MONSTRO_TAB_BAR_NONE)) {

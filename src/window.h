@@ -25,6 +25,9 @@ struct Window {
     Layout layout_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
     int layout_stack_top = -1;
 
+    MonstroGroupFlags group_flags_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
+    int group_stack_top = -1;
+
     MonstroVec2 pos = {0.0f, 0.0f};
     MonstroVec2 size = {0.0f, 0.0f};
     float scroll_x = 0.0f, scroll_y = 0.0f;

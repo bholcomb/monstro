@@ -601,10 +601,18 @@ void Window::makeLastSibling() {
 }
 
 void Window::collectDrawCommands(Context* context) const {
-    if (active) {
+    if (active && canvas.draw_command_count > 0) {
+        uint32_t start = context->final_command_count;
         for (uint32_t i = 0; i < canvas.draw_command_count; i++) {
             if (context->final_command_count >= MONSTRO_MAX_DRAW_COMMANDS) break;
             context->final_commands[context->final_command_count++] = canvas.draw_commands[i];
+        }
+        uint32_t end = context->final_command_count;
+        if (end - start > 1) {
+            std::stable_sort(context->final_commands + start, context->final_commands + end,
+                [](const MonstroDrawCommand& a, const MonstroDrawCommand& b) {
+                    return a.layer < b.layer;
+                });
         }
     }
     if (sibling) sibling->collectDrawCommands(context);
