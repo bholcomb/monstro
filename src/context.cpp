@@ -84,6 +84,17 @@ void Context::endFrame() {
         root_window->collectDrawCommands(this);
     }
 
+    if (popup_stack_top > 0 && mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+        bool opened_this_frame = popup_stack[popup_stack_top - 1].open_frame == frame;
+        if (!opened_this_frame) {
+            bool clicked_inside_popup = hovered_window != nullptr &&
+                (hovered_window->flags & MONSTRO_WINDOW_POPUP);
+            if (!clicked_inside_popup) {
+                popup_stack_top = 0;
+            }
+        }
+    }
+
     if (hovered_window != nullptr && active_id == 0 && mouse.anyButtonPressed()) {
         focusWindow(hovered_window);
     }

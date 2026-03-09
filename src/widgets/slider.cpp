@@ -46,7 +46,6 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
                              float width, float height, MonstroSliderFlags flags, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label || !value) return false;
     (void)flags;
-    (void)tooltip;
 
     monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
@@ -57,6 +56,8 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
     MonstroStyleSlider* ss = &style->slider;
 
     uint64_t id = win->getChildId(label);
+
+    monstro_add_item(ctx, ss->padding[0], ss->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
     float label_w = monstro_font_measure_text(font, label, 0.0f).x;
@@ -132,6 +133,10 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
     }
 
     monstro_add_item(ctx, total_w, slider_h);
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
 
     return *value != old_value;
 }

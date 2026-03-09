@@ -10,6 +10,7 @@ struct MonstroPopupInternal {
     monstro::Window* parent_window;
     uint64_t parent_id;
     float open_pos_x, open_pos_y;
+    int open_frame;
 };
 
 #endif

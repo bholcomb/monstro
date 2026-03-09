@@ -51,8 +51,15 @@ void TooltipState::endFrame(Context* ctx) {
 
 void TooltipState::update(uint64_t hoveredId, float deltaTime,
                           float mouseDeltaX, float mouseDeltaY,
-                          const char* text) {
+                          bool mousePressed, const char* text) {
     if (!text || text[0] == '\0') return;
+
+    if (mousePressed) {
+        myHoverTimer = 0.0f;
+        myActive = false;
+        myText = text;
+        return;
+    }
 
     if (hoveredId != myHoveredId) {
         myHoveredId = hoveredId;
@@ -85,7 +92,8 @@ extern "C" {
 void monstro_tooltip(MonstroContext* ctx, const char* text) {
     if (!ctx || !text || text[0] == '\0') return;
     ctx->tooltip.update(ctx->hovered_id, ctx->delta_time,
-                        ctx->mouse.delta_x, ctx->mouse.delta_y, text);
+                        ctx->mouse.delta_x, ctx->mouse.delta_y,
+                        ctx->mouse.anyButtonDown(), text);
 }
 
 } // extern "C"

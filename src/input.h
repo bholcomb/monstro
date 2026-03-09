@@ -43,6 +43,7 @@ struct MouseState {
     bool isClicked(MonstroMouseButton button, float repeat_delay, float repeat_rate, float dt) const;
 
     bool anyButtonPressed() const;
+    bool anyButtonDown() const;
 
     void newFrame(float dt, float current_time);
     void endFrame();

@@ -54,11 +54,16 @@ bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled) {
     if (text_size.x == 0.0f) text_size.x = (float)strlen(label) * 8.0f;
     if (text_size.y == 0.0f) text_size.y = 16.0f;
     
-    float label_width = text_size.x + style->menu.padding[0];
-    float label_height = win->getMenuBarHeight();
-    if (label_height == 0.0f) {
-        label_height = text_size.y + style->menu.padding[1] * 2.0f;
+    float sel_pad_y = style->selectable.padding[1];
+
+    float menu_bar_h = win->getMenuBarHeight();
+    if (menu_bar_h == 0.0f) {
+        menu_bar_h = text_size.y + style->menu.padding[1] * 2.0f;
     }
+
+    float label_width = text_size.x;
+    float label_height = menu_bar_h - sel_pad_y * 2.0f;
+    if (label_height < 0.0f) label_height = 0.0f;
     
     bool pressed = false;
     bool opened = monstro_is_popup_open(ctx, label);
@@ -122,8 +127,15 @@ bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, b
         sel_flags = (MonstroSelectableFlags)(sel_flags | MONSTRO_SELECTABLE_DISABLED);
     }
     
+    float sel_pad_y = style->selectable.padding[1];
+    float menu_pad_y = style->menu.padding[1];
+    float item_height = label_size.y + (menu_pad_y - sel_pad_y) * 2.0f;
+    if (item_height < label_size.y) item_height = label_size.y;
+
     bool temp_selected = selected ? *selected : false;
-    bool pressed = monstro_selectable(ctx, label, &temp_selected, sel_flags, nullptr);
+    bool pressed = monstro_selectable_sized(ctx, label, &temp_selected,
+                                            label_size.x, item_height,
+                                            sel_flags, nullptr);
     
     if (pressed && selected) {
         *selected = temp_selected;

@@ -76,6 +76,13 @@ bool MouseState::anyButtonPressed() const {
     return false;
 }
 
+bool MouseState::anyButtonDown() const {
+    for (int i = 0; i < MONSTRO_MOUSE_BUTTON_COUNT; i++) {
+        if (buttons[i].down) return true;
+    }
+    return false;
+}
+
 void MouseState::newFrame(float dt, float current_time) {
     for (int i = 0; i < MONSTRO_MOUSE_BUTTON_COUNT; i++) {
         ButtonState* btn = &buttons[i];

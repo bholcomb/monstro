@@ -34,6 +34,7 @@ void monstro_open_popup(MonstroContext* ctx, const char* label) {
     popup->parent_id = win->getChildId("popups");
     popup->open_pos_x = ctx->mouse.pos_x;
     popup->open_pos_y = ctx->mouse.pos_y;
+    popup->open_frame = ctx->frame;
 }
 
 void monstro_close_current_popup(MonstroContext* ctx) {
