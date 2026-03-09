@@ -56,7 +56,7 @@ void monstro_end_group(MonstroContext* ctx) {
     win->canvas.popLayer();
 
     if (flags & MONSTRO_GROUP_BACKGROUND) {
-        MonstroStyleItem* bg = &style->window.fixed_background;
+        MonstroStyleItem* bg = &style->window.group_background;
         if (bg->type == MONSTRO_STYLE_ITEM_COLOR) {
             win->canvas.addRectFilled(group_rect, monstro_color_to_u32(bg->data.color),
                                       style->window.rounding, MONSTRO_CORNER_ALL);
