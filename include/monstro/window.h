@@ -67,6 +67,13 @@ bool monstro_is_window_hovered(MonstroContext* ctx);
 
 void monstro_next_line(MonstroContext* ctx);
 
+/*
+ * Child Windows / Scroll Regions
+ */
+
+bool monstro_begin_child(MonstroContext* ctx, const char* str_id, float width, float height, MonstroWindowFlags flags);
+void monstro_end_child(MonstroContext* ctx);
+
 #ifdef __cplusplus
 }
 #endif

@@ -579,6 +579,7 @@ void monstro_style_set_default(MonstroStyle* style) {
     style->window.group_border_color = rgba( 55,  74,  92, 153);
     style->window.tooltip_border_color = TOOLTIP_BORDER;
     style->window.scaler = styleItemColor(TEXT);
+    style->window.modal_dim_color = rgba(0, 0, 0, 128);
 
     style->window.border = 1.0f;
     style->window.combo_border = 2.0f;

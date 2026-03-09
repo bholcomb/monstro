@@ -12,6 +12,10 @@ static bool is_popup_open_internal(MonstroContext* ctx, uint64_t popup_id) {
 }
 
 void monstro_open_popup(MonstroContext* ctx, const char* label) {
+    monstro_open_popup_ex(ctx, label, false);
+}
+
+void monstro_open_popup_ex(MonstroContext* ctx, const char* label, bool modal) {
     if (!ctx || !ctx->current_window || !label) return;
     
     monstro::Window* win = ctx->current_window;
@@ -20,12 +24,11 @@ void monstro_open_popup(MonstroContext* ctx, const char* label) {
     if (is_popup_open_internal(ctx, popup_id)) return;
     if (ctx->popup_stack_top >= MONSTRO_MAX_POPUP_STACK) return;
 
-    // Close any sibling popups from the same parent window.
-    // This ensures that opening one menu closes any other open menu
-    // at the same level (e.g. clicking "Edit" closes "File").
-    while (ctx->popup_stack_top > 0 &&
-           ctx->popup_stack[ctx->popup_stack_top - 1].parent_window == win) {
-        ctx->popup_stack_top--;
+    if (!modal) {
+        while (ctx->popup_stack_top > 0 &&
+               ctx->popup_stack[ctx->popup_stack_top - 1].parent_window == win) {
+            ctx->popup_stack_top--;
+        }
     }
     
     MonstroPopupInternal* popup = &ctx->popup_stack[ctx->popup_stack_top++];
@@ -35,6 +38,7 @@ void monstro_open_popup(MonstroContext* ctx, const char* label) {
     popup->open_pos_x = ctx->mouse.pos_x;
     popup->open_pos_y = ctx->mouse.pos_y;
     popup->open_frame = ctx->frame;
+    popup->is_modal = modal;
 }
 
 void monstro_close_current_popup(MonstroContext* ctx) {
@@ -88,11 +92,62 @@ bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFl
 }
 
 bool monstro_begin_popup_modal(MonstroContext* ctx, const char* label, bool* p_open, MonstroWindowFlags flags) {
-    (void)ctx;
-    (void)label;
-    (void)p_open;
-    (void)flags;
-    return true;
+    if (!ctx || !ctx->current_window || !label) return false;
+
+    if (p_open && !*p_open) return false;
+
+    monstro::Window* parent_win = ctx->current_window;
+    uint64_t popup_id = parent_win->getChildId(label);
+
+    if (!is_popup_open_internal(ctx, popup_id)) {
+        return false;
+    }
+
+    MonstroStyle* style = &ctx->style;
+    monstro::Canvas* root_canvas = &ctx->root_window->canvas;
+    MonstroRect fullscreen = {0.0f, 0.0f, ctx->display_width, ctx->display_height};
+    root_canvas->pushLayer(1000);
+    root_canvas->addRectFilled(fullscreen,
+        monstro_color_to_u32(style->window.modal_dim_color), 0.0f, MONSTRO_CORNER_NONE);
+    root_canvas->popLayer();
+
+    MonstroWindowFlags modal_flags = (MonstroWindowFlags)(
+        (flags & ~MONSTRO_WINDOW_SCROLL_WITH_MOUSE) |
+        MONSTRO_WINDOW_MODAL | MONSTRO_WINDOW_POPUP |
+        MONSTRO_WINDOW_TITLE_BAR | MONSTRO_WINDOW_BORDERS |
+        MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_INPUTS |
+        MONSTRO_WINDOW_MOVABLE | MONSTRO_WINDOW_AUTO_RESIZE
+    );
+
+    char popup_name[320];
+    snprintf(popup_name, sizeof(popup_name), "modal_%s", label);
+
+    monstro::Window* existing = ctx->findWindow(popup_name);
+    if (existing && existing->size.x > 0.0f && existing->size.y > 0.0f) {
+        float cx = (ctx->display_width - existing->size.x) * 0.5f;
+        float cy = (ctx->display_height - existing->size.y) * 0.5f;
+        monstro_set_next_window_pos(ctx, cx, cy, MONSTRO_COND_ALWAYS);
+    }
+
+    bool closed = false;
+    bool opened = monstro_begin_window(ctx, popup_name, &closed, modal_flags);
+
+    if (ctx->current_window) {
+        ctx->current_window->makeLastSibling();
+    }
+
+    if (p_open && ctx->keyboard.isPressed(MONSTRO_KEY_ESCAPE)) {
+        *p_open = false;
+        monstro_close_current_popup(ctx);
+        monstro_end_popup(ctx);
+        return false;
+    }
+
+    if (!opened) {
+        monstro_end_popup(ctx);
+    }
+
+    return opened;
 }
 
 bool monstro_begin_popup_context_item(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button) {

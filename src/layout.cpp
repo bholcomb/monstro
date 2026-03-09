@@ -21,9 +21,21 @@ void Layout::init(MonstroLayoutDirection direction, float posX, float posY) {
     myScrollOffsetY = 0.0f;
     myAvailableWidth = 0.0f;
     myAvailableHeight = 0.0f;
+    myLastItemX = 0.0f;
+    myLastItemY = 0.0f;
+    myLastItemW = 0.0f;
+    myLastItemH = 0.0f;
+    myCurrentLineY = 0.0f;
+    myCurrentLineMaxH = 0.0f;
 }
 
 void Layout::addItem(float width, float height) {
+    myLastItemX = myCursorX;
+    myLastItemY = myCursorY;
+    myLastItemW = width;
+    myLastItemH = height;
+    myCurrentLineMaxH = std::max(myCurrentLineMaxH, myCursorY - myCurrentLineY + height);
+
     mySizeX = std::max(mySizeX, myCursorX + width);
     mySizeY = std::max(mySizeY, myCursorY + height);
 
@@ -133,6 +145,23 @@ void monstro_spacer(MonstroContext* ctx, float size) {
     } else {
         layout->myCursorX += size;
     }
+}
+
+void monstro_dummy(MonstroContext* ctx, float width, float height) {
+    if (!ctx || !ctx->current_window) return;
+    monstro_add_item(ctx, width, height);
+}
+
+void monstro_same_line(MonstroContext* ctx, float offset_x, float spacing) {
+    monstro::Layout* layout = ctx ? ctx->getCurrentLayout() : nullptr;
+    if (!layout) return;
+
+    if (offset_x > 0.0f) {
+        layout->myCursorX = offset_x;
+    } else {
+        layout->myCursorX = layout->myLastItemX + layout->myLastItemW + spacing;
+    }
+    layout->myCursorY = layout->myCurrentLineY;
 }
 
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction) {

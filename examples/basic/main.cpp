@@ -92,6 +92,9 @@ struct App {
 
     char tableNames[3][64];
     float tableValues[3];
+
+    bool showModal;
+    bool secondWindowOpen;
 };
 
 static App* g_app = nullptr;
@@ -843,9 +846,95 @@ static void updateUI(App* app, float deltaTime) {
 
             monstro_end_table(ctx);
         }
+
+        monstro_separator_text(ctx, "Label Variants");
+
+        monstro_label_sized(ctx, "Sized Label", 200.0f, 30.0f);
+        monstro_label_wrapped(ctx, "This is a long label that will wrap to multiple lines when the width is limited. It demonstrates the monstro_label_wrapped function.", 0.0f);
+        monstro_label_colored(ctx, "Colored Label (Red)", {255, 80, 80, 255});
+        monstro_label_colored(ctx, "Colored Label (Green)", {80, 255, 80, 255});
+
+        monstro_separator_text(ctx, "Spacing Helpers");
+
+        monstro_label(ctx, "same_line demo:");
+        monstro_begin_layout(ctx, MONSTRO_LAYOUT_VERTICAL);
+        {
+            if (monstro_button(ctx, "One", nullptr)) {}
+            monstro_same_line(ctx, 0.0f, 8.0f);
+            if (monstro_button(ctx, "Two", nullptr)) {}
+            monstro_same_line(ctx, 0.0f, 8.0f);
+            if (monstro_button(ctx, "Three", nullptr)) {}
+        }
+        monstro_end_layout(ctx);
+
+        monstro_label(ctx, "dummy spacer (50x20):");
+        monstro_dummy(ctx, 50.0f, 20.0f);
+        monstro_label(ctx, "(after spacer)");
+
+        monstro_separator_text(ctx, "Child Scroll Region");
+
+        if (monstro_begin_child(ctx, "scrollList", 0.0f, 120.0f,
+                (MonstroWindowFlags)(MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_BACKGROUND))) {
+            for (int i = 0; i < 30; i++) {
+                char buf[64];
+                snprintf(buf, sizeof(buf), "Item %d", i);
+                monstro_label(ctx, buf);
+            }
+            monstro_end_child(ctx);
+        }
+
+        monstro_separator_text(ctx, "Modal Dialog");
+
+        if (monstro_button(ctx, "Open Modal", nullptr)) {
+            app->showModal = true;
+            monstro_open_popup_ex(ctx, "ConfirmModal", true);
+        }
+
+        if (app->showModal) {
+            if (monstro_begin_popup_modal(ctx, "ConfirmModal", &app->showModal, (MonstroWindowFlags)0)) {
+                monstro_label(ctx, "Are you sure?");
+                monstro_label(ctx, "This action cannot be undone.");
+                monstro_spacer(ctx, 10.0f);
+                monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+                {
+                    if (monstro_button(ctx, "OK", nullptr)) {
+                        printf("Modal: OK clicked\n");
+                        app->showModal = false;
+                        monstro_close_current_popup(ctx);
+                    }
+                    monstro_spacer(ctx, 10.0f);
+                    if (monstro_button(ctx, "Cancel", nullptr)) {
+                        printf("Modal: Cancel clicked\n");
+                        app->showModal = false;
+                        monstro_close_current_popup(ctx);
+                    }
+                }
+                monstro_end_layout(ctx);
+                monstro_end_popup(ctx);
+            }
+        }
     }
     monstro_end_window(ctx);
-    
+
+    if (app->secondWindowOpen) {
+        monstro_set_next_window_pos(ctx, 550.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
+        monstro_set_next_window_size(ctx, 300.0f, 200.0f, MONSTRO_COND_FIRST_USE_EVER);
+
+        MonstroWindowFlags closeableFlags = (MonstroWindowFlags)(
+            MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_TITLE_BAR |
+            MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_MOVABLE |
+            MONSTRO_WINDOW_COLLAPSABLE | MONSTRO_WINDOW_RESIZABLE |
+            MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLL_WITH_MOUSE
+        );
+
+        if (monstro_begin_window(ctx, "Closeable Window", &app->secondWindowOpen, closeableFlags)) {
+            monstro_label(ctx, "This window has a close button.");
+            monstro_label(ctx, "It also has collapse and resize.");
+            monstro_label_colored(ctx, "Try resizing from the corner!", {255, 200, 80, 255});
+        }
+        monstro_end_window(ctx);
+    }
+
     monstro_end_frame(ctx);
 }
 
@@ -958,6 +1047,8 @@ int main(int argc, char* argv[]) {
     app.tableValues[0] = 1.00f;
     app.tableValues[1] = 2.50f;
     app.tableValues[2] = 0.75f;
+    app.showModal = false;
+    app.secondWindowOpen = true;
     g_app = &app;
     
     printf("Monstro UI Example\n");

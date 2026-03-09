@@ -41,6 +41,7 @@ bool Window::begin(bool* p_closed) {
     if (p_closed && *p_closed == true)
         return false;
 
+    p_open_ref = p_closed;
     ctx->id_stack.push(id);
 
     if (flags & MONSTRO_WINDOW_MODAL) {
@@ -77,7 +78,8 @@ bool Window::begin(bool* p_closed) {
         layout_stack[layout_stack_top].myScrollOffsetX = 0.0f;
         layout_stack[layout_stack_top].myScrollOffsetY = -scroll_y;
         float avail_w = size.x - pad_style->window.padding[0] * 2.0f;
-        if (content_height > (size.y - getTitleBarHeight() - getMenuBarHeight())) {
+        if (!(flags & MONSTRO_WINDOW_AUTO_RESIZE) &&
+            content_height > (size.y - getTitleBarHeight() - getMenuBarHeight())) {
             avail_w -= pad_style->window.scrollbar_size[0];
         }
         layout_stack[layout_stack_top].myAvailableWidth = avail_w;
@@ -95,6 +97,11 @@ bool Window::begin(bool* p_closed) {
     }
 
     canvas.init(&ctx->draw_buffer);
+
+    if ((flags & MONSTRO_WINDOW_CHILD) && parent) {
+        MonstroRect parent_clip = parent->canvas.getClipRect();
+        canvas.clip_rect_stack[0] = parent_clip;
+    }
 
     MonstroStyle* style = &ctx->style;
 
@@ -159,13 +166,16 @@ bool Window::end() {
 
     Layout* layout = getCurrentLayout();
     if (layout) {
+        float header_offset = getTitleBarHeight() + getMenuBarHeight();
         content_width = layout->mySizeX + style->window.padding[0] * 2.0f;
-        content_height = layout->mySizeY + style->window.padding[1] * 2.0f;
+        content_height = layout->mySizeY - header_offset + style->window.padding[1] * 2.0f;
+        if (content_height < 0.0f) content_height = 0.0f;
     }
 
     if (flags & MONSTRO_WINDOW_AUTO_RESIZE) {
+        float header_for_auto = getTitleBarHeight() + getMenuBarHeight();
         if (content_width > 0.0f) size.x = content_width;
-        if (content_height > 0.0f) size.y = content_height;
+        if (content_height > 0.0f) size.y = content_height + header_for_auto;
     }
 
     float header_h = getTitleBarHeight() + getMenuBarHeight();
@@ -175,11 +185,57 @@ bool Window::end() {
     if (scroll_y > max_scroll) scroll_y = max_scroll;
     if (scroll_y < 0.0f) scroll_y = 0.0f;
 
-    drawScrollbar(max_scroll, visible_h, header_h);
+    if (!(flags & MONSTRO_WINDOW_AUTO_RESIZE)) {
+        drawScrollbar(max_scroll, visible_h, header_h);
+    }
+
+    if ((flags & MONSTRO_WINDOW_RESIZABLE) && !collapsed) {
+        float grip_sz = 14.0f;
+        float grip_x = pos.x + size.x - grip_sz;
+        float grip_y = pos.y + size.y - grip_sz;
+        MonstroRect grip_rect = {grip_x, grip_y, grip_sz, grip_sz};
+
+        uint64_t resize_id = getChildId("##resize");
+        ctx->keepAliveId(resize_id);
+
+        bool grip_hovered = ctx->hovered_window == this &&
+            monstro_rect_contains(grip_rect, ctx->mouse.pos_x, ctx->mouse.pos_y);
+
+        if (grip_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+            ctx->setActiveId(resize_id);
+        }
+
+        bool grip_held = (ctx->active_id == resize_id);
+        if (grip_held) {
+            if (ctx->mouse.isDown(MONSTRO_MOUSE_BUTTON_LEFT)) {
+                size.x += ctx->mouse.delta_x;
+                size.y += ctx->mouse.delta_y;
+                if (size.x < style->window.min_size[0]) size.x = style->window.min_size[0];
+                if (size.y < style->window.min_size[1]) size.y = style->window.min_size[1];
+            } else {
+                ctx->setActiveId(0);
+            }
+        }
+
+        uint32_t grip_col;
+        if (grip_held) {
+            grip_col = monstro_color_to_u32(style->window.header.active.data.color);
+        } else if (grip_hovered) {
+            grip_col = monstro_color_to_u32(style->window.header.hover.data.color);
+        } else {
+            grip_col = monstro_color_to_u32(style->window.scaler.data.color);
+        }
+
+        MonstroVec2 t1 = {pos.x + size.x, pos.y + size.y - grip_sz};
+        MonstroVec2 t2 = {pos.x + size.x - grip_sz, pos.y + size.y};
+        MonstroVec2 t3 = {pos.x + size.x, pos.y + size.y};
+        canvas.addTriangleFilled(t1, t2, t3, grip_col);
+    }
 
     canvas.popClipRect();
 
     layout_stack_top = -1;
+    p_open_ref = nullptr;
     ctx->id_stack.pop();
     return true;
 }
@@ -316,6 +372,21 @@ void Window::drawBackground() {
     }
 }
 
+static void draw_collapse_arrow(Canvas& canvas, float cx, float cy, float sz, bool pointing_right, uint32_t color) {
+    float half = sz * 0.5f;
+    if (pointing_right) {
+        MonstroVec2 p1 = {cx - half * 0.4f, cy - half};
+        MonstroVec2 p2 = {cx + half * 0.6f, cy};
+        MonstroVec2 p3 = {cx - half * 0.4f, cy + half};
+        canvas.addTriangleFilled(p1, p2, p3, color);
+    } else {
+        MonstroVec2 p1 = {cx - half, cy - half * 0.4f};
+        MonstroVec2 p2 = {cx + half, cy - half * 0.4f};
+        MonstroVec2 p3 = {cx, cy + half * 0.6f};
+        canvas.addTriangleFilled(p1, p2, p3, color);
+    }
+}
+
 void Window::drawForeground() {
     MonstroStyle* style = &ctx->style;
 
@@ -327,8 +398,30 @@ void Window::drawForeground() {
     if (collapsed) {
         MonstroRect title_rect = getTitleBarRect();
         canvas.addRectFilled(title_rect, monstro_color_to_u32(style->window.header.active.data.color), style->window.rounding, MONSTRO_CORNER_ALL);
+
+        float btn_sz = title_rect.h * 0.6f;
+        float arrow_x = title_rect.x + style->window.header.padding[0] + btn_sz * 0.5f;
+        float arrow_y = title_rect.y + title_rect.h * 0.5f;
+
+        uint64_t collapse_id = getChildId("##collapse");
+        MonstroRect collapse_hit = {title_rect.x + style->window.header.padding[0], title_rect.y, btn_sz + 4.0f, title_rect.h};
+        bool col_hovered = ctx->hovered_window == this &&
+            monstro_rect_contains(collapse_hit, ctx->mouse.pos_x, ctx->mouse.pos_y);
+
+        if (col_hovered) {
+            ctx->hovered_id = collapse_id;
+            if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+                collapsed = false;
+            }
+        }
+
+        uint32_t arrow_col = monstro_color_to_u32(style->window.header.label_normal);
+        draw_collapse_arrow(canvas, arrow_x, arrow_y, btn_sz, true, arrow_col);
+
+        float text_left = arrow_x + btn_sz * 0.5f + 4.0f;
+        MonstroRect text_rect = {text_left, title_rect.y, title_rect.w - (text_left - title_rect.x), title_rect.h};
         if (style->font) {
-            canvas.addTextEx(style->font, title_rect, monstro_color_to_u32(style->window.header.label_normal), name, MONSTRO_ALIGN_CENTER);
+            canvas.addTextEx(style->font, text_rect, monstro_color_to_u32(style->window.header.label_normal), name, MONSTRO_ALIGN_LEFT);
         }
     } else {
         if (flags & MONSTRO_WINDOW_TITLE_BAR) {
@@ -336,12 +429,70 @@ void Window::drawForeground() {
             uint32_t header_color = monstro_color_to_u32(style->window.header.active.data.color);
             canvas.addRectFilled(title_rect, header_color, style->window.rounding, MONSTRO_CORNER_TOP);
 
-            uint32_t label_color = monstro_color_to_u32(style->window.header.label_normal);
-            if (style->font) {
-                canvas.addTextEx(style->font, title_rect, label_color, name, MONSTRO_ALIGN_CENTER);
+            float btn_sz = title_rect.h * 0.6f;
+            float content_left = title_rect.x + style->window.header.padding[0];
+            float content_right = title_rect.x + title_rect.w - style->window.header.padding[0];
+
+            if (flags & MONSTRO_WINDOW_COLLAPSABLE) {
+                float arrow_x = content_left + btn_sz * 0.5f;
+                float arrow_y = title_rect.y + title_rect.h * 0.5f;
+
+                uint64_t collapse_id = getChildId("##collapse");
+                MonstroRect collapse_hit = {content_left, title_rect.y, btn_sz + 4.0f, title_rect.h};
+                bool col_hovered = ctx->hovered_window == this &&
+                    monstro_rect_contains(collapse_hit, ctx->mouse.pos_x, ctx->mouse.pos_y);
+
+                if (col_hovered) {
+                    ctx->hovered_id = collapse_id;
+                    if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+                        collapsed = true;
+                    }
+                }
+
+                uint32_t arrow_col = monstro_color_to_u32(style->window.header.label_normal);
+                draw_collapse_arrow(canvas, arrow_x, arrow_y, btn_sz, false, arrow_col);
+
+                content_left += btn_sz + 4.0f;
             }
 
-            addItem(title_rect.w, title_rect.h);
+            if (p_open_ref != nullptr) {
+                float close_x = content_right - btn_sz;
+                float close_y = title_rect.y + (title_rect.h - btn_sz) * 0.5f;
+                MonstroRect close_rect = {close_x, close_y, btn_sz, btn_sz};
+
+                uint64_t close_id = getChildId("##close");
+                bool close_hovered = ctx->hovered_window == this &&
+                    monstro_rect_contains(close_rect, ctx->mouse.pos_x, ctx->mouse.pos_y);
+
+                uint32_t close_col = monstro_color_to_u32(style->window.header.label_normal);
+                if (close_hovered) {
+                    ctx->hovered_id = close_id;
+                    canvas.addRectFilled(close_rect, monstro_color_to_u32(style->window.header.hover.data.color),
+                                         style->window.rounding, MONSTRO_CORNER_ALL);
+                    if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
+                        *p_open_ref = true;
+                    }
+                }
+
+                float pad = btn_sz * 0.2f;
+                MonstroVec2 x1a = {close_rect.x + pad, close_rect.y + pad};
+                MonstroVec2 x1b = {close_rect.x + btn_sz - pad, close_rect.y + btn_sz - pad};
+                MonstroVec2 x2a = {close_rect.x + btn_sz - pad, close_rect.y + pad};
+                MonstroVec2 x2b = {close_rect.x + pad, close_rect.y + btn_sz - pad};
+                canvas.addLine(x1a, x1b, close_col, 2.0f);
+                canvas.addLine(x2a, x2b, close_col, 2.0f);
+
+                content_right -= btn_sz + 4.0f;
+            }
+
+            MonstroRect text_rect = {content_left, title_rect.y, content_right - content_left, title_rect.h};
+            uint32_t label_color = monstro_color_to_u32(style->window.header.label_normal);
+            if (style->font) {
+                canvas.addTextEx(style->font, text_rect, label_color, name, MONSTRO_ALIGN_CENTER);
+            }
+
+            Layout* l = getCurrentLayout();
+            if (l) l->myCursorY += title_rect.h;
         }
 
         if (flags & MONSTRO_WINDOW_MENU_BAR) {
@@ -675,7 +826,16 @@ static Window* findHoveredWindowRecursive(
 
 Window* Context::findHoveredWindow(float x, float y, bool excludeChildren) {
     if (root_window != nullptr) {
-        return findHoveredWindowRecursive(root_window, x, y, excludeChildren);
+        Window* result = findHoveredWindowRecursive(root_window, x, y, excludeChildren);
+
+        if (result && popup_stack_top > 0 && popup_stack[popup_stack_top - 1].is_modal) {
+            if (!(result->flags & MONSTRO_WINDOW_MODAL) &&
+                !(result->flags & MONSTRO_WINDOW_POPUP)) {
+                return nullptr;
+            }
+        }
+
+        return result;
     }
     return nullptr;
 }

@@ -386,6 +386,7 @@ typedef struct MonstroStyleWindow {
     MonstroColor group_border_color;
     MonstroColor tooltip_border_color;
     MonstroStyleItem scaler;
+    MonstroColor modal_dim_color;
 
     float border;
     float combo_border;

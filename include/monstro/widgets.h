@@ -76,6 +76,9 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
 /* ------------------------------------------------------------------------- */
 
 void monstro_label(MonstroContext* ctx, const char* text);
+void monstro_label_sized(MonstroContext* ctx, const char* text, float width, float height);
+void monstro_label_wrapped(MonstroContext* ctx, const char* text, float wrap_width);
+void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor color);
 
 /* ------------------------------------------------------------------------- */
 /* Image                                                                     */
@@ -184,6 +187,7 @@ bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, b
 /* ------------------------------------------------------------------------- */
 
 void monstro_open_popup(MonstroContext* ctx, const char* label);
+void monstro_open_popup_ex(MonstroContext* ctx, const char* label, bool modal);
 void monstro_close_current_popup(MonstroContext* ctx);
 bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFlags extra_flags);
 bool monstro_begin_popup_modal(MonstroContext* ctx, const char* label, bool* p_open, MonstroWindowFlags flags);

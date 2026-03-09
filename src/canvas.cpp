@@ -521,6 +521,61 @@ void Canvas::addText(MonstroFont* font, MonstroVec2 pos, uint32_t color, const c
     }
 }
 
+void Canvas::addTextWrapped(MonstroFont* font, MonstroVec2 pos, uint32_t color, const char* text, float wrap_width) {
+    if (!font || !text || wrap_width <= 0.0f) return;
+
+    uint64_t texture_id = monstro_font_get_atlas_texture(font);
+    if (texture_id == 0) return;
+
+    float pen_x = pos.x;
+    float pen_y = pos.y;
+    float line_y = 0;
+    float line_height = monstro_font_get_line_height(font);
+    float start_x = pos.x;
+
+    const char* line_start = text;
+    const char* word_start = text;
+    const char* s = text;
+
+    while (*s) {
+        const char* prev = s;
+        uint32_t codepoint = decode_utf8(&s);
+
+        if (codepoint == '\n') {
+            pen_x = start_x;
+            line_y += line_height;
+            word_start = s;
+            line_start = s;
+            continue;
+        }
+        if (codepoint == '\r') continue;
+
+        if (codepoint == ' ' || codepoint == '\t') {
+            word_start = s;
+        }
+
+        MonstroGlyph glyph;
+        if (!monstro_font_get_glyph(font, codepoint, &glyph)) continue;
+
+        if (pen_x - start_x + glyph.advance[0] > wrap_width && pen_x > start_x) {
+            pen_x = start_x;
+            line_y += line_height;
+        }
+
+        float x = pen_x + glyph.offset[0];
+        float y = pen_y + line_y + glyph.offset[1] + monstro_font_get_ascent(font);
+
+        if (glyph.size[0] > 0 && glyph.size[1] > 0) {
+            MonstroRect rect = {x, y, glyph.size[0], glyph.size[1]};
+            MonstroVec2 uv_min = {glyph.min_tex_coord[0], glyph.min_tex_coord[1]};
+            MonstroVec2 uv_max = {glyph.max_tex_coord[0], glyph.max_tex_coord[1]};
+            addImage(texture_id, rect, uv_min, uv_max, color);
+        }
+
+        pen_x += glyph.advance[0];
+    }
+}
+
 void Canvas::addTextEx(MonstroFont* font, MonstroRect rect, uint32_t color, const char* text, MonstroAlign align) {
     if (!font || !text) return;
 

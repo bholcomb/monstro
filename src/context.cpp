@@ -102,7 +102,8 @@ void Context::endFrame() {
 
     if (popup_stack_top > 0 && mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT)) {
         bool opened_this_frame = popup_stack[popup_stack_top - 1].open_frame == frame;
-        if (!opened_this_frame) {
+        bool is_modal = popup_stack[popup_stack_top - 1].is_modal;
+        if (!opened_this_frame && !is_modal) {
             bool clicked_inside_popup = hovered_window != nullptr &&
                 (hovered_window->flags & MONSTRO_WINDOW_POPUP);
             if (!clicked_inside_popup) {

@@ -172,3 +172,56 @@ void monstro_next_line(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return;
     ctx->current_window->nextLine();
 }
+
+/* ------------------------------------------------------------------------- */
+/* Child Windows / Scroll Regions                                            */
+/* ------------------------------------------------------------------------- */
+
+bool monstro_begin_child(MonstroContext* ctx, const char* str_id, float width, float height, MonstroWindowFlags flags) {
+    if (!ctx || !ctx->current_window || !str_id) return false;
+
+    monstro::Window* parent = ctx->current_window;
+    if (parent->skip_items) return false;
+
+    MonstroStyle* style = &ctx->style;
+
+    MonstroVec2 cursor = parent->getCursorScreenPos();
+
+    monstro::Layout* parent_layout = parent->getCurrentLayout();
+    if (width <= 0.0f && parent_layout) {
+        width = parent_layout->myAvailableWidth;
+    }
+    if (height <= 0.0f && parent_layout) {
+        height = parent_layout->myAvailableHeight;
+    }
+
+    MonstroWindowFlags child_flags = (MonstroWindowFlags)(
+        flags | MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_INPUTS |
+        MONSTRO_WINDOW_SCROLL_WITH_MOUSE
+    );
+
+    if (!(flags & MONSTRO_WINDOW_BORDERS)) {
+        child_flags = (MonstroWindowFlags)(child_flags & ~MONSTRO_WINDOW_BORDERS);
+    }
+
+    char child_name[320];
+    snprintf(child_name, sizeof(child_name), "child_%s_%s", parent->name, str_id);
+
+    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);
+    monstro_set_next_window_size(ctx, width, height, MONSTRO_COND_ALWAYS);
+
+    bool opened = monstro_begin_window(ctx, child_name, nullptr, child_flags);
+
+    if (opened) {
+        parent->addItem(width, height);
+    }
+
+    return opened;
+}
+
+void monstro_end_child(MonstroContext* ctx) {
+    if (!ctx || !ctx->current_window) return;
+    if (!(ctx->current_window->flags & MONSTRO_WINDOW_CHILD)) return;
+
+    monstro_end_window(ctx);
+}

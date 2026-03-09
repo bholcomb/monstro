@@ -35,6 +35,7 @@ struct Window {
     float content_width = 0.0f;
     bool collapsed = false;
     bool content_clip_pushed = false;
+    bool* p_open_ref = nullptr;
 
     Window* parent = nullptr;
     Window* child = nullptr;

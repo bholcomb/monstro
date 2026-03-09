@@ -60,6 +60,7 @@ struct Canvas {
 
     void addText(MonstroFont* font, MonstroVec2 pos, uint32_t color, const char* text);
     void addTextEx(MonstroFont* font, MonstroRect rect, uint32_t color, const char* text, MonstroAlign align);
+    void addTextWrapped(MonstroFont* font, MonstroVec2 pos, uint32_t color, const char* text, float wrap_width);
 
     void addImage(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t tint_color);
     void addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t tint_color, float rounding, MonstroCornerFlags corners);

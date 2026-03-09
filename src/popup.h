@@ -11,6 +11,7 @@ struct MonstroPopupInternal {
     uint64_t parent_id;
     float open_pos_x, open_pos_y;
     int open_frame;
+    bool is_modal;
 };
 
 #endif
