@@ -111,8 +111,11 @@ bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
     }
     
     monstro_add_item(ctx, outer.w, outer.h);
-    
-    (void)tooltip;
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }
 
@@ -168,7 +171,10 @@ bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* sele
     }
     
     monstro_add_item(ctx, outer.w, outer.h);
-    
-    (void)tooltip;
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }

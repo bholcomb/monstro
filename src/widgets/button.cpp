@@ -126,11 +126,12 @@ bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip)
     draw_button_background(canvas, r, style, hovered, held);
     draw_button_text(canvas, font, r, style, label, hovered, held);
     
-    // Add button size (like C#: win.addItem(size))
     monstro_add_item(ctx, w, h);
-    
-    (void)tooltip;
-    
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }
 
@@ -159,9 +160,11 @@ bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, f
     draw_button_text(canvas, font, r, style, label, hovered, held);
     
     monstro_add_item(ctx, width, height);
-    
-    (void)tooltip;
-    
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }
 
@@ -199,8 +202,10 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
     canvas->addImage(texture_id, ir, uv_min, uv_max, 0xFFFFFFFF);
     
     monstro_add_item(ctx, width, height);
-    
-    (void)tooltip;
-    
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }

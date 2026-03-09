@@ -4,7 +4,6 @@
 
 bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, int button_value, const char* tooltip) {
     if (!ctx || !ctx->current_window || !label || !value) return false;
-    (void)tooltip;
 
     monstro::Window* win = ctx->current_window;
     if (win->skip_items) return false;
@@ -15,6 +14,8 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
     MonstroStyleToggle* os = &style->option;
 
     uint64_t id = win->getChildId(label);
+
+    monstro_add_item(ctx, os->padding[0], os->padding[1]);
 
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
     float circle_d = text_h;
@@ -82,6 +83,10 @@ bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, in
     }
 
     monstro_add_item(ctx, total_w, total_h);
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
 
     return pressed;
 }

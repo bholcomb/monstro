@@ -10,6 +10,7 @@
 #include "font.h"
 #include "helpers.h"
 #include "idStack.h"
+#include "tooltip.h"
 
 struct MonstroTabBarState {
     uint64_t id;
@@ -111,6 +112,8 @@ struct Context {
     MonstroCondition next_window_focus_cond = MONSTRO_COND_NONE;
 
     MonstroFont* default_font = nullptr;
+
+    TooltipState tooltip;
 };
 
 } // namespace monstro

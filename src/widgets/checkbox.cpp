@@ -51,6 +51,9 @@ bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const
     MonstroStyle* style = &ctx->style;
     monstro::Canvas* canvas = &ctx->current_window->canvas;
     MonstroFont* font = style->font;
+
+    monstro_add_item(ctx, style->checkbox.padding[0], style->checkbox.padding[1]);
+
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
@@ -104,8 +107,10 @@ bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const
     canvas->addText(font, text_pos, monstro_color_to_u32(style->text.color), label);
     
     monstro_add_item(ctx, total_w, total_h);
-    
-    (void)tooltip;
-    
+
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return pressed;
 }

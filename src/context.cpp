@@ -54,7 +54,9 @@ void Context::beginFrame(float dt) {
     want_capture_mouse = false;
     want_capture_keyboard = false;
     want_text_input = false;
-    
+
+    tooltip.beginFrame();
+
     if (window_stack_top != 0) {
         throw std::runtime_error("Unbalanced window stack: missing monstro_end_window() calls");
     }
@@ -74,6 +76,8 @@ void Context::beginFrame(float dt) {
 }
 
 void Context::endFrame() {
+    tooltip.endFrame(this);
+
     monstro_end_window(this);
 
     if (root_window) {
@@ -225,7 +229,6 @@ void monstro_draw_buffer_set_index_buffer(MonstroDrawBuffer* buf, uint32_t* buff
 }
 
 } // extern "C"
-
 
 /* ------------------------------------------------------------------------- */
 /* ID Stack C API                                                            */

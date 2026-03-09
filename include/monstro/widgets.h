@@ -240,6 +240,12 @@ bool monstro_table_next_column(MonstroContext* ctx);
 bool monstro_table_set_column_index(MonstroContext* ctx, int column);
 
 /* ------------------------------------------------------------------------- */
+/* Tooltip                                                                   */
+/* ------------------------------------------------------------------------- */
+
+void monstro_tooltip(MonstroContext* ctx, const char* text);
+
+/* ------------------------------------------------------------------------- */
 /* Separator                                                                 */
 /* ------------------------------------------------------------------------- */
 

@@ -13,6 +13,9 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     MonstroFont* font = style->font;
     
     uint64_t id = win->getChildId(label);
+
+    monstro_add_item(ctx, style->combo.content_padding[0], style->combo.content_padding[1]);
+
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
     
     MonstroVec2 label_size = {0.0f, 0.0f};
@@ -126,8 +129,10 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
         }
     }
     
-    (void)tooltip;
-    
+    if (hovered && tooltip) {
+        monstro_tooltip(ctx, tooltip);
+    }
+
     return opened;
 }
 
