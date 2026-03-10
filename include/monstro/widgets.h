@@ -108,10 +108,8 @@ void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor c
 void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float height);
 
 /* ------------------------------------------------------------------------- */
-/* Icon                                                                      */
+/* Icon -- see include/monstro/icons.h for the full icon API                 */
 /* ------------------------------------------------------------------------- */
-
-void monstro_icon(MonstroContext* ctx, uint64_t texture_id, float size);
 
 /* ------------------------------------------------------------------------- */
 /* Checkbox                                                                  */

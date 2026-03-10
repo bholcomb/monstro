@@ -12,6 +12,7 @@
 #include "idStack.h"
 #include "tooltip.h"
 #include "editstate.h"
+#include <unordered_map>
 
 enum MonstroStylePushedType {
     MONSTRO_PUSHED_TEXT,
@@ -114,6 +115,13 @@ struct MonstroTabBarState {
     bool content_active;
 };
 
+struct MonstroIconEntry {
+    uint64_t texture_id = 0;
+    MonstroVec2 uv_min = {0.0f, 0.0f};
+    MonstroVec2 uv_max = {1.0f, 1.0f};
+    bool is_monochrome = false;
+};
+
 namespace monstro {
 
 struct Context {
@@ -152,6 +160,8 @@ struct Context {
     uint32_t final_command_count = 0;
 
     MonstroFontManager* font_manager = nullptr;
+
+    std::unordered_map<uint32_t, MonstroIconEntry> icon_map;
 
     IdStack id_stack;
 

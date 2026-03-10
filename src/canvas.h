@@ -7,6 +7,12 @@
 
 namespace monstro {
 
+typedef bool (*MonstroIconLookupFn)(void* user_data, uint32_t icon_id,
+                                    uint64_t* out_texture_id,
+                                    MonstroVec2* out_uv_min,
+                                    MonstroVec2* out_uv_max,
+                                    bool* out_monochrome);
+
 struct Canvas {
     DrawBuffer* buffer = nullptr;
 
@@ -27,6 +33,9 @@ struct Canvas {
 
     uint64_t default_texture_id = 0;
     uint32_t myLastIndexCount = 0;
+
+    MonstroIconLookupFn icon_lookup = nullptr;
+    void* icon_lookup_user_data = nullptr;
 
     void init(DrawBuffer* draw_buffer);
     void clear();
@@ -65,7 +74,6 @@ struct Canvas {
     void addImage(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t tint_color);
     void addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t tint_color, float rounding, MonstroCornerFlags corners);
     void addNinePatch(const MonstroNinePatch* patch, MonstroRect rect, uint32_t tint_color);
-    void addIcon(uint32_t icon_id, MonstroRect rect, uint32_t tint_color);
 
     void addCustomDraw(MonstroCustomDrawCallback callback, void* user_data);
 

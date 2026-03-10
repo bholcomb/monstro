@@ -16,4 +16,7 @@ void monstro_draw_disabled_overlay(MonstroContext* ctx, MonstroRect rect);
 
 const char* monstro_display_text(const char* label);
 
+uint32_t decode_utf8(const char** str);
+bool parse_icon_tag(const char** str, uint32_t* out_icon_id);
+
 #endif

@@ -1,5 +1,6 @@
 #include "canvas.h"
 #include "drawbuffer.h"
+#include "helpers.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -458,29 +459,6 @@ void Canvas::addBezierQuadratic(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, 
 /* Text Drawing                                                              */
 /* ------------------------------------------------------------------------- */
 
-static uint32_t decode_utf8(const char** str) {
-    const uint8_t* s = (const uint8_t*)*str;
-    uint32_t c = *s++;
-
-    if (c < 0x80) {
-        *str = (const char*)s;
-        return c;
-    }
-
-    if ((c & 0xE0) == 0xC0) {
-        c = ((c & 0x1F) << 6) | (*s++ & 0x3F);
-    } else if ((c & 0xF0) == 0xE0) {
-        c = ((c & 0x0F) << 12) | ((*s++ & 0x3F) << 6);
-        c |= (*s++ & 0x3F);
-    } else if ((c & 0xF8) == 0xF0) {
-        c = ((c & 0x07) << 18) | ((*s++ & 0x3F) << 12);
-        c |= ((*s++ & 0x3F) << 6);
-        c |= (*s++ & 0x3F);
-    }
-
-    *str = (const char*)s;
-    return c;
-}
 
 void Canvas::addText(MonstroFont* font, MonstroVec2 pos, uint32_t color, const char* text) {
     if (!font || !text) return;
@@ -495,6 +473,22 @@ void Canvas::addText(MonstroFont* font, MonstroVec2 pos, uint32_t color, const c
 
     const char* s = text;
     while (*s) {
+        uint32_t icon_id;
+        if (icon_lookup && parse_icon_tag(&s, &icon_id)) {
+            uint64_t icon_tex;
+            MonstroVec2 icon_uv_min, icon_uv_max;
+            bool mono = false;
+            if (icon_lookup(icon_lookup_user_data, icon_id, &icon_tex, &icon_uv_min, &icon_uv_max, &mono)) {
+                float icon_sz = line_height;
+                float iy = pen_y + line_y;
+                MonstroRect icon_rect = {pen_x, iy, icon_sz, icon_sz};
+                uint32_t tint = mono ? color : 0xFFFFFFFF;
+                addImage(icon_tex, icon_rect, icon_uv_min, icon_uv_max, tint);
+                pen_x += icon_sz;
+            }
+            continue;
+        }
+
         uint32_t codepoint = decode_utf8(&s);
 
         if (codepoint == '\n') {
@@ -538,6 +532,27 @@ void Canvas::addTextWrapped(MonstroFont* font, MonstroVec2 pos, uint32_t color, 
     const char* s = text;
 
     while (*s) {
+        uint32_t icon_id;
+        if (icon_lookup && parse_icon_tag(&s, &icon_id)) {
+            float icon_sz = line_height;
+            if (pen_x - start_x + icon_sz > wrap_width && pen_x > start_x) {
+                pen_x = start_x;
+                line_y += line_height;
+            }
+            uint64_t icon_tex;
+            MonstroVec2 icon_uv_min, icon_uv_max;
+            bool mono = false;
+            if (icon_lookup(icon_lookup_user_data, icon_id, &icon_tex, &icon_uv_min, &icon_uv_max, &mono)) {
+                float iy = pen_y + line_y;
+                MonstroRect icon_rect = {pen_x, iy, icon_sz, icon_sz};
+                uint32_t tint = mono ? color : 0xFFFFFFFF;
+                addImage(icon_tex, icon_rect, icon_uv_min, icon_uv_max, tint);
+                pen_x += icon_sz;
+            }
+            word_start = s;
+            continue;
+        }
+
         const char* prev = s;
         uint32_t codepoint = decode_utf8(&s);
 
@@ -732,9 +747,6 @@ void Canvas::addNinePatch(const MonstroNinePatch* patch, MonstroRect rect, uint3
     cmd->index_count += 54;
 }
 
-void Canvas::addIcon(uint32_t icon_id, MonstroRect rect, uint32_t tint_color) {
-    (void)icon_id; (void)rect; (void)tint_color;
-}
 
 /* ------------------------------------------------------------------------- */
 /* Custom Draw                                                               */

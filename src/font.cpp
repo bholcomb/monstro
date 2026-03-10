@@ -378,29 +378,7 @@ MonstroFont* monstro_font_find(MonstroFontManager* manager, const char* name, fl
 /* Font Measurement                                                          */
 /* ------------------------------------------------------------------------- */
 
-static uint32_t decode_utf8(const char** str) {
-    const uint8_t* s = (const uint8_t*)*str;
-    uint32_t c = *s++;
-    
-    if (c < 0x80) {
-        *str = (const char*)s;
-        return c;
-    }
-    
-    if ((c & 0xE0) == 0xC0) {
-        c = ((c & 0x1F) << 6) | (*s++ & 0x3F);
-    } else if ((c & 0xF0) == 0xE0) {
-        c = ((c & 0x0F) << 12) | ((*s++ & 0x3F) << 6);
-        c |= (*s++ & 0x3F);
-    } else if ((c & 0xF8) == 0xF0) {
-        c = ((c & 0x07) << 18) | ((*s++ & 0x3F) << 12);
-        c |= ((*s++ & 0x3F) << 6);
-        c |= (*s++ & 0x3F);
-    }
-    
-    *str = (const char*)s;
-    return c;
-}
+
 
 MonstroVec2 monstro_font_measure_text(MonstroFont* font, const char* text_utf8, float wrap_width) {
     MonstroVec2 result = {0.0f, 0.0f};
@@ -416,9 +394,16 @@ MonstroVec2 monstro_font_measure_text(MonstroFont* font, const char* text_utf8, 
     float width = 0;
     float max_width = 0;
     int line_count = 1;
+    float icon_size = font->line_height;
     
     const char* s = text_utf8;
     while (*s) {
+        uint32_t icon_id;
+        if (parse_icon_tag(&s, &icon_id)) {
+            width += icon_size;
+            continue;
+        }
+
         uint32_t codepoint = decode_utf8(&s);
         
         if (codepoint == '\n') {
@@ -454,9 +439,21 @@ MonstroVec2 monstro_font_measure_text_wrapped(MonstroFont* font, const char* tex
     float width = 0;
     float max_width = 0;
     int line_count = 1;
+    float icon_size = font->line_height;
     
     const char* s = text_utf8;
     while (*s) {
+        uint32_t icon_id;
+        if (parse_icon_tag(&s, &icon_id)) {
+            if (width + icon_size > wrap_width && width > 0) {
+                if (width > max_width) max_width = width;
+                width = 0;
+                line_count++;
+            }
+            width += icon_size;
+            continue;
+        }
+
         uint32_t codepoint = decode_utf8(&s);
         
         if (codepoint == '\n') {

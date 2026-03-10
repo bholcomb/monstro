@@ -73,6 +73,11 @@ struct App {
     VETextureIndex fontAtlasTexture;
     uint64_t fontAtlasTextureId;  // Monstro texture ID (mapped to fontAtlasTexture)
     
+    // Icon atlas
+    VETextureIndex iconAtlasTexture;
+    uint64_t iconAtlasTextureId;
+    MonstroIconId firstIconId;
+
     // Demo state
     int buttonClicks;
     bool checkboxValue;
@@ -618,6 +623,38 @@ static void updateUI(App* app, float deltaTime) {
             printf("Checkbox toggled: %d\n", app->checkboxValue);
         }
         
+        monstro_separator_text(ctx, "Icons");
+
+        if (app->firstIconId) {
+            char ib[32];
+
+            monstro_icon(ctx, app->firstIconId, 16.0f);
+            monstro_same_line(ctx, 0, 4);
+            monstro_icon(ctx, app->firstIconId + 1, 16.0f);
+            monstro_same_line(ctx, 0, 4);
+            monstro_icon(ctx, app->firstIconId + 2, 16.0f);
+            monstro_same_line(ctx, 0, 4);
+            monstro_icon(ctx, app->firstIconId + 3, 16.0f);
+
+            char btn_label[64];
+            snprintf(btn_label, sizeof(btn_label), "btn1##%sSave", monstro_icon_str(app->firstIconId, ib, sizeof(ib)));
+            if (monstro_button(ctx, btn_label, nullptr)) {
+                printf("Icon button Save clicked\n");
+            }
+
+            snprintf(btn_label, sizeof(btn_label), "btn2##%sOpen", monstro_icon_str(app->firstIconId + 1, ib, sizeof(ib)));
+            monstro_same_line(ctx, 0, 4);
+            if (monstro_button(ctx, btn_label, nullptr)) {
+                printf("Icon button Open clicked\n");
+            }
+
+            snprintf(btn_label, sizeof(btn_label), "btn3##%sExport", monstro_icon_str(app->firstIconId + 2, ib, sizeof(ib)));
+            monstro_same_line(ctx, 0, 4);
+            if (monstro_button(ctx, btn_label, nullptr)) {
+                printf("Icon button Export clicked\n");
+            }
+        }
+
         monstro_separator_text(ctx, "Sliders");
         
         monstro_slider_float(ctx, "Volume", &app->sliderValue, 0.0f, 1.0f, "%.2f", "Adjust volume");
@@ -1206,7 +1243,40 @@ int main(int argc, char* argv[]) {
         
         printf("Font atlas uploaded: texture index %u\n", app.fontAtlasTexture);
     }
-    
+
+    // Create a procedural 4x1 icon atlas (4 colored squares, 16x16 each = 64x16 atlas)
+    {
+        constexpr int icon_w = 16, icon_h = 16;
+        constexpr int cols = 4, rows = 1;
+        constexpr int atlas_w = icon_w * cols, atlas_h = icon_h * rows;
+        uint32_t pixels[atlas_w * atlas_h];
+
+        uint32_t colors[4] = {
+            0xFF4444FF,  // red
+            0xFF44FF44,  // green
+            0xFFFF8844,  // orange
+            0xFFFFFF44,  // yellow
+        };
+        for (int c = 0; c < cols; c++) {
+            for (int y = 0; y < icon_h; y++) {
+                for (int x = 0; x < icon_w; x++) {
+                    pixels[y * atlas_w + c * icon_w + x] = colors[c];
+                }
+            }
+        }
+
+        VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
+        if (veCreateTexture2D(app.device, atlas_w, atlas_h, VK_FORMAT_R8G8B8A8_UNORM, usage,
+                              "MonstroIconAtlas", &app.iconAtlasTexture) == VE_SUCCESS) {
+            veHostWriteTextureRegion(app.device, app.iconAtlasTexture, pixels, sizeof(pixels), nullptr);
+            app.iconAtlasTextureId = (uint64_t)app.iconAtlasTexture;
+            app.firstIconId = 1;
+            monstro_register_icon_atlas(app.ui, app.firstIconId, app.iconAtlasTextureId,
+                                        icon_w, icon_h, atlas_w, atlas_h, cols, rows);
+            printf("Registered %d icons starting at ID %u\n", cols * rows, app.firstIconId);
+        }
+    }
+
     printf("Monstro UI initialized\n");
     printf("Starting render loop...\n\n");
     

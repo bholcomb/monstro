@@ -1136,6 +1136,106 @@ your renderer, choose a `uint64_t` that identifies it, and use that value
 wherever Monstro expects a `texture_id`.  Your draw loop must know how to
 resolve that ID back to a GPU handle.
 
+### Icons
+
+Monstro provides an icon registry that maps user-chosen numeric IDs
+(`MonstroIconId`, a `uint32_t`) to texture sub-regions. Icons can be
+registered from sprite sheet atlases (full color) or icon font glyph ranges
+(monochrome, tinted by text color). For icon fonts, the codepoint *is* the
+icon ID, so you can reference icons directly from the font's documentation.
+Once registered, icons can be embedded inline in any widget label using the
+`{icon:ID}` tag syntax.
+
+**Registering a sprite sheet atlas:**
+
+```c
+/* Upload your icon atlas to the GPU and get a texture_id */
+uint64_t atlas_id = upload_texture("icons.png", &atlas_w, &atlas_h);
+
+/* Register a grid of icons starting at ID 100: 16x16 pixel icons, 8 columns, 4 rows */
+monstro_register_icon_atlas(ctx, 100, atlas_id,
+                            16, 16,        /* icon size */
+                            128, 64,       /* atlas size */
+                            8, 4);         /* cols, rows */
+/* Icons are assigned IDs 100..131 */
+```
+
+Icons are laid out left-to-right, top-to-bottom. The returned ID is the first
+icon; subsequent icons are numbered sequentially.
+
+**Registering a single icon with explicit UVs:**
+
+```c
+MonstroVec2 uv_min = {0.0f, 0.0f};
+MonstroVec2 uv_max = {0.5f, 0.5f};
+monstro_register_icon(ctx, 42, my_texture, uv_min, uv_max);
+```
+
+**Registering icon font glyphs (IDs are the codepoints):**
+
+```c
+/* Register FontAwesome codepoints 0xF000..0xF0FF as monochrome icons.
+   Each icon's ID is its codepoint (e.g., 0xF000, 0xF001, ...). */
+monstro_register_icon_font(ctx, fa_font, 0xF000, 256);
+```
+
+Monochrome icons are tinted with the current text color at render time.
+For icon fonts, you can use the codepoint directly in `{icon:ID}` tags,
+making it easy to reference icons from font documentation.
+
+**Using icons in labels:**
+
+Icons are embedded in widget label strings using the `{icon:ID}` tag. The tag
+is parsed at render time and replaced with the icon graphic, sized to match the
+current font line height.
+
+```c
+/* Build an icon tag string */
+char ib[32];
+monstro_icon_str(100, ib, sizeof(ib));  /* writes "{icon:100}" */
+
+/* Use in a button label */
+char label[64];
+snprintf(label, sizeof(label), "save_btn##%sSave", ib);
+monstro_button(ctx, label, NULL);  /* displays: [icon] Save */
+```
+
+The `##` separator works as usual: everything before `##` is ID-only,
+everything after `##` is displayed. Icon tags in the ID portion (before `##`)
+are not rendered -- they are just characters in the ID hash.
+
+Icons work in any widget that displays a text label: buttons, tree nodes, menu
+items, labels, checkboxes, selectables, tabs, and more. Multiple icon tags can
+appear in a single label.
+
+```c
+/* Icon-only button (no visible text, icon in the display portion) */
+snprintf(label, sizeof(label), "del##%s", ib);
+monstro_button(ctx, label, NULL);
+
+/* Multiple icons */
+char ib2[32];
+monstro_icon_str(101, ib2, sizeof(ib2));
+snprintf(label, sizeof(label), "multi##%s%sStatus", ib, ib2);
+monstro_label(ctx, label);
+```
+
+**Standalone icon widget:**
+
+```c
+monstro_icon(ctx, first, 24.0f);  /* draw icon at 24x24 pixels */
+```
+
+**Looking up icon data for manual drawing:**
+
+```c
+uint64_t tex;
+MonstroVec2 uv_min, uv_max;
+if (monstro_get_icon(ctx, first, &tex, &uv_min, &uv_max)) {
+    /* use tex, uv_min, uv_max with monstro_image or custom drawing */
+}
+```
+
 ### MonstroStyleItem -- the multi-type style value
 
 Every visual property on a widget (normal, hover, active backgrounds, cursors,

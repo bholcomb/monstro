@@ -4,6 +4,23 @@
 #include <cmath>
 #include <algorithm>
 
+static bool icon_lookup_from_context(void* user_data, uint32_t icon_id,
+                                     uint64_t* out_texture_id,
+                                     MonstroVec2* out_uv_min,
+                                     MonstroVec2* out_uv_max,
+                                     bool* out_monochrome) {
+    auto* ctx = (monstro::Context*)user_data;
+    if (!ctx || icon_id == 0) return false;
+    auto it = ctx->icon_map.find(icon_id);
+    if (it == ctx->icon_map.end()) return false;
+    const MonstroIconEntry& e = it->second;
+    if (out_texture_id) *out_texture_id = e.texture_id;
+    if (out_uv_min) *out_uv_min = e.uv_min;
+    if (out_uv_max) *out_uv_max = e.uv_max;
+    if (out_monochrome) *out_monochrome = e.is_monochrome;
+    return true;
+}
+
 namespace monstro {
 
 /* ------------------------------------------------------------------------- */
@@ -97,6 +114,8 @@ bool Window::begin(bool* p_closed) {
     }
 
     canvas.init(&ctx->draw_buffer);
+    canvas.icon_lookup = icon_lookup_from_context;
+    canvas.icon_lookup_user_data = ctx;
 
     if ((flags & MONSTRO_WINDOW_CHILD) && parent) {
         MonstroRect parent_clip = parent->canvas.getClipRect();
