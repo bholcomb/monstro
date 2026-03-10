@@ -47,6 +47,7 @@ void monstro_set_window_layout_named(MonstroContext* ctx, const char* name, Mons
 MonstroRect monstro_get_window_rect(MonstroContext* ctx);
 MonstroVec2 monstro_get_window_pos(MonstroContext* ctx);
 MonstroVec2 monstro_get_window_size(MonstroContext* ctx);
+MonstroCanvas* monstro_get_window_canvas(MonstroContext* ctx);
 
 /*
  * Scrolling
@@ -64,8 +65,6 @@ void monstro_set_scroll_y(MonstroContext* ctx, float scroll_y);
 bool monstro_is_window_collapsed(MonstroContext* ctx);
 bool monstro_is_window_focused(MonstroContext* ctx);
 bool monstro_is_window_hovered(MonstroContext* ctx);
-
-void monstro_next_line(MonstroContext* ctx);
 
 /*
  * Child Windows / Scroll Regions

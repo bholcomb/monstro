@@ -1236,6 +1236,150 @@ if (monstro_get_icon(ctx, first, &tex, &uv_min, &uv_max)) {
 }
 ```
 
+### Custom drawing
+
+Monstro exposes the full set of canvas drawing primitives through the C API.
+Every function operates on an opaque `MonstroCanvas*` handle, obtained from
+the current window:
+
+```c
+MonstroCanvas* canvas = monstro_get_window_canvas(ctx);
+```
+
+**Shape primitives:**
+
+```c
+monstro_draw_line(canvas, p1, p2, color, thickness);
+monstro_draw_rect(canvas, rect, color, rounding, MONSTRO_CORNER_ALL, thickness);
+monstro_draw_rect_filled(canvas, rect, color, rounding, MONSTRO_CORNER_ALL);
+monstro_draw_circle(canvas, center, radius, color, 12, thickness);
+monstro_draw_circle_filled(canvas, center, radius, color, 12);
+monstro_draw_triangle(canvas, p1, p2, p3, color, thickness);
+monstro_draw_triangle_filled(canvas, p1, p2, p3, color);
+monstro_draw_quad(canvas, p1, p2, p3, p4, color, thickness);
+monstro_draw_quad_filled(canvas, p1, p2, p3, p4, color);
+```
+
+**Complex shapes:**
+
+```c
+monstro_draw_polyline(canvas, points, count, color, closed, thickness);
+monstro_draw_convex_poly_filled(canvas, points, count, color);
+monstro_draw_bezier_cubic(canvas, p1, cp1, cp2, p2, color, thickness, 0);
+monstro_draw_bezier_quadratic(canvas, p1, cp, p2, color, thickness, 0);
+```
+
+Pass `0` for `num_segments` to use the default tessellation.
+
+**Text and images:**
+
+```c
+monstro_draw_text(canvas, font, pos, color, "Hello");
+monstro_draw_text_aligned(canvas, font, rect, color, "Centered", MONSTRO_ALIGN_CENTER);
+monstro_draw_text_wrapped(canvas, font, pos, color, "Long text...", wrap_width);
+monstro_draw_image(canvas, texture_id, rect, uv_min, uv_max, 0xFFFFFFFF);
+monstro_draw_image_rounded(canvas, texture_id, rect, uv_min, uv_max, 0xFFFFFFFF, 4.0f, MONSTRO_CORNER_ALL);
+monstro_draw_nine_patch(canvas, &patch, rect, 0xFFFFFFFF);
+```
+
+**Path API for complex shapes:**
+
+```c
+monstro_path_clear(canvas);
+monstro_path_move_to(canvas, start);
+monstro_path_line_to(canvas, mid);
+monstro_path_arc_to(canvas, center, radius, 0.0f, 3.14f, 12);
+monstro_path_bezier_cubic_to(canvas, cp1, cp2, end_pt, 0);
+monstro_path_stroke(canvas, color, true, 2.0f);   /* or monstro_path_fill(canvas, color); */
+```
+
+**Clip rects** restrict drawing to a sub-region:
+
+```c
+monstro_push_clip_rect(canvas, region);
+/* ... drawing calls are clipped to region ... */
+monstro_pop_clip_rect(canvas);
+```
+
+**Custom draw callback** lets you inject your own rendering commands (e.g. for
+GPU-native effects) into the draw stream:
+
+```c
+monstro_draw_custom(canvas, my_callback, my_user_data);
+```
+
+### Invisible button
+
+`monstro_invisible_button` creates a clickable/hoverable layout region that
+draws nothing.  You supply the visuals yourself using the draw API.  This is
+the fundamental building block for custom interactive widgets.
+
+```c
+MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
+if (monstro_invisible_button(ctx, "my_widget", 200.0f, 100.0f)) {
+    /* clicked */
+}
+MonstroCanvas* canvas = monstro_get_window_canvas(ctx);
+MonstroRect r = {pos.x, pos.y, 200.0f, 100.0f};
+
+uint32_t bg = monstro_is_item_hovered(ctx) ? 0xFF444444 : 0xFF333333;
+monstro_draw_rect_filled(canvas, r, bg, 4.0f, MONSTRO_CORNER_ALL);
+```
+
+After `monstro_invisible_button`, all the standard item queries work:
+`monstro_is_item_hovered`, `monstro_is_item_active`, `monstro_is_item_clicked`,
+`monstro_get_item_rect`.
+
+### Custom widget authoring
+
+To build a fully integrated custom widget, use these public primitives together:
+
+1. `monstro_get_cursor_screen_pos` -- where to draw
+2. `monstro_invisible_button` -- create an interactive region
+3. `monstro_get_window_canvas` + draw functions -- render your visuals
+4. `monstro_is_item_hovered` / `monstro_is_item_active` -- read interaction state
+5. `monstro_add_item` -- if you need to advance layout manually
+6. `monstro_set_last_item` -- if you need to set custom interaction state
+
+**Example: simple sparkline widget**
+
+```c
+void sparkline(MonstroContext* ctx, const char* id, const float* values,
+               int count, float width, float height) {
+    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
+    monstro_invisible_button(ctx, id, width, height);
+
+    MonstroCanvas* canvas = monstro_get_window_canvas(ctx);
+    MonstroRect r = {pos.x, pos.y, width, height};
+
+    uint32_t bg = 0xFF1A1A2E;
+    uint32_t line_color = monstro_is_item_hovered(ctx) ? 0xFF00DDFF : 0xFF0099CC;
+    monstro_draw_rect_filled(canvas, r, bg, 2.0f, MONSTRO_CORNER_ALL);
+
+    if (count < 2) return;
+    float v_min = values[0], v_max = values[0];
+    for (int i = 1; i < count; i++) {
+        if (values[i] < v_min) v_min = values[i];
+        if (values[i] > v_max) v_max = values[i];
+    }
+    float range = v_max - v_min;
+    if (range < 0.0001f) range = 1.0f;
+
+    MonstroVec2 points[256];
+    int n = count < 256 ? count : 256;
+    for (int i = 0; i < n; i++) {
+        float t = (float)i / (float)(n - 1);
+        float v = (values[i] - v_min) / range;
+        points[i].x = pos.x + t * width;
+        points[i].y = pos.y + height - v * height;
+    }
+
+    monstro_push_clip_rect(canvas, r);
+    monstro_draw_polyline(canvas, points, n, line_color, false, 1.5f);
+    monstro_pop_clip_rect(canvas);
+}
+```
+
 ### MonstroStyleItem -- the multi-type style value
 
 Every visual property on a widget (normal, hover, active backgrounds, cursors,

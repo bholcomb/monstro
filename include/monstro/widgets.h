@@ -91,6 +91,7 @@ bool monstro_is_disabled(MonstroContext* ctx);
 bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip);
 bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, float height, const char* tooltip);
 bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t texture_id, float width, float height, const char* tooltip);
+bool monstro_invisible_button(MonstroContext* ctx, const char* str_id, float width, float height);
 
 /* ------------------------------------------------------------------------- */
 /* Label / Text                                                              */
@@ -298,6 +299,57 @@ void monstro_tooltip(MonstroContext* ctx, const char* text);
 
 void monstro_separator(MonstroContext* ctx);
 void monstro_separator_text(MonstroContext* ctx, const char* text);
+
+/* ------------------------------------------------------------------------- */
+/* Color Picker                                                              */
+/* ------------------------------------------------------------------------- */
+
+typedef enum MonstroColorPickerFlags {
+    MONSTRO_COLOR_PICKER_NONE       = 0,
+    MONSTRO_COLOR_PICKER_NO_ALPHA   = 1 << 0,
+    MONSTRO_COLOR_PICKER_NO_SLIDERS = 1 << 1,
+    MONSTRO_COLOR_PICKER_NO_HEX     = 1 << 2,
+    MONSTRO_COLOR_PICKER_NO_PREVIEW = 1 << 3
+} MonstroColorPickerFlags;
+
+bool monstro_color_picker(MonstroContext* ctx, const char* label, MonstroColor* color,
+                          MonstroColorPickerFlags flags);
+
+bool monstro_color_button(MonstroContext* ctx, const char* label, MonstroColor color,
+                          float width, float height);
+
+/* ------------------------------------------------------------------------- */
+/* File Dialog                                                               */
+/* ------------------------------------------------------------------------- */
+
+typedef enum MonstroFileDialogMode {
+    MONSTRO_FILE_DIALOG_OPEN = 0,
+    MONSTRO_FILE_DIALOG_SAVE = 1
+} MonstroFileDialogMode;
+
+typedef enum MonstroFileDialogResult {
+    MONSTRO_FILE_DIALOG_NONE = 0,
+    MONSTRO_FILE_DIALOG_OK   = 1,
+    MONSTRO_FILE_DIALOG_CANCEL = 2
+} MonstroFileDialogResult;
+
+typedef struct MonstroFileDialogState MonstroFileDialogState;
+
+MonstroFileDialogState* monstro_file_dialog_create(void);
+void monstro_file_dialog_destroy(MonstroFileDialogState* state);
+
+void monstro_file_dialog_open(MonstroFileDialogState* state,
+                              const char* title,
+                              const char* start_path,
+                              const char* filter,
+                              MonstroFileDialogMode mode);
+
+MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext* ctx,
+                                                 MonstroFileDialogState* state);
+
+const char* monstro_file_dialog_get_path(const MonstroFileDialogState* state);
+
+bool monstro_file_dialog_is_open(const MonstroFileDialogState* state);
 
 #ifdef __cplusplus
 }

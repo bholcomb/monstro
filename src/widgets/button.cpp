@@ -217,3 +217,23 @@ bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t text
 
     return pressed;
 }
+
+bool monstro_invisible_button(MonstroContext* ctx, const char* str_id, float width, float height) {
+    if (!ctx || !ctx->current_window || !str_id) return false;
+
+    monstro::Window* win = ctx->current_window;
+    if (win->skip_items) return false;
+
+    uint64_t id = win->getChildId(str_id);
+    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
+    MonstroRect r = {pos.x, pos.y, width, height};
+
+    bool hovered = false;
+    bool held = false;
+    bool pressed = button_behavior(ctx, r, id, &hovered, &held, (MonstroButtonFlags)0);
+
+    monstro_add_item(ctx, width, height);
+    monstro_set_last_item(ctx, id, r, hovered, held, pressed, false);
+
+    return pressed;
+}

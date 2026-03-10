@@ -8,6 +8,7 @@
 #include "monstro/style.h"
 #include "monstro/font.h"
 #include "monstro/icons.h"
+#include "monstro/draw.h"
 #include "monstro/widgets.h"
 
 #endif

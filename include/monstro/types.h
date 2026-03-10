@@ -6,13 +6,15 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
-namespace monstro { struct Context; struct DrawBuffer; }
+namespace monstro { struct Context; struct DrawBuffer; struct Canvas; }
 typedef monstro::Context MonstroContext;
 typedef monstro::DrawBuffer MonstroDrawBuffer;
+typedef monstro::Canvas MonstroCanvas;
 extern "C" {
 #else
 typedef struct MonstroContext MonstroContext;
 typedef struct MonstroDrawBuffer MonstroDrawBuffer;
+typedef struct MonstroCanvas MonstroCanvas;
 #endif
 
 /* ------------------------------------------------------------------------- */

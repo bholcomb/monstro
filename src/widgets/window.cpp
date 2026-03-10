@@ -165,12 +165,12 @@ bool monstro_is_window_hovered(MonstroContext* ctx) {
 }
 
 /* ------------------------------------------------------------------------- */
-/* Layout Helpers                                                            */
+/* Canvas Access                                                             */
 /* ------------------------------------------------------------------------- */
 
-void monstro_next_line(MonstroContext* ctx) {
-    if (!ctx || !ctx->current_window) return;
-    ctx->current_window->nextLine();
+MonstroCanvas* monstro_get_window_canvas(MonstroContext* ctx) {
+    if (!ctx || !ctx->current_window) return nullptr;
+    return reinterpret_cast<MonstroCanvas*>(&ctx->current_window->canvas);
 }
 
 /* ------------------------------------------------------------------------- */

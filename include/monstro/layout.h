@@ -13,6 +13,9 @@ void monstro_end_layout(MonstroContext* ctx);
 
 void monstro_add_item(MonstroContext* ctx, float width, float height);
 
+void monstro_set_last_item(MonstroContext* ctx, uint64_t id, MonstroRect rect,
+                           bool hovered, bool active, bool clicked, bool edited);
+
 MonstroVec2 monstro_get_cursor_pos(MonstroContext* ctx);
 void monstro_set_cursor_pos(MonstroContext* ctx, float x, float y);
 

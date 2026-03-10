@@ -100,6 +100,11 @@ struct App {
 
     bool showModal;
     bool secondWindowOpen;
+
+    MonstroColor pickerColor;
+
+    MonstroFileDialogState* fileDialog;
+    char lastFilePath[4096];
 };
 
 static App* g_app = nullptr;
@@ -986,6 +991,28 @@ static void updateUI(App* app, float deltaTime) {
             monstro_label(ctx, state_buf);
         }
 
+        monstro_separator_text(ctx, "File Dialog");
+        if (monstro_button(ctx, "Open File...", nullptr)) {
+            monstro_file_dialog_open(app->fileDialog, "Open File", nullptr, "*.cpp;*.h;*.txt", MONSTRO_FILE_DIALOG_OPEN);
+        }
+        monstro_same_line(ctx, 0, 8);
+        if (monstro_button(ctx, "Save File...", nullptr)) {
+            monstro_file_dialog_open(app->fileDialog, "Save File", nullptr, "*", MONSTRO_FILE_DIALOG_SAVE);
+        }
+        if (monstro_file_dialog_is_open(app->fileDialog)) {
+            MonstroFileDialogResult r = monstro_file_dialog_draw(ctx, app->fileDialog);
+            if (r == MONSTRO_FILE_DIALOG_OK) {
+                strncpy(app->lastFilePath, monstro_file_dialog_get_path(app->fileDialog), sizeof(app->lastFilePath) - 1);
+                printf("Selected: %s\n", app->lastFilePath);
+            }
+        }
+        if (app->lastFilePath[0]) {
+            monstro_label(ctx, app->lastFilePath);
+        }
+
+        monstro_separator_text(ctx, "Color Picker");
+        monstro_color_picker(ctx, "##demo_picker", &app->pickerColor, MONSTRO_COLOR_PICKER_NONE);
+
         monstro_separator_text(ctx, "Modal Dialog");
 
         if (monstro_button(ctx, "Open Modal", nullptr)) {
@@ -1086,7 +1113,11 @@ static void cleanup(App* app) {
         veDeviceWaitIdle(app->device);
     }
     
-    // Destroy Monstro
+    if (app->fileDialog) {
+        monstro_file_dialog_destroy(app->fileDialog);
+        app->fileDialog = nullptr;
+    }
+
     if (app->ui) {
         monstro_context_destroy(app->ui);
     }
@@ -1152,6 +1183,9 @@ int main(int argc, char* argv[]) {
     app.tableValues[2] = 0.75f;
     app.showModal = false;
     app.secondWindowOpen = true;
+    app.pickerColor = {0.4f, 0.7f, 1.0f, 1.0f};
+    app.fileDialog = monstro_file_dialog_create();
+    app.lastFilePath[0] = '\0';
     g_app = &app;
     
     printf("Monstro UI Example\n");
