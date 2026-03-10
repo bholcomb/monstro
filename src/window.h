@@ -35,6 +35,10 @@ struct Window
    float scroll_x = 0.0f, scroll_y = 0.0f;
    float content_height = 0.0f;
    float content_width = 0.0f;
+   float content_view_width = 0.0f;
+   float content_view_height = 0.0f;
+   bool show_scrollbar_x = false;
+   bool show_scrollbar_y = false;
    bool collapsed = false;
    bool content_clip_pushed = false;
    bool *p_open_ref = nullptr;
@@ -62,6 +66,7 @@ struct Window
    void setCursorScreenPos(float x, float y);
 
    MonstroRect getRect() const;
+   MonstroRect getContentRect() const;
    float getTitleBarHeight() const;
    MonstroRect getTitleBarRect() const;
    float getMenuBarHeight() const;
@@ -92,7 +97,12 @@ struct Window
  private:
    void drawBackground();
    void drawForeground();
-   void drawScrollbar(float max_scroll, float visible_h, float header_h);
+   void updateScrollState(float header_h);
+   void clampScrollOffsets();
+   float getMaxScrollX() const;
+   float getMaxScrollY() const;
+   void drawVerticalScrollbar(float header_h);
+   void drawHorizontalScrollbar(float header_h);
 };
 
 } // namespace monstro

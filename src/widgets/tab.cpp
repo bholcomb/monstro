@@ -22,6 +22,9 @@ static MonstroTabBarState *find_or_create_tab_bar(MonstroContext *ctx, uint64_t 
    state->header_start_x = 0.0f;
    state->header_start_y = 0.0f;
    state->header_height = 0.0f;
+   state->flags = MONSTRO_TAB_BAR_NONE;
+   state->first_tab = 0;
+   state->selected_tab_present = false;
    state->content_active = false;
    return state;
 }
@@ -30,7 +33,6 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
 {
    if (!ctx || !ctx->current_window || !str_id)
       return false;
-   (void)flags;
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -44,6 +46,9 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
       return false;
 
    state->last_frame_active = ctx->frame;
+   state->flags = flags;
+   state->first_tab = 0;
+   state->selected_tab_present = false;
    state->content_active = false;
    ctx->current_tab_bar = state;
 
@@ -79,6 +84,10 @@ void monstro_end_tab_bar(MonstroContext *ctx)
    {
       bar->content_active = false;
    }
+   if (bar && (bar->flags & MONSTRO_TAB_BAR_AUTO_SELECT) && !bar->selected_tab_present && bar->first_tab != 0)
+   {
+      bar->selected_tab = bar->first_tab;
+   }
 
    ctx->id_stack.pop();
    ctx->current_tab_bar = nullptr;
@@ -103,6 +112,10 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
 
    uint64_t tab_id = win->getChildId(label);
    const char *display = monstro_display_text(label);
+   if (bar->first_tab == 0)
+   {
+      bar->first_tab = tab_id;
+   }
 
    if (bar->selected_tab == 0)
    {
@@ -110,6 +123,10 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
    }
 
    bool is_selected = (bar->selected_tab == tab_id);
+   if (is_selected)
+   {
+      bar->selected_tab_present = true;
+   }
 
    MonstroVec2 text_size = monstro_font_measure_text(font, display, 0.0f);
    if (text_size.x == 0.0f)

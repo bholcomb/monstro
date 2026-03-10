@@ -49,6 +49,8 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
          return false;
    }
 
+   win->flags = flags;
+
    return win->begin(p_open);
 }
 
@@ -256,7 +258,8 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
    }
 
    MonstroWindowFlags child_flags =
-       (MonstroWindowFlags)(flags | MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLL_WITH_MOUSE);
+       (MonstroWindowFlags)(flags | MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_INPUTS |
+                            MONSTRO_WINDOW_SCROLL_WITH_MOUSE | MONSTRO_WINDOW_VERTICAL_SCROLLBAR);
 
    if (!(flags & MONSTRO_WINDOW_BORDERS))
    {

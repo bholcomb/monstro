@@ -120,6 +120,9 @@ struct MonstroTabBarState
    float header_start_x;
    float header_start_y;
    float header_height;
+   MonstroTabBarFlags flags;
+   uint64_t first_tab;
+   bool selected_tab_present;
    bool content_active;
 };
 

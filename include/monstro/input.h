@@ -58,6 +58,7 @@ bool monstro_is_key_down(MonstroContext* ctx, MonstroKey key);
 bool monstro_is_key_pressed(MonstroContext* ctx, MonstroKey key, bool repeat);
 bool monstro_is_key_released(MonstroContext* ctx, MonstroKey key);
 MonstroModFlags monstro_get_key_mods(MonstroContext* ctx);
+const char* monstro_get_input_text(MonstroContext* ctx);
 
 /*
  * Input Capture Flags

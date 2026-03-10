@@ -88,9 +88,15 @@ bool monstro_is_disabled(MonstroContext* ctx);
 /* Button                                                                    */
 /* ------------------------------------------------------------------------- */
 
+bool monstro_button_ex(MonstroContext* ctx, const char* label, float width, float height,
+                       MonstroButtonFlags flags, const char* tooltip);
 bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip);
 bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, float height, const char* tooltip);
+bool monstro_image_button_ex(MonstroContext* ctx, const char* str_id, uint64_t texture_id,
+                             float width, float height, MonstroButtonFlags flags, const char* tooltip);
 bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t texture_id, float width, float height, const char* tooltip);
+bool monstro_invisible_button_ex(MonstroContext* ctx, const char* str_id, float width, float height,
+                                 MonstroButtonFlags flags);
 bool monstro_invisible_button(MonstroContext* ctx, const char* str_id, float width, float height);
 
 /* ------------------------------------------------------------------------- */
