@@ -2,13 +2,12 @@
 
 artifacts:
   transform:
-    # UI shaders for basic example
-    - name: basic_shaders
+    - name: ui_shaders
       tool: glslangValidator
       inputs:
-        - "basic/shaders/*.vert"
-        - "basic/shaders/*.frag"
-      outputs: "${output_dir}/shaders/basic/${filename}.spv"
+        - "common/shaders/*.vert"
+        - "common/shaders/*.frag"
+      outputs: "${output_dir}/shaders/${filename}.spv"
 
 targets:
   executables:
@@ -18,6 +17,7 @@ targets:
         - "basic/*.cpp"
       include_dirs:
         - "../include"
+        - "common"
       deps:
         - glfw3
         - vulkease
@@ -26,7 +26,143 @@ targets:
         - monstro
       depends_on:
         targets: [monstro]
-        artifacts: [basic_shaders]
+        artifacts: [ui_shaders]
+
+    - name: monstro_console
+      language: cpp
+      sources:
+        - "console/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_toast
+      language: cpp
+      sources:
+        - "toast/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_property
+      language: cpp
+      sources:
+        - "property/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_shortcut
+      language: cpp
+      sources:
+        - "shortcut/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_plot
+      language: cpp
+      sources:
+        - "plot/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_curve
+      language: cpp
+      sources:
+        - "curve/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_timeline
+      language: cpp
+      sources:
+        - "timeline/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
+    - name: monstro_node
+      language: cpp
+      sources:
+        - "node/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
 
 staging:
   name: monstro_examples_dist
@@ -37,11 +173,19 @@ staging:
     - folder: "."
       targets:
         - monstro_basic
+        - monstro_console
+        - monstro_toast
+        - monstro_property
+        - monstro_shortcut
+        - monstro_plot
+        - monstro_curve
+        - monstro_timeline
+        - monstro_node
         - monstro
 
-    - folder: data/basic/shaders
+    - folder: data/shaders
       artifacts:
-        - basic_shaders
+        - ui_shaders
 
     - folder: data/fonts
       files:

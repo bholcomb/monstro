@@ -27,7 +27,6 @@ void monstro_unindent(MonstroContext* ctx, float indent_width);
 
 void monstro_spacer(MonstroContext* ctx, float size);
 void monstro_dummy(MonstroContext* ctx, float width, float height);
-void monstro_same_line(MonstroContext* ctx, float offset_x, float spacing);
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction);
 
 void monstro_begin_columns(MonstroContext* ctx, const char* str_id, int count);

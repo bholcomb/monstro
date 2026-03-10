@@ -25,6 +25,7 @@ void monstro_context_set_default_font(MonstroContext* ctx, MonstroFont* font);
 MonstroFont* monstro_context_get_default_font(MonstroContext* ctx);
 
 void monstro_set_display_size(MonstroContext* ctx, float width, float height);
+void monstro_get_display_size(MonstroContext* ctx, float* out_width, float* out_height);
 
 void monstro_begin_frame(MonstroContext* ctx, float delta_time);
 void monstro_end_frame(MonstroContext* ctx);

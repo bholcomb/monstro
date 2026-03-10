@@ -1,1351 +1,688 @@
-/**
- * Monstro UI Basic Example
- * Demonstrates basic Monstro UI setup with GLFW window and VulkEase rendering
- * 
- * Based on VulkEase examples (01_triangle, 03_cube)
- */
+#include "example_app.h"
+#include <monstro/icons.h>
+#include <monstro/widgets.h>
 
-#include <vulkease.h>
-#include <GLFW/glfw3.h>
+struct BasicDemo
+{
+   int buttonClicks;
+   bool checkboxValue;
+   float sliderValue;
+   float sliderValue2;
+   int sliderInt;
+   float knobValue;
+   float knobValue2;
+   int radioValue;
+   int comboSelected;
 
-#ifdef _WIN32
-    #define GLFW_EXPOSE_NATIVE_WIN32
-    #include <GLFW/glfw3native.h>
-#elif defined(__linux__)
-    #define GLFW_EXPOSE_NATIVE_X11
-    #include <GLFW/glfw3native.h>
-#elif defined(__APPLE__)
-    #define GLFW_EXPOSE_NATIVE_COCOA
-    #include <GLFW/glfw3native.h>
-#endif
+   char textInput[256];
+   char multilineInput[1024];
+   int intInput;
+   float floatInput;
+   double doubleInput;
 
-#include <monstro.h>
+   char tableNames[3][64];
+   float tableValues[3];
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
+   bool showModal;
+   bool secondWindowOpen;
 
-// Shader paths (compiled SPIR-V)
-#define UI_VERTEX_SHADER_PATH "data/basic/shaders/ui.vert.spv"
-#define UI_FRAGMENT_SHADER_PATH "data/basic/shaders/ui.frag.spv"
+   MonstroColor pickerColor;
+   bool colorPickerOpen;
 
-// Window settings
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 1024
-#define WINDOW_TITLE "Monstro UI Example"
+   MonstroFileDialogState *fileDialog;
+   char lastFilePath[4096];
 
-#ifdef DEBUG
-static bool g_vsync = true;
-#else
-static bool g_vsync = false;
-#endif
-
-// Application state
-struct App {
-    GLFWwindow* window;
-    VEContext* context;
-    VEDevice* device;
-    VESwapchain* swapchain;
-    
-    // Render target
-    VERenderTarget renderTarget;
-    VETextureIndex colorTexture;
-    
-    // UI Renderer resources
-    VEShader* vertexShader;
-    VEShader* fragmentShader;
-    VEGraphicsPipeline* pipeline;
-    VESamplerIndex sampler;
-    VETextureIndex whiteTexture;
-    
-    // Dynamic buffers (recreated as needed)
-    VEBufferAddress vertexBuffer;
-    VEBufferAddress indexBuffer;
-    size_t vertexBufferCapacity;
-    size_t indexBufferCapacity;
-    
-    // Monstro UI
-    MonstroContext* ui;
-    
-    // Font resources
-    MonstroFont* font;
-    VETextureIndex fontAtlasTexture;
-    uint64_t fontAtlasTextureId;  // Monstro texture ID (mapped to fontAtlasTexture)
-    
-    // Icon atlas
-    VETextureIndex iconAtlasTexture;
-    uint64_t iconAtlasTextureId;
-    MonstroIconId firstIconId;
-
-    // Demo state
-    int buttonClicks;
-    bool checkboxValue;
-    float sliderValue;
-    float sliderValue2;
-    int sliderInt;
-    float knobValue;
-    float knobValue2;
-    int radioValue;
-    int comboSelected;
-
-    char textInput[256];
-    char multilineInput[1024];
-    int intInput;
-    float floatInput;
-    double doubleInput;
-
-    char tableNames[3][64];
-    float tableValues[3];
-
-    bool showModal;
-    bool secondWindowOpen;
-
-    MonstroColor pickerColor;
-
-    MonstroFileDialogState* fileDialog;
-    char lastFilePath[4096];
+   VETextureIndex iconAtlasTexture;
+   uint64_t iconAtlasTextureId;
+   MonstroIconId firstIconId;
 };
 
-static App* g_app = nullptr;
+static void basic_init(ExampleApp *app, void *ud)
+{
+   BasicDemo *d = (BasicDemo *)ud;
 
-// GLFW key to Monstro key mapping
-static MonstroKey glfw_key_to_monstro(int key) {
-    switch (key) {
-        case GLFW_KEY_TAB: return MONSTRO_KEY_TAB;
-        case GLFW_KEY_LEFT: return MONSTRO_KEY_LEFT_ARROW;
-        case GLFW_KEY_RIGHT: return MONSTRO_KEY_RIGHT_ARROW;
-        case GLFW_KEY_UP: return MONSTRO_KEY_UP_ARROW;
-        case GLFW_KEY_DOWN: return MONSTRO_KEY_DOWN_ARROW;
-        case GLFW_KEY_PAGE_UP: return MONSTRO_KEY_PAGE_UP;
-        case GLFW_KEY_PAGE_DOWN: return MONSTRO_KEY_PAGE_DOWN;
-        case GLFW_KEY_HOME: return MONSTRO_KEY_HOME;
-        case GLFW_KEY_END: return MONSTRO_KEY_END;
-        case GLFW_KEY_INSERT: return MONSTRO_KEY_INSERT;
-        case GLFW_KEY_DELETE: return MONSTRO_KEY_DELETE;
-        case GLFW_KEY_BACKSPACE: return MONSTRO_KEY_BACKSPACE;
-        case GLFW_KEY_SPACE: return MONSTRO_KEY_SPACE;
-        case GLFW_KEY_ENTER: return MONSTRO_KEY_ENTER;
-        case GLFW_KEY_ESCAPE: return MONSTRO_KEY_ESCAPE;
-        case GLFW_KEY_LEFT_CONTROL: return MONSTRO_KEY_LEFT_CTRL;
-        case GLFW_KEY_RIGHT_CONTROL: return MONSTRO_KEY_RIGHT_CTRL;
-        case GLFW_KEY_LEFT_SHIFT: return MONSTRO_KEY_LEFT_SHIFT;
-        case GLFW_KEY_RIGHT_SHIFT: return MONSTRO_KEY_RIGHT_SHIFT;
-        case GLFW_KEY_LEFT_ALT: return MONSTRO_KEY_LEFT_ALT;
-        case GLFW_KEY_RIGHT_ALT: return MONSTRO_KEY_RIGHT_ALT;
-        case GLFW_KEY_LEFT_SUPER: return MONSTRO_KEY_LEFT_SUPER;
-        case GLFW_KEY_RIGHT_SUPER: return MONSTRO_KEY_RIGHT_SUPER;
-        case GLFW_KEY_A: return MONSTRO_KEY_A;
-        case GLFW_KEY_C: return MONSTRO_KEY_C;
-        case GLFW_KEY_V: return MONSTRO_KEY_V;
-        case GLFW_KEY_X: return MONSTRO_KEY_X;
-        case GLFW_KEY_Y: return MONSTRO_KEY_Y;
-        case GLFW_KEY_Z: return MONSTRO_KEY_Z;
-        default: return MONSTRO_KEY_COUNT;
-    }
+   constexpr int icon_w = 16, icon_h = 16;
+   constexpr int cols = 4, rows = 1;
+   constexpr int atlas_w = icon_w * cols, atlas_h = icon_h * rows;
+   uint32_t pixels[atlas_w * atlas_h];
+
+   uint32_t colors[4] = {0xFF4444FF, 0xFF44FF44, 0xFFFF8844, 0xFFFFFF44};
+   for (int c = 0; c < cols; c++)
+   {
+      for (int y = 0; y < icon_h; y++)
+      {
+         for (int x = 0; x < icon_w; x++)
+         {
+            pixels[y * atlas_w + c * icon_w + x] = colors[c];
+         }
+      }
+   }
+
+   VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
+   if (veCreateTexture2D(app->device, atlas_w, atlas_h, VK_FORMAT_R8G8B8A8_UNORM, usage, "BasicIconAtlas",
+                         &d->iconAtlasTexture) == VE_SUCCESS)
+   {
+      veHostWriteTextureRegion(app->device, d->iconAtlasTexture, pixels, sizeof(pixels), nullptr);
+      d->iconAtlasTextureId = (uint64_t)d->iconAtlasTexture;
+      d->firstIconId = 1;
+      monstro_register_icon_atlas(app->ui, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h,
+                                  cols, rows);
+   }
 }
 
-// GLFW Callbacks
-static void errorCallback(int error, const char* description) {
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
-}
+static void basic_update(ExampleApp *app, void *ud, float dt)
+{
+   (void)dt;
+   BasicDemo *d = (BasicDemo *)ud;
+   MonstroContext *ctx = app->ui;
 
-static void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (app && width > 0 && height > 0) {
-        if (app->swapchain) {
-            veResizeSwapchain(app->swapchain, (uint32_t)width, (uint32_t)height);
-        }
-        if (app->colorTexture != VE_INVALID_TEXTURE_INDEX) {
-            veResizeRenderTarget(app->device, &app->renderTarget, (uint32_t)width, (uint32_t)height);
-            app->colorTexture = app->renderTarget.attachments[0].texture;
-        }
-        if (app->ui) {
-            monstro_set_display_size(app->ui, (float)width, (float)height);
-        }
-    }
-}
+   monstro_set_next_window_pos(ctx, 50.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
+   monstro_set_next_window_size(ctx, 450.0f, 900.0f, MONSTRO_COND_FIRST_USE_EVER);
 
-static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    (void)scancode;
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (!app || !app->ui) return;
-    
-    MonstroKey mkey = glfw_key_to_monstro(key);
-    if (mkey != MONSTRO_KEY_COUNT) {
-        monstro_set_key(app->ui, mkey, action != GLFW_RELEASE);
-    }
-    
-    MonstroModFlags mod_flags = MONSTRO_MOD_NONE;
-    if (mods & GLFW_MOD_CONTROL) mod_flags = (MonstroModFlags)(mod_flags | MONSTRO_MOD_CTRL);
-    if (mods & GLFW_MOD_SHIFT) mod_flags = (MonstroModFlags)(mod_flags | MONSTRO_MOD_SHIFT);
-    if (mods & GLFW_MOD_ALT) mod_flags = (MonstroModFlags)(mod_flags | MONSTRO_MOD_ALT);
-    if (mods & GLFW_MOD_SUPER) mod_flags = (MonstroModFlags)(mod_flags | MONSTRO_MOD_SUPER);
-    monstro_set_key_mods(app->ui, mod_flags);
-}
+   MonstroWindowFlags windowFlags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
+   if (monstro_begin_window(ctx, "Monstro Demo", nullptr, windowFlags))
+   {
 
-static void charCallback(GLFWwindow* window, unsigned int codepoint) {
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (!app || !app->ui) return;
-    
-    char utf8[5] = {0};
-    if (codepoint < 0x80) {
-        utf8[0] = (char)codepoint;
-    } else if (codepoint < 0x800) {
-        utf8[0] = (char)(0xC0 | (codepoint >> 6));
-        utf8[1] = (char)(0x80 | (codepoint & 0x3F));
-    } else if (codepoint < 0x10000) {
-        utf8[0] = (char)(0xE0 | (codepoint >> 12));
-        utf8[1] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        utf8[2] = (char)(0x80 | (codepoint & 0x3F));
-    } else {
-        utf8[0] = (char)(0xF0 | (codepoint >> 18));
-        utf8[1] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-        utf8[2] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        utf8[3] = (char)(0x80 | (codepoint & 0x3F));
-    }
-    
-    monstro_add_input_text(app->ui, utf8);
-}
-
-static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (!app || !app->ui) return;
-    monstro_set_mouse_pos(app->ui, (float)xpos, (float)ypos);
-}
-
-static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    (void)mods;
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (!app || !app->ui) return;
-    
-    MonstroMouseButton mbutton = MONSTRO_MOUSE_BUTTON_LEFT;
-    if (button == GLFW_MOUSE_BUTTON_RIGHT) mbutton = MONSTRO_MOUSE_BUTTON_RIGHT;
-    else if (button == GLFW_MOUSE_BUTTON_MIDDLE) mbutton = MONSTRO_MOUSE_BUTTON_MIDDLE;
-    
-    monstro_set_mouse_button(app->ui, mbutton, action == GLFW_PRESS);
-}
-
-static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-    App* app = (App*)glfwGetWindowUserPointer(window);
-    if (!app || !app->ui) return;
-    monstro_set_mouse_wheel(app->ui, (float)xoffset, (float)yoffset);
-}
-
-// Initialize GLFW and create window
-static bool initWindow(App* app) {
-    glfwSetErrorCallback(errorCallback);
-    
-    if (!glfwInit()) {
-        fprintf(stderr, "Failed to initialize GLFW\n");
-        return false;
-    }
-    
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    
-    app->window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, nullptr, nullptr);
-    if (!app->window) {
-        fprintf(stderr, "Failed to create GLFW window\n");
-        glfwTerminate();
-        return false;
-    }
-    
-    glfwSetWindowUserPointer(app->window, app);
-    glfwSetFramebufferSizeCallback(app->window, framebufferSizeCallback);
-    glfwSetKeyCallback(app->window, keyCallback);
-    glfwSetCharCallback(app->window, charCallback);
-    glfwSetCursorPosCallback(app->window, cursorPosCallback);
-    glfwSetMouseButtonCallback(app->window, mouseButtonCallback);
-    glfwSetScrollCallback(app->window, scrollCallback);
-    
-    return true;
-}
-
-// Initialize VulkEase
-static bool initVulkEase(App* app) {
-    // Create context
-    if (veCreateContext("Monstro UI Example", nullptr, 0, &app->context) != VE_SUCCESS || !app->context) {
-        fprintf(stderr, "Failed to create VulkEase context\n");
-        return false;
-    }
-    
-    // Create device
-    if (veCreateDevice(app->context, VK_NULL_HANDLE, nullptr, 0, &app->device) != VE_SUCCESS || !app->device) {
-        fprintf(stderr, "Failed to create VulkEase device\n");
-        return false;
-    }
-    
-    printf("VulkEase initialized\n");
-    printf("Device: %s\n", veGetDeviceName(app->device));
-    
-    // Create swapchain
-    VESwapchainDesc swapchainDesc = {};
-    swapchainDesc.width = WINDOW_WIDTH;
-    swapchainDesc.height = WINDOW_HEIGHT;
-    swapchainDesc.colorFormat = VK_FORMAT_B8G8R8A8_SRGB;
-    swapchainDesc.vsync = g_vsync;
-    swapchainDesc.debugName = "MonstroSwapchain";
-
-#if defined(_WIN32)
-    swapchainDesc.surface.type = VE_SURFACE_TYPE_WIN32;
-    swapchainDesc.surface.win32.hwnd = glfwGetWin32Window(app->window);
-#elif defined(__linux__)
-    swapchainDesc.surface.type = VE_SURFACE_TYPE_XLIB;
-    swapchainDesc.surface.xlib.display = (void*)glfwGetX11Display();
-    swapchainDesc.surface.xlib.window = glfwGetX11Window(app->window);
-#elif defined(__APPLE__)
-    swapchainDesc.surface.type = VE_SURFACE_TYPE_COCOA;
-    swapchainDesc.surface.cocoa.window = glfwGetCocoaWindow(app->window);
-#endif
-
-    if (veCreateSwapchain(app->device, &swapchainDesc, &app->swapchain) != VE_SUCCESS || !app->swapchain) {
-        fprintf(stderr, "Failed to create swapchain\n");
-        return false;
-    }
-    
-    // Create render target (no depth buffer for UI)
-    int width, height;
-    glfwGetFramebufferSize(app->window, &width, &height);
-    
-    VEColor clearColor = {0.1f, 0.1f, 0.12f, 1.0f};
-    app->renderTarget = veCreateSimpleRenderTarget(app->device,
-                                                    (uint32_t)width, (uint32_t)height,
-                                                    veGetSwapchainFormat(app->swapchain),
-                                                    VK_FORMAT_UNDEFINED,  // No depth buffer
-                                                    clearColor, 1.0f,
-                                                    &app->colorTexture, nullptr);
-    
-    if (app->colorTexture == VE_INVALID_TEXTURE_INDEX) {
-        fprintf(stderr, "Failed to create render target\n");
-        return false;
-    }
-    
-    printf("Render target created: %dx%d\n", width, height);
-    return true;
-}
-
-// Initialize UI renderer resources
-static bool initUIRenderer(App* app) {
-    // Load shaders
-    if (veLoadShaderFromFile(app->device, UI_VERTEX_SHADER_PATH, VK_SHADER_STAGE_VERTEX_BIT, "main",
-                             "MonstroUIVertex", &app->vertexShader) != VE_SUCCESS || !app->vertexShader) {
-        fprintf(stderr, "Failed to load UI vertex shader\n");
-        return false;
-    }
-    
-    if (veLoadShaderFromFile(app->device, UI_FRAGMENT_SHADER_PATH, VK_SHADER_STAGE_FRAGMENT_BIT, "main",
-                             "MonstroUIFragment", &app->fragmentShader) != VE_SUCCESS || !app->fragmentShader) {
-        fprintf(stderr, "Failed to load UI fragment shader\n");
-        return false;
-    }
-    
-    // Create pipeline with alpha blending for UI
-    VEGraphicsPipelineDesc pipelineDesc = veDefaultGraphicsPipelineDesc();
-    pipelineDesc.vertexShader = app->vertexShader;
-    pipelineDesc.fragmentShader = app->fragmentShader;
-    pipelineDesc.debugName = "MonstroUIPipeline";
-    
-    // UI uses no vertex input (bindless via buffer device address)
-    pipelineDesc.vertexBindingCount = 0;
-    pipelineDesc.vertexBindings = nullptr;
-    pipelineDesc.vertexAttributeCount = 0;
-    pipelineDesc.vertexAttributes = nullptr;
-    
-    // Disable depth for UI
-    pipelineDesc.depthTestEnable = false;
-    pipelineDesc.depthWriteEnable = false;
-    
-    // No backface culling
-    pipelineDesc.cullMode = VK_CULL_MODE_NONE;
-    
-    // Enable alpha blending
-    pipelineDesc.blendAttachments[0].blendEnable = true;
-    pipelineDesc.blendAttachments[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    pipelineDesc.blendAttachments[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    pipelineDesc.blendAttachments[0].colorBlendOp = VK_BLEND_OP_ADD;
-    pipelineDesc.blendAttachments[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    pipelineDesc.blendAttachments[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    pipelineDesc.blendAttachments[0].alphaBlendOp = VK_BLEND_OP_ADD;
-    pipelineDesc.blendAttachments[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    pipelineDesc.blendAttachmentCount = 1;
-    
-    if (veCreateGraphicsPipeline(app->device, &pipelineDesc, &app->pipeline) != VE_SUCCESS || !app->pipeline) {
-        fprintf(stderr, "Failed to create UI pipeline\n");
-        return false;
-    }
-    
-    // Create linear sampler
-    if (veCreateLinearSampler(app->device, &app->sampler) != VE_SUCCESS || app->sampler == VE_INVALID_SAMPLER_INDEX) {
-        fprintf(stderr, "Failed to create sampler\n");
-        return false;
-    }
-    
-    // Create white texture (1x1 white pixel) as default
-    // Need VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT for veHostWriteTextureRegion
-    VkImageUsageFlags whiteTexUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
-    if (veCreateTexture2D(app->device, 1, 1, VK_FORMAT_R8G8B8A8_UNORM, whiteTexUsage, 
-                          "MonstroWhiteTexture", &app->whiteTexture) != VE_SUCCESS ||
-        app->whiteTexture == VE_INVALID_TEXTURE_INDEX) {
-        fprintf(stderr, "Failed to create white texture\n");
-        return false;
-    }
-    
-    uint32_t whitePixel = 0xFFFFFFFF;
-    VEResult texWriteResult = veHostWriteTextureRegion(app->device, app->whiteTexture, &whitePixel, sizeof(whitePixel), nullptr);
-    if (texWriteResult != VE_SUCCESS) {
-        fprintf(stderr, "Warning: veHostWriteTextureRegion failed with code %d\n", texWriteResult);
-    }
-    
-    // Initialize buffer addresses to invalid
-    app->vertexBuffer = VE_INVALID_ADDRESS;
-    app->indexBuffer = VE_INVALID_ADDRESS;
-    app->vertexBufferCapacity = 0;
-    app->indexBufferCapacity = 0;
-    
-    printf("UI renderer initialized\n");
-    return true;
-}
-
-// Upload UI buffers to GPU
-static bool uploadUIBuffers(App* app, MonstroDrawBuffer* drawBuffer) {
-    const MonstroVertex* vertices = nullptr;
-    size_t vertexByteSize = 0;
-    monstro_draw_buffer_get_vertex_buffer(drawBuffer, &vertices, &vertexByteSize);
-    
-    const uint32_t* indices = nullptr;
-    uint32_t indexCount = 0;
-    monstro_draw_buffer_get_index_buffer(drawBuffer, &indices, &indexCount);
-    size_t indexByteSize = indexCount * sizeof(uint32_t);
-    
-    if (vertexByteSize == 0 || indexByteSize == 0) {
-        return true;
-    }
-    
-    // Recreate vertex buffer if capacity exceeded
-    if (vertexByteSize > app->vertexBufferCapacity) {
-        if (app->vertexBuffer != VE_INVALID_ADDRESS) {
-            veDestroyBuffer(app->device, app->vertexBuffer);
-        }
-        
-        size_t newCapacity = vertexByteSize * 2;  // Double for growth
-        VEBufferDesc bufDesc = {};
-        bufDesc.size = newCapacity;
-        bufDesc.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        bufDesc.persistentlyMapped = false;
-        bufDesc.debugName = "MonstroVertexBuffer";
-        
-        if (veCreateBuffer(app->device, &bufDesc, &app->vertexBuffer) != VE_SUCCESS ||
-            app->vertexBuffer == VE_INVALID_ADDRESS) {
-            fprintf(stderr, "Failed to create vertex buffer\n");
-            return false;
-        }
-        app->vertexBufferCapacity = newCapacity;
-    }
-    
-    // Recreate index buffer if capacity exceeded
-    if (indexByteSize > app->indexBufferCapacity) {
-        if (app->indexBuffer != VE_INVALID_ADDRESS) {
-            veDestroyBuffer(app->device, app->indexBuffer);
-        }
-        
-        size_t newCapacity = indexByteSize * 2;
-        VEBufferDesc bufDesc = {};
-        bufDesc.size = newCapacity;
-        bufDesc.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-        bufDesc.persistentlyMapped = false;
-        bufDesc.debugName = "MonstroIndexBuffer";
-        
-        if (veCreateBuffer(app->device, &bufDesc, &app->indexBuffer) != VE_SUCCESS ||
-            app->indexBuffer == VE_INVALID_ADDRESS) {
-            fprintf(stderr, "Failed to create index buffer\n");
-            return false;
-        }
-        app->indexBufferCapacity = newCapacity;
-    }
-    
-    // Upload data
-    if (vertices && vertexByteSize > 0) {
-        veUpdateBuffer(app->device, app->vertexBuffer, vertices, vertexByteSize, 0);
-    }
-    if (indices && indexByteSize > 0) {
-        veUpdateBuffer(app->device, app->indexBuffer, indices, indexByteSize, 0);
-    }
-    
-    return true;
-}
-
-// Texture type flags for shader
-enum UITextureType : uint32_t {
-    UI_TEXTURE_RGBA = 0,
-    UI_TEXTURE_FONT_ATLAS = 1,
-    UI_TEXTURE_NONE = 2
-};
-
-// Push constants structure matching shader
-struct UIPushConstants {
-    uint64_t vertexBufferAddress;
-    uint64_t indexBufferAddress;
-    float screenWidth;
-    float screenHeight;
-    uint32_t textureIndex;
-    uint32_t samplerIndex;
-    uint32_t indexOffset;
-    uint32_t textureType;  // UITextureType
-};
-
-// Render UI draw commands
-static void renderUI(App* app, VECommandBuffer* cmd, MonstroContext* ctx, MonstroDrawBuffer* drawBuffer, uint32_t width, uint32_t height) {
-    const MonstroDrawCommand* drawCmds = nullptr;
-    uint32_t drawCount = 0;
-    monstro_context_get_draw_commands(ctx, &drawCmds, &drawCount);
-    
-    if (drawCount == 0 || app->vertexBuffer == VE_INVALID_ADDRESS) {
-        return;
-    }
-    
-    // Apply pipeline
-    veApplyGraphicsState(cmd, app->pipeline, nullptr, nullptr, nullptr);
-    
-    // Process each draw command
-    for (uint32_t i = 0; i < drawCount; i++) {
-        const MonstroDrawCommand* dc = &drawCmds[i];
-        
-        // Handle custom draw callbacks
-        if (dc->custom_draw) {
-            float clip[4] = {dc->clip_rect[0], dc->clip_rect[1], dc->clip_rect[2], dc->clip_rect[3]};
-            dc->custom_draw(dc->user_data, clip, dc->layer);
-            continue;
-        }
-        
-        // Set scissor rect from clip rect
-        int32_t sx = (int32_t)dc->clip_rect[0];
-        int32_t sy = (int32_t)dc->clip_rect[1];
-        uint32_t sw = (uint32_t)dc->clip_rect[2];
-        uint32_t sh = (uint32_t)dc->clip_rect[3];
-        
-        // Clamp to screen bounds
-        if (sx < 0) { sw = (sw > (uint32_t)(-sx)) ? sw + sx : 0; sx = 0; }
-        if (sy < 0) { sh = (sh > (uint32_t)(-sy)) ? sh + sy : 0; sy = 0; }
-        if ((uint32_t)sx + sw > width) { sw = width - sx; }
-        if ((uint32_t)sy + sh > height) { sh = height - sy; }
-        
-        veSetScissor(cmd, sx, sy, sw, sh);
-        
-        VETextureIndex texture = app->whiteTexture;
-        UITextureType texType = UI_TEXTURE_NONE;
-        
-        if (dc->texture_id == app->fontAtlasTextureId && app->fontAtlasTextureId != 0) {
-            texture = app->fontAtlasTexture;
-            texType = UI_TEXTURE_FONT_ATLAS;
-        } else if (dc->texture_id != 0) {
-            texType = UI_TEXTURE_RGBA;
-        }
-        
-        // Set push constants
-        UIPushConstants pc = {};
-        pc.vertexBufferAddress = app->vertexBuffer;
-        pc.indexBufferAddress = app->indexBuffer;
-        pc.screenWidth = (float)width;
-        pc.screenHeight = (float)height;
-        pc.textureIndex = texture;
-        pc.samplerIndex = app->sampler;
-        pc.indexOffset = dc->index_offset;
-        pc.textureType = texType;
-        
-        vePushConstants(cmd, &pc, sizeof(pc), 0);
-        
-        // Draw (using vertex index from shader gl_VertexIndex)
-        veDraw(cmd, dc->index_count, 1, 0, 0);
-    }
-}
-
-// Update UI state
-static void updateUI(App* app, float deltaTime) {
-    MonstroContext* ctx = app->ui;
-    
-    monstro_begin_frame(ctx, deltaTime);
-    
-    monstro_set_next_window_pos(ctx, 50.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
-    monstro_set_next_window_size(ctx, 450.0f, 900.0f, MONSTRO_COND_FIRST_USE_EVER);
-    
-    MonstroWindowFlags windowFlags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
-    if (monstro_begin_window(ctx, "Monstro Demo", nullptr, windowFlags)) {
-        
-        // Menu bar
-        if (monstro_begin_menu_bar(ctx)) {
-            if (monstro_begin_menu(ctx, "File", true)) {
-                if (monstro_menu_item(ctx, "Load", nullptr, true)) {
-                    printf("Menu: Load clicked\n");
-                }
-                if (monstro_menu_item(ctx, "Save", nullptr, true)) {
-                    printf("Menu: Save clicked\n");
-                }
-                if(monstro_begin_menu(ctx, "Options", true))
-                {
-                    if(monstro_menu_item(ctx, "Option 1", nullptr, true))
-                    {
-                        printf("Menu: Option 1 clicked\n");
-                    }
-                    if(monstro_menu_item(ctx, "Option 2", nullptr, true))
-                    {
-                        printf("Menu: Option 2 clicked\n");
-                    }
-                    monstro_end_menu(ctx);
-                }
-                monstro_separator(ctx);
-                if (monstro_menu_item(ctx, "Exit", nullptr, true)) {
-                    printf("Menu: Exit clicked\n");
-                }
-                monstro_end_menu(ctx);
+      if (monstro_begin_menu_bar(ctx))
+      {
+         if (monstro_begin_menu(ctx, "File", true))
+         {
+            if (monstro_menu_item(ctx, "Load", nullptr, true))
+            {
+               printf("Menu: Load clicked\n");
             }
-            if (monstro_begin_menu(ctx, "Edit", true)) {
-                if (monstro_menu_item(ctx, "Cut", nullptr, true)) {
-                    printf("Menu: Cut clicked\n");
-                }
-                if (monstro_menu_item(ctx, "Copy", nullptr, true)) {
-                    printf("Menu: Copy clicked\n");
-                }
-                if (monstro_menu_item(ctx, "Paste", nullptr, true)) {
-                    printf("Menu: Paste clicked\n");
-                }
-                monstro_end_menu(ctx);
+            if (monstro_menu_item(ctx, "Save", nullptr, true))
+            {
+               printf("Menu: Save clicked\n");
             }
-            monstro_end_menu_bar(ctx);
-        }
-        
-        monstro_label(ctx, "Hello, Monstro!");
-        
-        monstro_separator(ctx);
-        
-        if (monstro_button(ctx, "Click Me!", "Click this button")) {
-            app->buttonClicks++;
-            printf("Button clicked! Total: %d\n", app->buttonClicks);
-        }
-        
-        if (monstro_checkbox(ctx, "Enable Feature", &app->checkboxValue, "Toggle this feature")) {
-            printf("Checkbox toggled: %d\n", app->checkboxValue);
-        }
-        
-        monstro_separator_text(ctx, "Icons");
+            if (monstro_begin_menu(ctx, "Options", true))
+            {
+               if (monstro_menu_item(ctx, "Option 1", nullptr, true))
+               {
+                  printf("Menu: Option 1 clicked\n");
+               }
+               if (monstro_menu_item(ctx, "Option 2", nullptr, true))
+               {
+                  printf("Menu: Option 2 clicked\n");
+               }
+               monstro_end_menu(ctx);
+            }
+            monstro_separator(ctx);
+            if (monstro_menu_item(ctx, "Exit", nullptr, true))
+            {
+               printf("Menu: Exit clicked\n");
+            }
+            monstro_end_menu(ctx);
+         }
+         if (monstro_begin_menu(ctx, "Edit", true))
+         {
+            if (monstro_menu_item(ctx, "Cut", nullptr, true))
+            {
+               printf("Menu: Cut clicked\n");
+            }
+            if (monstro_menu_item(ctx, "Copy", nullptr, true))
+            {
+               printf("Menu: Copy clicked\n");
+            }
+            if (monstro_menu_item(ctx, "Paste", nullptr, true))
+            {
+               printf("Menu: Paste clicked\n");
+            }
+            monstro_end_menu(ctx);
+         }
+         monstro_end_menu_bar(ctx);
+      }
 
-        if (app->firstIconId) {
-            char ib[32];
+      monstro_label(ctx, "Hello, Monstro!");
+      monstro_separator(ctx);
 
-            monstro_icon(ctx, app->firstIconId, 16.0f);
-            monstro_same_line(ctx, 0, 4);
-            monstro_icon(ctx, app->firstIconId + 1, 16.0f);
-            monstro_same_line(ctx, 0, 4);
-            monstro_icon(ctx, app->firstIconId + 2, 16.0f);
-            monstro_same_line(ctx, 0, 4);
-            monstro_icon(ctx, app->firstIconId + 3, 16.0f);
+      if (monstro_button(ctx, "Click Me!", "Click this button"))
+      {
+         d->buttonClicks++;
+         printf("Button clicked! Total: %d\n", d->buttonClicks);
+      }
 
-            char btn_label[64];
-            snprintf(btn_label, sizeof(btn_label), "btn1##%sSave", monstro_icon_str(app->firstIconId, ib, sizeof(ib)));
-            if (monstro_button(ctx, btn_label, nullptr)) {
-                printf("Icon button Save clicked\n");
+      if (monstro_checkbox(ctx, "Enable Feature", &d->checkboxValue, "Toggle this feature"))
+      {
+         printf("Checkbox toggled: %d\n", d->checkboxValue);
+      }
+
+      monstro_separator_text(ctx, "Icons");
+
+      if (d->firstIconId)
+      {
+         char ib[32];
+
+         monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+         {
+            monstro_icon(ctx, d->firstIconId, 16.0f);
+            monstro_icon(ctx, d->firstIconId + 1, 16.0f);
+            monstro_icon(ctx, d->firstIconId + 2, 16.0f);
+            monstro_icon(ctx, d->firstIconId + 3, 16.0f);
+         }
+         monstro_end_layout(ctx);
+
+         char btn_label[64];
+         monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+         {
+            snprintf(btn_label, sizeof(btn_label), "btn1##%sSave", monstro_icon_str(d->firstIconId, ib, sizeof(ib)));
+            if (monstro_button(ctx, btn_label, nullptr))
+            {
+               printf("Icon button Save clicked\n");
             }
 
-            snprintf(btn_label, sizeof(btn_label), "btn2##%sOpen", monstro_icon_str(app->firstIconId + 1, ib, sizeof(ib)));
-            monstro_same_line(ctx, 0, 4);
-            if (monstro_button(ctx, btn_label, nullptr)) {
-                printf("Icon button Open clicked\n");
+            snprintf(btn_label, sizeof(btn_label), "btn2##%sOpen",
+                     monstro_icon_str(d->firstIconId + 1, ib, sizeof(ib)));
+            if (monstro_button(ctx, btn_label, nullptr))
+            {
+               printf("Icon button Open clicked\n");
             }
 
-            snprintf(btn_label, sizeof(btn_label), "btn3##%sExport", monstro_icon_str(app->firstIconId + 2, ib, sizeof(ib)));
-            monstro_same_line(ctx, 0, 4);
-            if (monstro_button(ctx, btn_label, nullptr)) {
-                printf("Icon button Export clicked\n");
+            snprintf(btn_label, sizeof(btn_label), "btn3##%sExport",
+                     monstro_icon_str(d->firstIconId + 2, ib, sizeof(ib)));
+            if (monstro_button(ctx, btn_label, nullptr))
+            {
+               printf("Icon button Export clicked\n");
             }
-        }
+         }
+         monstro_end_layout(ctx);
+      }
 
-        monstro_separator_text(ctx, "Sliders");
-        
-        monstro_slider_float(ctx, "Volume", &app->sliderValue, 0.0f, 1.0f, "%.2f", "Adjust volume");
-        monstro_slider_float(ctx, "Speed", &app->sliderValue2, 0.0f, 100.0f, "%.1f", "Adjust speed");
-        monstro_slider_int(ctx, "Count", &app->sliderInt, 0, 10, "%d", "Set count");
-        
-        monstro_separator_text(ctx, "Knobs");
-        monstro_knob(ctx, "Gain", &app->knobValue, 0.0f, 1.0f, "%.2f", "Adjust gain");
-        monstro_knob(ctx, "Rate", &app->knobValue2, 0.0f, 100.0f, "%.1f", "Adjust rate");
-        
-        monstro_separator_text(ctx, "Progress Bars");
-        monstro_progress_bar(ctx, app->knobValue, 100.0f, 20.0f, "Gain: %.2f");
-        monstro_progress_bar(ctx, app->knobValue2 / 100.0f, 100.0f, 20.0f, NULL);
+      monstro_separator_text(ctx, "Sliders");
 
+      monstro_slider_float(ctx, "Volume", &d->sliderValue, 0.0f, 1.0f, "%.2f", "Adjust volume");
+      monstro_slider_float(ctx, "Speed", &d->sliderValue2, 0.0f, 100.0f, "%.1f", "Adjust speed");
+      monstro_slider_int(ctx, "Count", &d->sliderInt, 0, 10, "%d", "Set count");
 
-        monstro_separator_text(ctx, "Radio Buttons");
-        
-        if(monstro_radio_button(ctx, "Option A", &app->radioValue, 0, nullptr))
-        {
-            printf("Radio button Option A clicked with value: %d\n", app->radioValue);
-        }
-        if(monstro_radio_button(ctx, "Option B", &app->radioValue, 1, nullptr))
-        {
-            printf("Radio button Option B clicked with value: %d\n", app->radioValue);
-        }
-        if(monstro_radio_button(ctx, "Option C", &app->radioValue, 2, nullptr))
-        {
-            printf("Radio button Option C clicked with value: %d\n", app->radioValue);
-        }
-        
-        monstro_separator_text(ctx, "Combo Box");
+      monstro_separator_text(ctx, "Knobs");
+      monstro_knob(ctx, "Gain", &d->knobValue, 0.0f, 1.0f, "%.2f", "Adjust gain");
+      monstro_knob(ctx, "Rate", &d->knobValue2, 0.0f, 100.0f, "%.1f", "Adjust rate");
 
-        {
-            const char* items[] = {"Apple", "Banana", "Cherry", "Date", "Elderberry"};
-            if (monstro_combo(ctx, "Fruit", &app->comboSelected, items, 5, nullptr)) {
-                printf("Combo selected: %s (%d)\n", items[app->comboSelected], app->comboSelected);
-            }
-        }
+      monstro_separator_text(ctx, "Progress Bars");
+      monstro_progress_bar(ctx, d->knobValue, 100.0f, 20.0f, "Gain: %.2f");
+      monstro_progress_bar(ctx, d->knobValue2 / 100.0f, 100.0f, 20.0f, NULL);
 
-        monstro_separator_text(ctx, "Text Input");
-        monstro_input_text(ctx, "Name", app->textInput, sizeof(app->textInput),
-                           MONSTRO_INPUT_TEXT_NONE, "Enter your name");
-        monstro_input_text(ctx, "Password", app->textInput, sizeof(app->textInput),
-                           MONSTRO_INPUT_TEXT_PASSWORD, "Enter password");
-        monstro_input_text_multiline(ctx, "Notes", app->multilineInput, sizeof(app->multilineInput),
-                                     0.0f, 80.0f, MONSTRO_INPUT_TEXT_NONE, "Enter notes");
+      monstro_separator_text(ctx, "Radio Buttons");
 
-        monstro_separator_text(ctx, "Numeric Input");
-        monstro_input_int(ctx, "Count", &app->intInput, 1, 10, "Integer with +/- buttons");
-        monstro_input_float(ctx, "Amount", &app->floatInput, 0.1f, 1.0f, "%.2f", "Float with +/- buttons");
-        monstro_input_double(ctx, "Precise", &app->doubleInput, 0.001, 0.1, "%.6f", "Double precision");
+      if (monstro_radio_button(ctx, "Option A", &d->radioValue, 0, nullptr))
+      {
+         printf("Radio button Option A clicked with value: %d\n", d->radioValue);
+      }
+      if (monstro_radio_button(ctx, "Option B", &d->radioValue, 1, nullptr))
+      {
+         printf("Radio button Option B clicked with value: %d\n", d->radioValue);
+      }
+      if (monstro_radio_button(ctx, "Option C", &d->radioValue, 2, nullptr))
+      {
+         printf("Radio button Option C clicked with value: %d\n", d->radioValue);
+      }
 
-        monstro_separator_text(ctx, "Layout Test");
-        
-        // Test horizontal layout - buttons side by side
-        monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
-        {
-            if (monstro_button(ctx, "Left", nullptr)) {
-                printf("Left button clicked\n");
-            }
-            if (monstro_button(ctx, "Middle", nullptr)) {
-                printf("Middle button clicked\n");
-            }
-            if (monstro_button(ctx, "Right", nullptr)) {
-                printf("Right button clicked\n");
-            }
-        }
-        monstro_end_layout(ctx);
-        
-        // Test percent-based sizing
-        monstro_separator_text(ctx, "Percent Width");
-        
-        float halfWidth = monstro_percent(ctx, 50.0f, MONSTRO_LAYOUT_HORIZONTAL);
-        monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
-        {
-            if (monstro_button_sized(ctx, "Left 50%", halfWidth - 4.0f, 25.0f, nullptr)) {
-                printf("Left 50%% button clicked\n");
-            }
-            if (monstro_button_sized(ctx, "Right 50%", halfWidth - 4.0f, 25.0f, nullptr)) {
-                printf("Right 50%% button clicked\n");
-            }
-        }
-        monstro_end_layout(ctx);
-        
-        monstro_separator_text(ctx, "Tree View");
+      monstro_separator_text(ctx, "Combo Box");
 
-        if (monstro_begin_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN)) {
-            if (monstro_begin_tree_node(ctx, "Meshes", MONSTRO_TREE_NONE)) {
-                monstro_tree_leaf(ctx, "Cube", MONSTRO_TREE_NONE);
-                monstro_tree_leaf(ctx, "Sphere", MONSTRO_TREE_NONE);
-                monstro_tree_leaf(ctx, "Plane", MONSTRO_TREE_NONE);
-                monstro_end_tree_node(ctx);
-            }
-            if (monstro_begin_tree_node(ctx, "Lights", MONSTRO_TREE_NONE)) {
-                monstro_tree_leaf(ctx, "Sun", MONSTRO_TREE_SELECTED);
-                monstro_tree_leaf(ctx, "Point Light", MONSTRO_TREE_NONE);
-                monstro_end_tree_node(ctx);
-            }
-            monstro_tree_leaf(ctx, "Camera", MONSTRO_TREE_NONE);
+      {
+         const char *items[] = {"Apple", "Banana", "Cherry", "Date", "Elderberry"};
+         if (monstro_combo(ctx, "Fruit", &d->comboSelected, items, 5, nullptr))
+         {
+            printf("Combo selected: %s (%d)\n", items[d->comboSelected], d->comboSelected);
+         }
+      }
+
+      monstro_separator_text(ctx, "Text Input");
+      monstro_input_text(ctx, "Name", d->textInput, sizeof(d->textInput), MONSTRO_INPUT_TEXT_NONE, "Enter your name");
+      monstro_input_text(ctx, "Password", d->textInput, sizeof(d->textInput), MONSTRO_INPUT_TEXT_PASSWORD,
+                         "Enter password");
+      monstro_input_text_multiline(ctx, "Notes", d->multilineInput, sizeof(d->multilineInput), 0.0f, 80.0f,
+                                   MONSTRO_INPUT_TEXT_NONE, "Enter notes");
+
+      monstro_separator_text(ctx, "Numeric Input");
+      monstro_input_int(ctx, "Count", &d->intInput, 1, 10, "Integer with +/- buttons");
+      monstro_input_float(ctx, "Amount", &d->floatInput, 0.1f, 1.0f, "%.2f", "Float with +/- buttons");
+      monstro_input_double(ctx, "Precise", &d->doubleInput, 0.001, 0.1, "%.6f", "Double precision");
+
+      monstro_separator_text(ctx, "Layout Test");
+
+      monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+      {
+         if (monstro_button(ctx, "Left", nullptr))
+         {
+            printf("Left button clicked\n");
+         }
+         if (monstro_button(ctx, "Middle", nullptr))
+         {
+            printf("Middle button clicked\n");
+         }
+         if (monstro_button(ctx, "Right", nullptr))
+         {
+            printf("Right button clicked\n");
+         }
+      }
+      monstro_end_layout(ctx);
+
+      monstro_separator_text(ctx, "Percent Width");
+
+      float halfWidth = monstro_percent(ctx, 50.0f, MONSTRO_LAYOUT_HORIZONTAL);
+      monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+      {
+         if (monstro_button_sized(ctx, "Left 50%", halfWidth - 4.0f, 25.0f, nullptr))
+         {
+            printf("Left 50%% button clicked\n");
+         }
+         if (monstro_button_sized(ctx, "Right 50%", halfWidth - 4.0f, 25.0f, nullptr))
+         {
+            printf("Right 50%% button clicked\n");
+         }
+      }
+      monstro_end_layout(ctx);
+
+      monstro_separator_text(ctx, "Tree View");
+
+      if (monstro_begin_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN))
+      {
+         if (monstro_begin_tree_node(ctx, "Meshes", MONSTRO_TREE_NONE))
+         {
+            monstro_tree_leaf(ctx, "Cube", MONSTRO_TREE_NONE);
+            monstro_tree_leaf(ctx, "Sphere", MONSTRO_TREE_NONE);
+            monstro_tree_leaf(ctx, "Plane", MONSTRO_TREE_NONE);
             monstro_end_tree_node(ctx);
-        }
+         }
+         if (monstro_begin_tree_node(ctx, "Lights", MONSTRO_TREE_NONE))
+         {
+            monstro_tree_leaf(ctx, "Sun", MONSTRO_TREE_SELECTED);
+            monstro_tree_leaf(ctx, "Point Light", MONSTRO_TREE_NONE);
+            monstro_end_tree_node(ctx);
+         }
+         monstro_tree_leaf(ctx, "Camera", MONSTRO_TREE_NONE);
+         monstro_end_tree_node(ctx);
+      }
 
-        if (monstro_collapsing_header(ctx, "Extra Settings", nullptr)) {
-            monstro_label(ctx, "These are extra settings.");
-            monstro_checkbox(ctx, "Wireframe", &app->checkboxValue, nullptr);
-        }
+      if (monstro_collapsing_header(ctx, "Extra Settings", nullptr))
+      {
+         monstro_label(ctx, "These are extra settings.");
+         monstro_checkbox(ctx, "Wireframe", &d->checkboxValue, nullptr);
+      }
 
-        monstro_separator_text(ctx, "Columns");
+      monstro_separator_text(ctx, "Columns");
 
-        monstro_begin_columns(ctx, "cols_equal", 3);
-            monstro_label(ctx, "Column 1");
-            monstro_next_column(ctx);
-            monstro_label(ctx, "Column 2");
-            monstro_next_column(ctx);
-            monstro_label(ctx, "Column 3");
-            monstro_next_column(ctx);
-        monstro_end_columns(ctx);
+      monstro_begin_columns(ctx, "cols_equal", 3);
+      monstro_label(ctx, "Column 1");
+      monstro_next_column(ctx);
+      monstro_label(ctx, "Column 2");
+      monstro_next_column(ctx);
+      monstro_label(ctx, "Column 3");
+      monstro_next_column(ctx);
+      monstro_end_columns(ctx);
 
-        float col_widths[] = { 100.0f, 0.0f, 80.0f };
-        monstro_begin_columns_ex(ctx, "cols_form", 3, col_widths);
-            monstro_label(ctx, "Name:");
-            monstro_next_column(ctx);
-            monstro_input_text(ctx, "col_name##Name", app->textInput, sizeof(app->textInput), MONSTRO_INPUT_TEXT_NONE, nullptr);
-            monstro_next_column(ctx);
-            if (monstro_button(ctx, "Clear", nullptr)) { app->textInput[0] = '\0'; }
-            monstro_next_column(ctx);
+      float col_widths[] = {100.0f, 0.0f, 80.0f};
+      monstro_begin_columns_ex(ctx, "cols_form", 3, col_widths);
+      monstro_label(ctx, "Name:");
+      monstro_next_column(ctx);
+      monstro_input_text(ctx, "col_name##Name", d->textInput, sizeof(d->textInput), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      monstro_next_column(ctx);
+      if (monstro_button(ctx, "Clear", nullptr))
+      {
+         d->textInput[0] = '\0';
+      }
+      monstro_next_column(ctx);
 
-            monstro_label(ctx, "Volume:");
-            monstro_next_column(ctx);
-            monstro_slider_float(ctx, "col_vol##Vol", &app->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
-            monstro_next_column(ctx);
-            if (monstro_button(ctx, "Reset##vol", nullptr)) { app->sliderValue = 0.5f; }
-            monstro_next_column(ctx);
-        monstro_end_columns(ctx);
+      monstro_label(ctx, "Volume:");
+      monstro_next_column(ctx);
+      monstro_slider_float(ctx, "col_vol##Vol", &d->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
+      monstro_next_column(ctx);
+      if (monstro_button(ctx, "Reset##vol", nullptr))
+      {
+         d->sliderValue = 0.5f;
+      }
+      monstro_next_column(ctx);
+      monstro_end_columns(ctx);
 
-        monstro_separator_text(ctx, "Groups");
+      monstro_separator_text(ctx, "Groups");
 
-        monstro_begin_group(ctx, MONSTRO_LAYOUT_VERTICAL, MONSTRO_GROUP_BORDER);
-        {
-            monstro_label(ctx, "Bordered Group");
-            monstro_checkbox(ctx, "Option 1", &app->checkboxValue, nullptr);
-        }
-        monstro_end_group(ctx);
+      monstro_begin_group(ctx, MONSTRO_LAYOUT_VERTICAL, MONSTRO_GROUP_BORDER);
+      {
+         monstro_label(ctx, "Bordered Group");
+         monstro_checkbox(ctx, "Option 1", &d->checkboxValue, nullptr);
+      }
+      monstro_end_group(ctx);
 
-        monstro_begin_group(ctx, MONSTRO_LAYOUT_HORIZONTAL, (MonstroGroupFlags)(MONSTRO_GROUP_BORDER | MONSTRO_GROUP_BACKGROUND));
-        {
-            if (monstro_button(ctx, "A", nullptr)) { printf("A\n"); }
-            if (monstro_button(ctx, "B", nullptr)) { printf("B\n"); }
-            if (monstro_button(ctx, "C", nullptr)) { printf("C\n"); }
-        }
-        monstro_end_group(ctx);
+      monstro_begin_group(ctx, MONSTRO_LAYOUT_HORIZONTAL,
+                          (MonstroGroupFlags)(MONSTRO_GROUP_BORDER | MONSTRO_GROUP_BACKGROUND));
+      {
+         if (monstro_button(ctx, "A", nullptr))
+         {
+            printf("A\n");
+         }
+         if (monstro_button(ctx, "B", nullptr))
+         {
+            printf("B\n");
+         }
+         if (monstro_button(ctx, "C", nullptr))
+         {
+            printf("C\n");
+         }
+      }
+      monstro_end_group(ctx);
 
-        monstro_separator_text(ctx, "Tabs");
-        
-        if (monstro_begin_tab_bar(ctx, "demoTabs", MONSTRO_TAB_BAR_NONE)) {
-            if (monstro_begin_tab_item(ctx, "General", nullptr)) {
-                monstro_label(ctx, "General settings go here.");
-                if (monstro_button(ctx, "Reset Counter", nullptr)) {
-                    app->buttonClicks = 0;
-                }
-                monstro_end_tab_item(ctx);
+      monstro_separator_text(ctx, "Tabs");
+
+      if (monstro_begin_tab_bar(ctx, "demoTabs", MONSTRO_TAB_BAR_NONE))
+      {
+         if (monstro_begin_tab_item(ctx, "General", nullptr))
+         {
+            monstro_label(ctx, "General settings go here.");
+            if (monstro_button(ctx, "Reset Counter", nullptr))
+            {
+               d->buttonClicks = 0;
             }
-            if (monstro_begin_tab_item(ctx, "Advanced", nullptr)) {
-                monstro_label(ctx, "Advanced options.");
-                monstro_checkbox(ctx, "Extra Feature", &app->checkboxValue, nullptr);
-                monstro_end_tab_item(ctx);
-            }
-            if (monstro_begin_tab_item(ctx, "About", nullptr)) {
-                monstro_label(ctx, "Monstro UI v2.0");
-                monstro_end_tab_item(ctx);
-            }
-            monstro_end_tab_bar(ctx);
-        }
+            monstro_end_tab_item(ctx);
+         }
+         if (monstro_begin_tab_item(ctx, "Advanced", nullptr))
+         {
+            monstro_label(ctx, "Advanced options.");
+            monstro_checkbox(ctx, "Extra Feature", &d->checkboxValue, nullptr);
+            monstro_end_tab_item(ctx);
+         }
+         if (monstro_begin_tab_item(ctx, "About", nullptr))
+         {
+            monstro_label(ctx, "Monstro UI v2.0");
+            monstro_end_tab_item(ctx);
+         }
+         monstro_end_tab_bar(ctx);
+      }
 
-        monstro_separator_text(ctx, "Table");
+      monstro_separator_text(ctx, "Table");
 
-        if (monstro_begin_table(ctx, "demoTable", 3,
-                (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE),
-                0.0f, 0.0f)) {
-            monstro_table_setup_column(ctx, "Name",   MONSTRO_TABLE_COLUMN_NONE, 0.0f);
-            monstro_table_setup_column(ctx, "Value",  MONSTRO_TABLE_COLUMN_NONE, 0.0f);
-            monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
-            monstro_table_headers_row(ctx);
+      if (monstro_begin_table(
+              ctx, "demoTable", 3,
+              (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE), 0.0f,
+              0.0f))
+      {
+         monstro_table_setup_column(ctx, "Name", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+         monstro_table_setup_column(ctx, "Value", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+         monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
+         monstro_table_headers_row(ctx);
 
+         MonstroStyleButton btn_s = *monstro_get_button_style(ctx);
+         btn_s.padding[0] = 0.0f;
+         btn_s.padding[1] = 0.0f;
+         monstro_push_button_style(ctx, &btn_s);
 
-            MonstroStyleButton btn_s = *monstro_get_button_style(ctx);
-            btn_s.padding[0] = 0.0f;
-            btn_s.padding[1] = 0.0f;
-            monstro_push_button_style(ctx, &btn_s);
+         monstro_table_next_row(ctx);
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "Alpha");
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "1.00");
+         monstro_table_next_column(ctx);
+         if (monstro_button(ctx, "a##Reset", nullptr))
+         {
+            printf("Reset Alpha\n");
+         }
 
+         monstro_table_next_row(ctx);
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "Beta");
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "2.50");
+         monstro_table_next_column(ctx);
+         if (monstro_button(ctx, "b##Reset", nullptr))
+         {
+            printf("Reset Beta\n");
+         }
+
+         monstro_table_next_row(ctx);
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "Gamma");
+         monstro_table_next_column(ctx);
+         monstro_label(ctx, "0.75");
+         monstro_table_next_column(ctx);
+         if (monstro_button(ctx, "g##Reset", nullptr))
+         {
+            printf("Reset Gamma\n");
+         }
+
+         monstro_pop_style(ctx, 1);
+
+         monstro_end_table(ctx);
+      }
+
+      monstro_separator_text(ctx, "Editable Table");
+
+      if (monstro_begin_table(
+              ctx, "editTable", 3,
+              (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE), 0.0f,
+              0.0f))
+      {
+         monstro_table_setup_column(ctx, "Name", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+         monstro_table_setup_column(ctx, "Value", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+         monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
+         monstro_table_headers_row(ctx);
+
+         MonstroStyleButton btn_s2 = *monstro_get_button_style(ctx);
+         btn_s2.padding[0] = 0.0f;
+         btn_s2.padding[1] = 0.0f;
+         monstro_push_button_style(ctx, &btn_s2);
+
+         MonstroStyleEdit edit_s = *monstro_get_edit_style(ctx);
+         edit_s.padding[0] = 0.0f;
+         edit_s.padding[1] = 0.0f;
+         monstro_push_edit_style(ctx, &edit_s);
+
+         MonstroStyleProperty prop_s = *monstro_get_property_style(ctx);
+         prop_s.padding[0] = 0.0f;
+         prop_s.padding[1] = 0.0f;
+         monstro_push_property_style(ctx, &prop_s);
+
+         MonstroStyleText text_s = *monstro_get_text_style(ctx);
+         text_s.alignment = MONSTRO_ALIGN_CENTER;
+         monstro_push_text_style(ctx, &text_s);
+
+         const char *row_ids[] = {"name0##", "name1##", "name2##"};
+         const char *val_ids[] = {"val0##", "val1##", "val2##"};
+         const char *btn_ids[] = {"rst0##Reset", "rst1##Reset", "rst2##Reset"};
+         float defaults[] = {1.00f, 2.50f, 0.75f};
+
+         for (int i = 0; i < 3; i++)
+         {
             monstro_table_next_row(ctx);
             monstro_table_next_column(ctx);
-            monstro_label(ctx, "Alpha");
+            monstro_input_text(ctx, row_ids[i], d->tableNames[i], sizeof(d->tableNames[i]), MONSTRO_INPUT_TEXT_NONE,
+                               nullptr);
             monstro_table_next_column(ctx);
-            monstro_label(ctx, "1.00");
+            monstro_input_float(ctx, val_ids[i], &d->tableValues[i], 0.0f, 0.0f, "%.2f", nullptr);
             monstro_table_next_column(ctx);
-            if (monstro_button(ctx, "a##Reset", nullptr)) { printf("Reset Alpha\n"); }
-
-            monstro_table_next_row(ctx);
-            monstro_table_next_column(ctx);
-            monstro_label(ctx, "Beta");
-            monstro_table_next_column(ctx);
-            monstro_label(ctx, "2.50");
-            monstro_table_next_column(ctx);
-            if (monstro_button(ctx, "b##Reset", nullptr)) { printf("Reset Beta\n"); }
-
-            monstro_table_next_row(ctx);
-            monstro_table_next_column(ctx);
-            monstro_label(ctx, "Gamma");
-            monstro_table_next_column(ctx);
-            monstro_label(ctx, "0.75");
-            monstro_table_next_column(ctx);
-            if (monstro_button(ctx, "g##Reset", nullptr)) { printf("Reset Gamma\n"); }
-
-            monstro_pop_style(ctx, 1);
-
-            monstro_end_table(ctx);
-        }
-
-        monstro_separator_text(ctx, "Editable Table");
-
-        if (monstro_begin_table(ctx, "editTable", 3,
-                (MonstroTableFlags)(MONSTRO_TABLE_BORDERS | MONSTRO_TABLE_ROW_BACKGROUND | MONSTRO_TABLE_RESIZABLE),
-                0.0f, 0.0f)) {
-            monstro_table_setup_column(ctx, "Name",   MONSTRO_TABLE_COLUMN_NONE, 0.0f);
-            monstro_table_setup_column(ctx, "Value",  MONSTRO_TABLE_COLUMN_NONE, 0.0f);
-            monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
-            monstro_table_headers_row(ctx);
-
-            MonstroStyleButton btn_s2 = *monstro_get_button_style(ctx);
-            btn_s2.padding[0] = 0.0f;
-            btn_s2.padding[1] = 0.0f;
-            monstro_push_button_style(ctx, &btn_s2);
-
-            MonstroStyleEdit edit_s = *monstro_get_edit_style(ctx);
-            edit_s.padding[0] = 0.0f;
-            edit_s.padding[1] = 0.0f;
-            monstro_push_edit_style(ctx, &edit_s);
-
-            MonstroStyleProperty prop_s = *monstro_get_property_style(ctx);
-            prop_s.padding[0] = 0.0f;
-            prop_s.padding[1] = 0.0f;
-            monstro_push_property_style(ctx, &prop_s);
-
-            MonstroStyleText text_s = *monstro_get_text_style(ctx);
-            text_s.alignment = MONSTRO_ALIGN_CENTER;
-            monstro_push_text_style(ctx, &text_s);
-
-            const char* row_ids[] = {"name0##", "name1##", "name2##"};
-            const char* val_ids[] = {"val0##",  "val1##",  "val2##"};
-            const char* btn_ids[] = {"rst0##Reset", "rst1##Reset", "rst2##Reset"};
-            float defaults[] = {1.00f, 2.50f, 0.75f};
-
-            for (int i = 0; i < 3; i++) {
-                monstro_table_next_row(ctx);
-                monstro_table_next_column(ctx);
-                monstro_input_text(ctx, row_ids[i], app->tableNames[i], sizeof(app->tableNames[i]),
-                                   MONSTRO_INPUT_TEXT_NONE, nullptr);
-                monstro_table_next_column(ctx);
-                monstro_input_float(ctx, val_ids[i], &app->tableValues[i],
-                                    0.0f, 0.0f, "%.2f", nullptr);
-                monstro_table_next_column(ctx);
-                if (monstro_button(ctx, btn_ids[i], nullptr)) {
-                    app->tableValues[i] = defaults[i];
-                }
+            if (monstro_button(ctx, btn_ids[i], nullptr))
+            {
+               d->tableValues[i] = defaults[i];
             }
+         }
 
-            monstro_pop_style(ctx, 4);
+         monstro_pop_style(ctx, 4);
 
-            monstro_end_table(ctx);
-        }
+         monstro_end_table(ctx);
+      }
 
-        monstro_separator_text(ctx, "Label Variants");
+      monstro_separator_text(ctx, "Label Variants");
 
-        monstro_label_sized(ctx, "Sized Label", 200.0f, 30.0f);
-        monstro_label_wrapped(ctx, "This is a long label that will wrap to multiple lines when the width is limited. It demonstrates the monstro_label_wrapped function.", 0.0f);
-        monstro_label_colored(ctx, "Colored Label (Red)", {255, 80, 80, 255});
-        monstro_label_colored(ctx, "Colored Label (Green)", {80, 255, 80, 255});
+      monstro_label_sized(ctx, "Sized Label", 200.0f, 30.0f);
+      monstro_label_wrapped(ctx, "This is a long label that will wrap to multiple lines when the width is limited. It demonstrates the monstro_label_wrapped function.", 0.0f); monstro_label_colored(ctx, " Colored Label(Red) ",{255, 80, 80, 255});
+      monstro_label_colored(ctx, "Colored Label (Green)", {80, 255, 80, 255});
 
-        monstro_separator_text(ctx, "Spacing Helpers");
+      monstro_separator_text(ctx, "Spacing Helpers");
 
-        monstro_label(ctx, "same_line demo:");
-        monstro_begin_layout(ctx, MONSTRO_LAYOUT_VERTICAL);
-        {
-            if (monstro_button(ctx, "One", nullptr)) {}
-            monstro_same_line(ctx, 0.0f, 8.0f);
-            if (monstro_button(ctx, "Two", nullptr)) {}
-            monstro_same_line(ctx, 0.0f, 8.0f);
-            if (monstro_button(ctx, "Three", nullptr)) {}
-        }
-        monstro_end_layout(ctx);
+      monstro_label(ctx, "horizontal layout demo:");
+      monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+      {
+         if (monstro_button(ctx, "One", nullptr))
+         {
+         }
+         if (monstro_button(ctx, "Two", nullptr))
+         {
+         }
+         if (monstro_button(ctx, "Three", nullptr))
+         {
+         }
+      }
+      monstro_end_layout(ctx);
 
-        monstro_label(ctx, "dummy spacer (50x20):");
-        monstro_dummy(ctx, 50.0f, 20.0f);
-        monstro_label(ctx, "(after spacer)");
+      monstro_label(ctx, "dummy spacer (50x20):");
+      monstro_dummy(ctx, 50.0f, 20.0f);
+      monstro_label(ctx, "(after spacer)");
 
-        monstro_separator_text(ctx, "Child Scroll Region");
+      monstro_separator_text(ctx, "Child Scroll Region");
 
-        if (monstro_begin_child(ctx, "scrollList", 0.0f, 120.0f,
-                (MonstroWindowFlags)(MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_BACKGROUND))) {
-            for (int i = 0; i < 30; i++) {
-                char buf[64];
-                snprintf(buf, sizeof(buf), "Item %d", i);
-                monstro_label(ctx, buf);
-            }
-            monstro_end_child(ctx);
-        }
+      if (monstro_begin_child(ctx, "scrollList", 0.0f, 120.0f,
+                              (MonstroWindowFlags)(MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_BACKGROUND)))
+      {
+         for (int i = 0; i < 30; i++)
+         {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "Item %d", i);
+            monstro_label(ctx, buf);
+         }
+         monstro_end_child(ctx);
+      }
 
-        monstro_separator_text(ctx, "Disabled State");
+      monstro_separator_text(ctx, "Disabled State");
 
-        monstro_begin_disabled(ctx, true);
-        monstro_button(ctx, "Disabled Button", nullptr);
-        monstro_checkbox(ctx, "Disabled Checkbox", &app->checkboxValue, nullptr);
-        monstro_slider_float(ctx, "Disabled Slider", &app->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
-        monstro_end_disabled(ctx);
+      monstro_begin_disabled(ctx, true);
+      monstro_button(ctx, "Disabled Button", nullptr);
+      monstro_checkbox(ctx, "Disabled Checkbox", &d->checkboxValue, nullptr);
+      monstro_slider_float(ctx, "Disabled Slider", &d->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
+      monstro_end_disabled(ctx);
 
-        monstro_separator_text(ctx, "Item State Queries");
+      monstro_separator_text(ctx, "Item State Queries");
 
-        if (monstro_button(ctx, "Hover/Click Me##statequery", nullptr)) {
-            printf("Item state: clicked!\n");
-        }
-        {
-            bool h = monstro_is_item_hovered(ctx);
-            bool a = monstro_is_item_active(ctx);
-            MonstroRect r = monstro_get_item_rect(ctx);
-            char state_buf[128];
-            snprintf(state_buf, sizeof(state_buf), "Hovered: %s  Active: %s  Rect: %.0f,%.0f %.0fx%.0f",
-                     h ? "yes" : "no", a ? "yes" : "no", r.x, r.y, r.w, r.h);
-            monstro_label(ctx, state_buf);
-        }
+      if (monstro_button(ctx, "Hover/Click Me##statequery", nullptr))
+      {
+         printf("Item state: clicked!\n");
+      }
+      {
+         bool h = monstro_is_item_hovered(ctx);
+         bool a = monstro_is_item_active(ctx);
+         MonstroRect r = monstro_get_item_rect(ctx);
+         char state_buf[128];
+         snprintf(state_buf, sizeof(state_buf), "Hovered: %s  Active: %s  Rect: %.0f,%.0f %.0fx%.0f", h ? "yes" : "no",
+                  a ? "yes" : "no", r.x, r.y, r.w, r.h);
+         monstro_label(ctx, state_buf);
+      }
 
-        monstro_separator_text(ctx, "File Dialog");
-        if (monstro_button(ctx, "Open File...", nullptr)) {
-            monstro_file_dialog_open(app->fileDialog, "Open File", nullptr, "*.cpp;*.h;*.txt", MONSTRO_FILE_DIALOG_OPEN);
-        }
-        monstro_same_line(ctx, 0, 8);
-        if (monstro_button(ctx, "Save File...", nullptr)) {
-            monstro_file_dialog_open(app->fileDialog, "Save File", nullptr, "*", MONSTRO_FILE_DIALOG_SAVE);
-        }
-        if (monstro_file_dialog_is_open(app->fileDialog)) {
-            MonstroFileDialogResult r = monstro_file_dialog_draw(ctx, app->fileDialog);
-            if (r == MONSTRO_FILE_DIALOG_OK) {
-                strncpy(app->lastFilePath, monstro_file_dialog_get_path(app->fileDialog), sizeof(app->lastFilePath) - 1);
-                printf("Selected: %s\n", app->lastFilePath);
-            }
-        }
-        if (app->lastFilePath[0]) {
-            monstro_label(ctx, app->lastFilePath);
-        }
+      monstro_separator_text(ctx, "File Dialog");
+      monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+      {
+          if (monstro_button(ctx, "Open File...", nullptr)) {
+              monstro_file_dialog_open(d->fileDialog, "Open File", nullptr, "*.cpp;*.h;*.txt",
+         MONSTRO_FILE_DIALOG_OPEN);
+          }
+          if (monstro_button(ctx, "Save File...", nullptr)) {
+              monstro_file_dialog_open(d->fileDialog, "Save File", nullptr, "*", MONSTRO_FILE_DIALOG_SAVE);
+          }
+      }
+      monstro_end_layout(ctx);
+      if (monstro_file_dialog_is_open(d->fileDialog)) {
+          MonstroFileDialogResult r = monstro_file_dialog_draw(ctx, d->fileDialog);
+          if (r == MONSTRO_FILE_DIALOG_OK) {
+              strncpy(d->lastFilePath, monstro_file_dialog_get_path(d->fileDialog), sizeof(d->lastFilePath) - 1);
+              printf("Selected: %s\n", d->lastFilePath);
+          }
+      }
+      if (d->lastFilePath[0]) {
+          monstro_label(ctx, d->lastFilePath);
+      }
 
-        monstro_separator_text(ctx, "Color Picker");
-        monstro_color_picker(ctx, "##demo_picker", &app->pickerColor, MONSTRO_COLOR_PICKER_NONE);
+      monstro_separator_text(ctx, "Color Picker");
+      if (monstro_color_button(ctx, "##picker_swatch", d->pickerColor, 40.0f, 20.0f)) {
+          d->colorPickerOpen = !d->colorPickerOpen;
+      }
 
-        monstro_separator_text(ctx, "Modal Dialog");
+      monstro_separator_text(ctx, "Modal Dialog");
 
-        if (monstro_button(ctx, "Open Modal", nullptr)) {
-            app->showModal = true;
-            monstro_open_popup_ex(ctx, "ConfirmModal", true);
-        }
+      if (monstro_button(ctx, "Open Modal", nullptr)) {
+          d->showModal = true;
+          monstro_open_popup_ex(ctx, "ConfirmModal", true);
+      }
 
-        if (app->showModal) {
-            if (monstro_begin_popup_modal(ctx, "ConfirmModal", &app->showModal, (MonstroWindowFlags)0)) {
-                monstro_label(ctx, "Are you sure?");
-                monstro_label(ctx, "This action cannot be undone.");
-                monstro_spacer(ctx, 10.0f);
-                monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
-                {
-                    if (monstro_button(ctx, "OK", nullptr)) {
-                        printf("Modal: OK clicked\n");
-                        app->showModal = false;
-                        monstro_close_current_popup(ctx);
-                    }
-                    monstro_spacer(ctx, 10.0f);
-                    if (monstro_button(ctx, "Cancel", nullptr)) {
-                        printf("Modal: Cancel clicked\n");
-                        app->showModal = false;
-                        monstro_close_current_popup(ctx);
-                    }
-                }
-                monstro_end_layout(ctx);
-                monstro_end_popup(ctx);
-            }
-        }
-    }
-    monstro_end_window(ctx);
+      if (d->showModal) {
+          if (monstro_begin_popup_modal(ctx, "ConfirmModal", &d->showModal, (MonstroWindowFlags)0)) {
+              monstro_label(ctx, "Are you sure?");
+              monstro_label(ctx, "This action cannot be undone.");
+              monstro_spacer(ctx, 10.0f);
+              monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+              {
+                  if (monstro_button(ctx, "OK", nullptr)) {
+                      printf("Modal: OK clicked\n");
+                      d->showModal = false;
+                      monstro_close_current_popup(ctx);
+                  }
+                  monstro_spacer(ctx, 10.0f);
+                  if (monstro_button(ctx, "Cancel", nullptr)) {
+                      printf("Modal: Cancel clicked\n");
+                      d->showModal = false;
+                      monstro_close_current_popup(ctx);
+                  }
+              }
+              monstro_end_layout(ctx);
+              monstro_end_popup(ctx);
+          }
+      }
+      monstro_end_window(ctx);
+   }
 
-    if (app->secondWindowOpen) {
-        monstro_set_next_window_pos(ctx, 550.0f, 50.0f, MONSTRO_COND_FIRST_USE_EVER);
-        monstro_set_next_window_size(ctx, 300.0f, 200.0f, MONSTRO_COND_FIRST_USE_EVER);
+   if (d->colorPickerOpen)
+   {
+      monstro_set_next_window_pos(ctx, 550.0f, 300.0f, MONSTRO_COND_FIRST_USE_EVER);
+      monstro_set_next_window_size(ctx, 250.0f, 400.0f, MONSTRO_COND_FIRST_USE_EVER);
 
-        MonstroWindowFlags closeableFlags = (MonstroWindowFlags)(
-            MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_TITLE_BAR |
-            MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_MOVABLE |
-            MONSTRO_WINDOW_COLLAPSABLE | MONSTRO_WINDOW_RESIZABLE |
-            MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLL_WITH_MOUSE
-        );
+      MonstroWindowFlags pickerFlags = (MonstroWindowFlags)(
+          MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_TITLE_BAR | MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_MOVABLE |
+          MONSTRO_WINDOW_COLLAPSABLE | MONSTRO_WINDOW_RESIZABLE | MONSTRO_WINDOW_INPUTS |
+          MONSTRO_WINDOW_SCROLL_WITH_MOUSE);
 
-        if (monstro_begin_window(ctx, "Closeable Window", &app->secondWindowOpen, closeableFlags)) {
-            monstro_label(ctx, "This window has a close button.");
-            monstro_label(ctx, "It also has collapse and resize.");
-            monstro_label_colored(ctx, "Try resizing from the corner!", {255, 200, 80, 255});
-        }
-        monstro_end_window(ctx);
-    }
-
-    monstro_end_frame(ctx);
+      if (monstro_begin_window(ctx, "Color Picker", &d->colorPickerOpen, pickerFlags))
+      {
+         monstro_color_picker(ctx, "##demo_picker", &d->pickerColor, MONSTRO_COLOR_PICKER_NONE);
+      }
+      monstro_end_window(ctx);
+   }
 }
 
-// Render one frame
-static void renderFrame(App* app, float deltaTime) {
-    int width, height;
-    glfwGetFramebufferSize(app->window, &width, &height);
-    if (width == 0 || height == 0) return;
-    
-    // Update UI
-    updateUI(app, deltaTime);
-    
-    // Upload UI geometry
-    MonstroDrawBuffer* drawBuffer = monstro_context_get_draw_buffer(app->ui);
-    
-    uploadUIBuffers(app, drawBuffer);
-    
-    // Begin command buffer
-    VECommandBuffer* cmd = nullptr;
-    if (veBeginCommandBuffer(app->device, &cmd) != VE_SUCCESS || !cmd) {
-        return;
-    }
-    
-    // Begin rendering
-    veBeginRendering(cmd, &app->renderTarget);
-    
-    // Render UI
-    renderUI(app, cmd, app->ui, drawBuffer, (uint32_t)width, (uint32_t)height);
-    
-    // End rendering
-    veEndRendering(cmd);
-    
-    // Blit to swapchain
-    VEResult result = veBlitTextureToSwapchain(cmd, app->colorTexture, app->swapchain, VK_FILTER_LINEAR);
-    if (result == VE_ERROR_SWAPCHAIN_OUT_OF_DATE) {
-        return;
-    }
-    
-    // Present
-    vePresentImage(app->swapchain, cmd, true);
+static void basic_shutdown(ExampleApp *app, void *ud)
+{
+   BasicDemo *d = (BasicDemo *)ud;
+   if (d->fileDialog)
+   {
+      monstro_file_dialog_destroy(d->fileDialog);
+      d->fileDialog = nullptr;
+   }
+   if (d->iconAtlasTexture != VE_INVALID_TEXTURE_INDEX)
+   {
+      veDestroyTexture(app->device, d->iconAtlasTexture);
+   }
 }
 
-// Cleanup
-static void cleanup(App* app) {
-    if (app->device) {
-        veDeviceWaitIdle(app->device);
-    }
-    
-    if (app->fileDialog) {
-        monstro_file_dialog_destroy(app->fileDialog);
-        app->fileDialog = nullptr;
-    }
+int main(int argc, char *argv[])
+{
+   (void)argc;
+   (void)argv;
 
-    if (app->ui) {
-        monstro_context_destroy(app->ui);
-    }
-    
-    // Destroy UI renderer resources
-    if (app->vertexBuffer != VE_INVALID_ADDRESS) {
-        veDestroyBuffer(app->device, app->vertexBuffer);
-    }
-    if (app->indexBuffer != VE_INVALID_ADDRESS) {
-        veDestroyBuffer(app->device, app->indexBuffer);
-    }
-    if (app->whiteTexture != VE_INVALID_TEXTURE_INDEX) {
-        veDestroyTexture(app->device, app->whiteTexture);
-    }
-    if (app->fontAtlasTexture != VE_INVALID_TEXTURE_INDEX) {
-        veDestroyTexture(app->device, app->fontAtlasTexture);
-    }
-    if (app->pipeline) {
-        veDestroyGraphicsPipeline(app->pipeline);
-    }
-    if (app->vertexShader) {
-        veDestroyShader(app->vertexShader);
-    }
-    if (app->fragmentShader) {
-        veDestroyShader(app->fragmentShader);
-    }
-    
-    // Destroy render target
-    if (app->colorTexture != VE_INVALID_TEXTURE_INDEX) {
-        veDestroyTexture(app->device, app->colorTexture);
-    }
-    
-    // Destroy VulkEase
-    if (app->swapchain) {
-        veDestroySwapchain(app->swapchain);
-    }
-    if (app->device) {
-        veDestroyDevice(app->device);
-    }
-    if (app->context) {
-        veDestroyContext(app->context);
-    }
-    
-    // Cleanup GLFW
-    if (app->window) {
-        glfwDestroyWindow(app->window);
-    }
-    glfwTerminate();
-}
+   BasicDemo demo = {};
+   strncpy(demo.tableNames[0], "Alpha", sizeof(demo.tableNames[0]));
+   strncpy(demo.tableNames[1], "Beta", sizeof(demo.tableNames[1]));
+   strncpy(demo.tableNames[2], "Gamma", sizeof(demo.tableNames[2]));
+   demo.tableValues[0] = 1.00f;
+   demo.tableValues[1] = 2.50f;
+   demo.tableValues[2] = 0.75f;
+   demo.secondWindowOpen = true;
+   demo.pickerColor = {0.4f, 0.7f, 1.0f, 1.0f};
+   demo.fileDialog = monstro_file_dialog_create();
+   demo.iconAtlasTexture = VE_INVALID_TEXTURE_INDEX;
 
-int main(int argc, char* argv[]) {
-    (void)argc; (void)argv;
-    
-    App app = {};
-    app.fontAtlasTexture = VE_INVALID_TEXTURE_INDEX;
-    app.fontAtlasTextureId = 0;
-    app.font = nullptr;
-    strncpy(app.tableNames[0], "Alpha", sizeof(app.tableNames[0]));
-    strncpy(app.tableNames[1], "Beta", sizeof(app.tableNames[1]));
-    strncpy(app.tableNames[2], "Gamma", sizeof(app.tableNames[2]));
-    app.tableValues[0] = 1.00f;
-    app.tableValues[1] = 2.50f;
-    app.tableValues[2] = 0.75f;
-    app.showModal = false;
-    app.secondWindowOpen = true;
-    app.pickerColor = {0.4f, 0.7f, 1.0f, 1.0f};
-    app.fileDialog = monstro_file_dialog_create();
-    app.lastFilePath[0] = '\0';
-    g_app = &app;
-    
-    printf("Monstro UI Example\n");
-    printf("==================\n\n");
-    
-    // Initialize
-    if (!initWindow(&app)) {
-        cleanup(&app);
-        return 1;
-    }
-    
-    if (!initVulkEase(&app)) {
-        cleanup(&app);
-        return 1;
-    }
-    
-    if (!initUIRenderer(&app)) {
-        cleanup(&app);
-        return 1;
-    }
-    
-    // Create Monstro context
-    app.ui = monstro_context_create();
-    if (!app.ui) {
-        fprintf(stderr, "Failed to create Monstro context\n");
-        cleanup(&app);
-        return 1;
-    }
-    
-    {
-        int fw, fh;
-        glfwGetFramebufferSize(app.window, &fw, &fh);
-        monstro_set_display_size(app.ui, (float)fw, (float)fh);
-    }
-    
-    // Load font
-    {
-        MonstroFontManager* fontManager = monstro_context_get_font_manager(app.ui);
-        MonstroTextureData atlasData = {};
-        
-        // Load TTF font at 16px, ASCII range (32-127)
-        app.font = monstro_font_load_ttf_from_file(
-            fontManager,
-            "data/fonts/freeSans.ttf",
-            16.0f,
-            32,   // first code point (space)
-            96,   // code point count (space through tilde)
-            &atlasData
-        );
-        
-        if (!app.font) {
-            fprintf(stderr, "Failed to load font\n");
-            cleanup(&app);
-            return 1;
-        }
-        
-        printf("Font loaded: atlas %ux%u, format %d\n", 
-               atlasData.width, atlasData.height, atlasData.format);
-        
-        // Create GPU texture for font atlas
-        VkFormat atlasFormat = (atlasData.format == MONSTRO_TEXTURE_FORMAT_R8) 
-                               ? VK_FORMAT_R8_UNORM 
-                               : VK_FORMAT_R8G8B8A8_UNORM;
-        VkImageUsageFlags atlasUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
-        
-        if (veCreateTexture2D(app.device, atlasData.width, atlasData.height, atlasFormat, atlasUsage,
-                              "MonstroFontAtlas", &app.fontAtlasTexture) != VE_SUCCESS ||
-            app.fontAtlasTexture == VE_INVALID_TEXTURE_INDEX) {
-            fprintf(stderr, "Failed to create font atlas texture\n");
-            cleanup(&app);
-            return 1;
-        }
-        
-        // Upload atlas data
-        VEResult uploadResult = veHostWriteTextureRegion(app.device, app.fontAtlasTexture, 
-                                                         atlasData.data, atlasData.data_size, nullptr);
-        if (uploadResult != VE_SUCCESS) {
-            fprintf(stderr, "Failed to upload font atlas (error %d)\n", uploadResult);
-        }
-        
-        // Use VulkEase texture index as Monstro texture ID
-        // (simple 1:1 mapping for this example)
-        app.fontAtlasTextureId = (uint64_t)app.fontAtlasTexture;
-        monstro_font_set_atlas_texture(app.font, app.fontAtlasTextureId);
-        
-        // Register font with font manager and set as default
-        monstro_font_add(fontManager, app.font, "default", 16.0f);
-        monstro_context_set_default_font(app.ui, app.font);
-        
-        printf("Font atlas uploaded: texture index %u\n", app.fontAtlasTexture);
-    }
+   ExampleAppDesc desc = {};
+   desc.title = "Monstro UI Example";
+   desc.width = 1280;
+   desc.height = 1024;
+   desc.user_data = &demo;
+   desc.init = basic_init;
+   desc.update = basic_update;
+   desc.shutdown = basic_shutdown;
 
-    // Create a procedural 4x1 icon atlas (4 colored squares, 16x16 each = 64x16 atlas)
-    {
-        constexpr int icon_w = 16, icon_h = 16;
-        constexpr int cols = 4, rows = 1;
-        constexpr int atlas_w = icon_w * cols, atlas_h = icon_h * rows;
-        uint32_t pixels[atlas_w * atlas_h];
-
-        uint32_t colors[4] = {
-            0xFF4444FF,  // red
-            0xFF44FF44,  // green
-            0xFFFF8844,  // orange
-            0xFFFFFF44,  // yellow
-        };
-        for (int c = 0; c < cols; c++) {
-            for (int y = 0; y < icon_h; y++) {
-                for (int x = 0; x < icon_w; x++) {
-                    pixels[y * atlas_w + c * icon_w + x] = colors[c];
-                }
-            }
-        }
-
-        VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
-        if (veCreateTexture2D(app.device, atlas_w, atlas_h, VK_FORMAT_R8G8B8A8_UNORM, usage,
-                              "MonstroIconAtlas", &app.iconAtlasTexture) == VE_SUCCESS) {
-            veHostWriteTextureRegion(app.device, app.iconAtlasTexture, pixels, sizeof(pixels), nullptr);
-            app.iconAtlasTextureId = (uint64_t)app.iconAtlasTexture;
-            app.firstIconId = 1;
-            monstro_register_icon_atlas(app.ui, app.firstIconId, app.iconAtlasTextureId,
-                                        icon_w, icon_h, atlas_w, atlas_h, cols, rows);
-            printf("Registered %d icons starting at ID %u\n", cols * rows, app.firstIconId);
-        }
-    }
-
-    printf("Monstro UI initialized\n");
-    printf("Starting render loop...\n\n");
-    
-    // Main loop
-    double lastTime = glfwGetTime();
-    VEFrameTimingInfo timing = {};
-    
-    while (!glfwWindowShouldClose(app.window)) {
-        veBeginFrame(app.device);
-        
-        glfwPollEvents();
-        
-        double currentTime = glfwGetTime();
-        float deltaTime = (float)(currentTime - lastTime);
-        lastTime = currentTime;
-        
-        renderFrame(&app, deltaTime);
-        
-        veEndFrame(app.device, &timing);
-        
-        if (timing.frameNumber % 1000 == 0) {
-            printf("Frame %llu: %.2f ms (%.1f FPS)\n",
-                   (unsigned long long)timing.frameNumber,
-                   timing.frameTimeMs,
-                   timing.fps);
-        }
-        
-        if (glfwGetKey(app.window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            break;
-        }
-    }
-    
-    printf("\nShutting down...\n");
-    cleanup(&app);
-    printf("Done.\n");
-    
-    return 0;
+   return example_app_run(desc);
 }

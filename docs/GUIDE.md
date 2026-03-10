@@ -783,17 +783,6 @@ monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
 monstro_end_layout(ctx);
 ```
 
-### Same-line placement
-
-Place the next widget on the same line as the previous one without a full
-horizontal layout:
-
-```c
-monstro_button(ctx, "Left", NULL);
-monstro_same_line(ctx, 0.0f, 8.0f);  /* 0 = auto offset, 8px spacing */
-monstro_button(ctx, "Right", NULL);
-```
-
 ### Percentage sizing
 
 ```c
@@ -888,12 +877,12 @@ if (monstro_begin_window(ctx, "My Window", NULL, MONSTRO_WINDOW_DEFAULT)) {
 ### Close button
 
 Pass a `bool*` as `p_open`.  When the user clicks the close button, Monstro
-sets it to `true` (the `closed` flag).  When the window is closed,
-`begin_window` returns `false`:
+sets `*p_open` to `false`.  When `*p_open` is `false`, `begin_window` returns
+`false` and the window is not drawn.  Pass `NULL` to hide the close button:
 
 ```c
-static bool window_closed = false;
-if (monstro_begin_window(ctx, "Closeable", &window_closed, flags)) {
+static bool window_open = true;
+if (monstro_begin_window(ctx, "Closeable", &window_open, flags)) {
     /* content */
     monstro_end_window(ctx);
 }
@@ -1604,17 +1593,17 @@ bool file_browser_update(MonstroContext* ctx, FileBrowserState* s) {
         /* Bottom bar: filename + OK/Cancel */
         monstro_input_text(ctx, "name##File", s->selected_file,
                            sizeof(s->selected_file), MONSTRO_INPUT_TEXT_NONE, NULL);
-        monstro_same_line(ctx, 0, 8);
+        monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
         if (monstro_button(ctx, "Open", NULL)) {
             s->confirmed = true;
             s->open = false;
             monstro_close_current_popup(ctx);
         }
-        monstro_same_line(ctx, 0, 4);
         if (monstro_button(ctx, "Cancel", NULL)) {
             s->open = false;
             monstro_close_current_popup(ctx);
         }
+        monstro_end_layout(ctx);
 
         monstro_end_popup(ctx);
     }
@@ -1673,12 +1662,13 @@ bool color_picker_update(MonstroContext* ctx, ColorPickerState* s) {
         if (changed) sync_hex_from_rgb(s);
 
         monstro_spacer(ctx, 4.0f);
+        monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
         monstro_label(ctx, "Hex:");
-        monstro_same_line(ctx, 0, 4);
         if (monstro_input_text(ctx, "##hex", s->hex, sizeof(s->hex),
                                MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL, NULL)) {
             sync_rgb_from_hex(s);
         }
+        monstro_end_layout(ctx);
 
         /* Preview swatch */
         monstro_spacer(ctx, 8.0f);
