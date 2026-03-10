@@ -27,6 +27,11 @@ void monstro_dummy(MonstroContext* ctx, float width, float height);
 void monstro_same_line(MonstroContext* ctx, float offset_x, float spacing);
 float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection direction);
 
+void monstro_begin_columns(MonstroContext* ctx, const char* str_id, int count);
+void monstro_begin_columns_ex(MonstroContext* ctx, const char* str_id, int count, const float* widths);
+void monstro_next_column(MonstroContext* ctx);
+void monstro_end_columns(MonstroContext* ctx);
+
 #ifdef __cplusplus
 }
 #endif

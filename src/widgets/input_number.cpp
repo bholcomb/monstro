@@ -94,6 +94,12 @@ bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
     bool has_buttons = step > 0.0f;
     float btn_w = has_buttons ? text_h : 0.0f;
     float field_w = 80.0f;
+    monstro::Layout* layout = win->getCurrentLayout();
+    if (layout && layout->myAvailableWidth > 0.0f) {
+        float buttons_w = has_buttons ? btn_w * 2.0f : 0.0f;
+        float avail = layout->myAvailableWidth - label_w - ps->padding[0] - buttons_w;
+        if (avail > 0.0f) field_w = avail;
+    }
     float field_h = text_h + es->padding[1] * 2.0f;
     float total_w = label_w + ps->padding[0] + (has_buttons ? btn_w : 0.0f) + field_w + (has_buttons ? btn_w : 0.0f);
 

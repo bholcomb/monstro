@@ -41,6 +41,11 @@ bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* pre
     float combo_height = preview_size.y + pad_y * 2.0f;
     
     float label_spacing = label_size.x > 0 ? style->combo.spacing[0] : 0.0f;
+    monstro::Layout* layout = win->getCurrentLayout();
+    if (layout && layout->myAvailableWidth > 0.0f) {
+        float avail = layout->myAvailableWidth - label_size.x - label_spacing;
+        if (avail > combo_width) combo_width = avail;
+    }
     float total_width = label_size.x + label_spacing + combo_width;
     float total_height = fmaxf(label_size.y, combo_height);
     

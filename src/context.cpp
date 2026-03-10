@@ -227,77 +227,134 @@ void monstro_set_style(MonstroContext* ctx, const MonstroStyle* style) {
     if (ctx && style) ctx->style = *style;
 }
 
-void monstro_push_style_float(MonstroContext* ctx, float* var, float new_value) {
-    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
-    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
-    entry->ptr = var;
-    entry->type = MONSTRO_STYLE_VAR_FLOAT;
-    entry->old_value.f = *var;
-    *var = new_value;
-}
+/* ------------------------------------------------------------------------- */
+/* Per-widget style get                                                      */
+/* ------------------------------------------------------------------------- */
 
-void monstro_push_style_vec2(MonstroContext* ctx, float var[2], float x, float y) {
-    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
-    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
-    entry->ptr = var;
-    entry->type = MONSTRO_STYLE_VAR_VEC2;
-    entry->old_value.v2[0] = var[0];
-    entry->old_value.v2[1] = var[1];
-    var[0] = x;
-    var[1] = y;
-}
+const MonstroStyleText*       monstro_get_text_style(MonstroContext* ctx) { return ctx ? &ctx->style.text : nullptr; }
+const MonstroStyleButton*     monstro_get_button_style(MonstroContext* ctx) { return ctx ? &ctx->style.button : nullptr; }
+const MonstroStyleButton*     monstro_get_contextual_button_style(MonstroContext* ctx) { return ctx ? &ctx->style.contextual_button : nullptr; }
+const MonstroStyleButton*     monstro_get_menu_button_style(MonstroContext* ctx) { return ctx ? &ctx->style.menu_button : nullptr; }
+const MonstroStyleToggle*     monstro_get_option_style(MonstroContext* ctx) { return ctx ? &ctx->style.option : nullptr; }
+const MonstroStyleToggle*     monstro_get_checkbox_style(MonstroContext* ctx) { return ctx ? &ctx->style.checkbox : nullptr; }
+const MonstroStyleSelectable* monstro_get_selectable_style(MonstroContext* ctx) { return ctx ? &ctx->style.selectable : nullptr; }
+const MonstroStyleSlider*     monstro_get_slider_style(MonstroContext* ctx) { return ctx ? &ctx->style.slider : nullptr; }
+const MonstroStyleKnob*       monstro_get_knob_style(MonstroContext* ctx) { return ctx ? &ctx->style.knob : nullptr; }
+const MonstroStyleProgress*   monstro_get_progress_style(MonstroContext* ctx) { return ctx ? &ctx->style.progress : nullptr; }
+const MonstroStyleProperty*   monstro_get_property_style(MonstroContext* ctx) { return ctx ? &ctx->style.property : nullptr; }
+const MonstroStyleEdit*       monstro_get_edit_style(MonstroContext* ctx) { return ctx ? &ctx->style.edit : nullptr; }
+const MonstroStyleTree*       monstro_get_tree_style(MonstroContext* ctx) { return ctx ? &ctx->style.tree : nullptr; }
+const MonstroStyleTab*        monstro_get_tab_style(MonstroContext* ctx) { return ctx ? &ctx->style.tab : nullptr; }
+const MonstroStyleTable*      monstro_get_table_style(MonstroContext* ctx) { return ctx ? &ctx->style.table : nullptr; }
+const MonstroStyleCombo*      monstro_get_combo_style(MonstroContext* ctx) { return ctx ? &ctx->style.combo : nullptr; }
+const MonstroStyleMenu*       monstro_get_menu_style(MonstroContext* ctx) { return ctx ? &ctx->style.menu : nullptr; }
+const MonstroStyleSeparator*  monstro_get_separator_style(MonstroContext* ctx) { return ctx ? &ctx->style.separator : nullptr; }
+const MonstroStyleTooltip*    monstro_get_tooltip_style(MonstroContext* ctx) { return ctx ? &ctx->style.tooltip : nullptr; }
+const MonstroStyleChart*      monstro_get_chart_style(MonstroContext* ctx) { return ctx ? &ctx->style.chart : nullptr; }
+const MonstroStyleScrollbar*  monstro_get_scrollh_style(MonstroContext* ctx) { return ctx ? &ctx->style.scrollh : nullptr; }
+const MonstroStyleScrollbar*  monstro_get_scrollv_style(MonstroContext* ctx) { return ctx ? &ctx->style.scrollv : nullptr; }
+const MonstroStyleWindow*     monstro_get_window_style(MonstroContext* ctx) { return ctx ? &ctx->style.window : nullptr; }
 
-void monstro_push_style_color(MonstroContext* ctx, MonstroColor* var, MonstroColor new_value) {
-    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
-    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
-    entry->ptr = var;
-    entry->type = MONSTRO_STYLE_VAR_COLOR;
-    entry->old_value.color = *var;
-    *var = new_value;
-}
+/* ------------------------------------------------------------------------- */
+/* Per-widget style set                                                      */
+/* ------------------------------------------------------------------------- */
 
-void monstro_push_style_item(MonstroContext* ctx, MonstroStyleItem* var, MonstroStyleItem new_value) {
-    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
-    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
-    entry->ptr = var;
-    entry->type = MONSTRO_STYLE_VAR_ITEM;
-    entry->old_value.item = *var;
-    *var = new_value;
-}
+void monstro_set_text_style(MonstroContext* ctx, const MonstroStyleText* s) { if (ctx && s) ctx->style.text = *s; }
+void monstro_set_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { if (ctx && s) ctx->style.button = *s; }
+void monstro_set_contextual_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { if (ctx && s) ctx->style.contextual_button = *s; }
+void monstro_set_menu_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { if (ctx && s) ctx->style.menu_button = *s; }
+void monstro_set_option_style(MonstroContext* ctx, const MonstroStyleToggle* s) { if (ctx && s) ctx->style.option = *s; }
+void monstro_set_checkbox_style(MonstroContext* ctx, const MonstroStyleToggle* s) { if (ctx && s) ctx->style.checkbox = *s; }
+void monstro_set_selectable_style(MonstroContext* ctx, const MonstroStyleSelectable* s) { if (ctx && s) ctx->style.selectable = *s; }
+void monstro_set_slider_style(MonstroContext* ctx, const MonstroStyleSlider* s) { if (ctx && s) ctx->style.slider = *s; }
+void monstro_set_knob_style(MonstroContext* ctx, const MonstroStyleKnob* s) { if (ctx && s) ctx->style.knob = *s; }
+void monstro_set_progress_style(MonstroContext* ctx, const MonstroStyleProgress* s) { if (ctx && s) ctx->style.progress = *s; }
+void monstro_set_property_style(MonstroContext* ctx, const MonstroStyleProperty* s) { if (ctx && s) ctx->style.property = *s; }
+void monstro_set_edit_style(MonstroContext* ctx, const MonstroStyleEdit* s) { if (ctx && s) ctx->style.edit = *s; }
+void monstro_set_tree_style(MonstroContext* ctx, const MonstroStyleTree* s) { if (ctx && s) ctx->style.tree = *s; }
+void monstro_set_tab_style(MonstroContext* ctx, const MonstroStyleTab* s) { if (ctx && s) ctx->style.tab = *s; }
+void monstro_set_table_style(MonstroContext* ctx, const MonstroStyleTable* s) { if (ctx && s) ctx->style.table = *s; }
+void monstro_set_combo_style(MonstroContext* ctx, const MonstroStyleCombo* s) { if (ctx && s) ctx->style.combo = *s; }
+void monstro_set_menu_style(MonstroContext* ctx, const MonstroStyleMenu* s) { if (ctx && s) ctx->style.menu = *s; }
+void monstro_set_separator_style(MonstroContext* ctx, const MonstroStyleSeparator* s) { if (ctx && s) ctx->style.separator = *s; }
+void monstro_set_tooltip_style(MonstroContext* ctx, const MonstroStyleTooltip* s) { if (ctx && s) ctx->style.tooltip = *s; }
+void monstro_set_chart_style(MonstroContext* ctx, const MonstroStyleChart* s) { if (ctx && s) ctx->style.chart = *s; }
+void monstro_set_scrollh_style(MonstroContext* ctx, const MonstroStyleScrollbar* s) { if (ctx && s) ctx->style.scrollh = *s; }
+void monstro_set_scrollv_style(MonstroContext* ctx, const MonstroStyleScrollbar* s) { if (ctx && s) ctx->style.scrollv = *s; }
+void monstro_set_window_style(MonstroContext* ctx, const MonstroStyleWindow* s) { if (ctx && s) ctx->style.window = *s; }
 
-void monstro_push_style_int(MonstroContext* ctx, int* var, int new_value) {
-    if (!ctx || ctx->style_var_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK || !var) return;
-    MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top++];
-    entry->ptr = var;
-    entry->type = MONSTRO_STYLE_VAR_INT;
-    entry->old_value.i = *var;
-    *var = new_value;
-}
+/* ------------------------------------------------------------------------- */
+/* Per-widget style push (backup + apply)                                    */
+/* ------------------------------------------------------------------------- */
 
-void monstro_pop_style_var(MonstroContext* ctx, int count) {
+#define MONSTRO_PUSH_STYLE(CTX, ENUM_TAG, UNION_FIELD, STYLE_FIELD, SRC) \
+    do { \
+        if (!(CTX) || !(SRC) || (CTX)->style_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK) return; \
+        MonstroStyleBackup* _b = &(CTX)->style_stack[(CTX)->style_stack_top++]; \
+        _b->type = (ENUM_TAG); \
+        _b->data.UNION_FIELD = (CTX)->style.STYLE_FIELD; \
+        (CTX)->style.STYLE_FIELD = *(SRC); \
+    } while(0)
+
+void monstro_push_text_style(MonstroContext* ctx, const MonstroStyleText* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_TEXT, text, text, s); }
+void monstro_push_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_BUTTON, button, button, s); }
+void monstro_push_contextual_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_CONTEXTUAL_BUTTON, button, contextual_button, s); }
+void monstro_push_menu_button_style(MonstroContext* ctx, const MonstroStyleButton* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_MENU_BUTTON, button, menu_button, s); }
+void monstro_push_option_style(MonstroContext* ctx, const MonstroStyleToggle* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_OPTION, toggle, option, s); }
+void monstro_push_checkbox_style(MonstroContext* ctx, const MonstroStyleToggle* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_CHECKBOX, toggle, checkbox, s); }
+void monstro_push_selectable_style(MonstroContext* ctx, const MonstroStyleSelectable* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_SELECTABLE, selectable, selectable, s); }
+void monstro_push_slider_style(MonstroContext* ctx, const MonstroStyleSlider* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_SLIDER, slider, slider, s); }
+void monstro_push_knob_style(MonstroContext* ctx, const MonstroStyleKnob* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_KNOB, knob, knob, s); }
+void monstro_push_progress_style(MonstroContext* ctx, const MonstroStyleProgress* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_PROGRESS, progress, progress, s); }
+void monstro_push_property_style(MonstroContext* ctx, const MonstroStyleProperty* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_PROPERTY, property, property, s); }
+void monstro_push_edit_style(MonstroContext* ctx, const MonstroStyleEdit* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_EDIT, edit, edit, s); }
+void monstro_push_tree_style(MonstroContext* ctx, const MonstroStyleTree* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_TREE, tree, tree, s); }
+void monstro_push_tab_style(MonstroContext* ctx, const MonstroStyleTab* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_TAB, tab, tab, s); }
+void monstro_push_table_style(MonstroContext* ctx, const MonstroStyleTable* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_TABLE, table, table, s); }
+void monstro_push_combo_style(MonstroContext* ctx, const MonstroStyleCombo* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_COMBO, combo, combo, s); }
+void monstro_push_menu_style(MonstroContext* ctx, const MonstroStyleMenu* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_MENU, menu, menu, s); }
+void monstro_push_separator_style(MonstroContext* ctx, const MonstroStyleSeparator* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_SEPARATOR, separator, separator, s); }
+void monstro_push_tooltip_style(MonstroContext* ctx, const MonstroStyleTooltip* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_TOOLTIP, tooltip, tooltip, s); }
+void monstro_push_chart_style(MonstroContext* ctx, const MonstroStyleChart* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_CHART, chart, chart, s); }
+void monstro_push_scrollh_style(MonstroContext* ctx, const MonstroStyleScrollbar* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_SCROLLH, scrollbar, scrollh, s); }
+void monstro_push_scrollv_style(MonstroContext* ctx, const MonstroStyleScrollbar* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_SCROLLV, scrollbar, scrollv, s); }
+void monstro_push_window_style(MonstroContext* ctx, const MonstroStyleWindow* s) { MONSTRO_PUSH_STYLE(ctx, MONSTRO_PUSHED_WINDOW, window, window, s); }
+
+#undef MONSTRO_PUSH_STYLE
+
+/* ------------------------------------------------------------------------- */
+/* Unified pop                                                               */
+/* ------------------------------------------------------------------------- */
+
+void monstro_pop_style(MonstroContext* ctx, int count) {
     if (!ctx) return;
-    for (int i = 0; i < count && ctx->style_var_stack_top > 0; i++) {
-        ctx->style_var_stack_top--;
-        MonstroStyleVarBackup* entry = &ctx->style_var_stack[ctx->style_var_stack_top];
-        switch (entry->type) {
-            case MONSTRO_STYLE_VAR_FLOAT:
-                *(float*)entry->ptr = entry->old_value.f;
-                break;
-            case MONSTRO_STYLE_VAR_VEC2: {
-                float* v = (float*)entry->ptr;
-                v[0] = entry->old_value.v2[0];
-                v[1] = entry->old_value.v2[1];
-                break;
-            }
-            case MONSTRO_STYLE_VAR_COLOR:
-                *(MonstroColor*)entry->ptr = entry->old_value.color;
-                break;
-            case MONSTRO_STYLE_VAR_ITEM:
-                *(MonstroStyleItem*)entry->ptr = entry->old_value.item;
-                break;
-            case MONSTRO_STYLE_VAR_INT:
-                *(int*)entry->ptr = entry->old_value.i;
-                break;
+    for (int i = 0; i < count && ctx->style_stack_top > 0; i++) {
+        ctx->style_stack_top--;
+        MonstroStyleBackup* b = &ctx->style_stack[ctx->style_stack_top];
+        switch (b->type) {
+            case MONSTRO_PUSHED_TEXT:               ctx->style.text = b->data.text; break;
+            case MONSTRO_PUSHED_BUTTON:             ctx->style.button = b->data.button; break;
+            case MONSTRO_PUSHED_CONTEXTUAL_BUTTON:  ctx->style.contextual_button = b->data.button; break;
+            case MONSTRO_PUSHED_MENU_BUTTON:        ctx->style.menu_button = b->data.button; break;
+            case MONSTRO_PUSHED_OPTION:             ctx->style.option = b->data.toggle; break;
+            case MONSTRO_PUSHED_CHECKBOX:           ctx->style.checkbox = b->data.toggle; break;
+            case MONSTRO_PUSHED_SELECTABLE:         ctx->style.selectable = b->data.selectable; break;
+            case MONSTRO_PUSHED_SLIDER:             ctx->style.slider = b->data.slider; break;
+            case MONSTRO_PUSHED_KNOB:               ctx->style.knob = b->data.knob; break;
+            case MONSTRO_PUSHED_PROGRESS:           ctx->style.progress = b->data.progress; break;
+            case MONSTRO_PUSHED_PROPERTY:           ctx->style.property = b->data.property; break;
+            case MONSTRO_PUSHED_EDIT:               ctx->style.edit = b->data.edit; break;
+            case MONSTRO_PUSHED_TREE:               ctx->style.tree = b->data.tree; break;
+            case MONSTRO_PUSHED_TAB:                ctx->style.tab = b->data.tab; break;
+            case MONSTRO_PUSHED_TABLE:              ctx->style.table = b->data.table; break;
+            case MONSTRO_PUSHED_COMBO:              ctx->style.combo = b->data.combo; break;
+            case MONSTRO_PUSHED_MENU:               ctx->style.menu = b->data.menu; break;
+            case MONSTRO_PUSHED_SEPARATOR:          ctx->style.separator = b->data.separator; break;
+            case MONSTRO_PUSHED_TOOLTIP:            ctx->style.tooltip = b->data.tooltip; break;
+            case MONSTRO_PUSHED_CHART:              ctx->style.chart = b->data.chart; break;
+            case MONSTRO_PUSHED_SCROLLH:            ctx->style.scrollh = b->data.scrollbar; break;
+            case MONSTRO_PUSHED_SCROLLV:            ctx->style.scrollv = b->data.scrollbar; break;
+            case MONSTRO_PUSHED_WINDOW:             ctx->style.window = b->data.window; break;
         }
     }
 }

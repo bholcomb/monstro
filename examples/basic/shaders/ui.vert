@@ -35,7 +35,7 @@ layout(push_constant) uniform PushConstants {
     uint textureIndex;
     uint samplerIndex;
     uint indexOffset;       // Offset into index buffer for this draw
-    uint textureType;       // 0=RGBA, 1=Font atlas (R8)
+    uint textureType;       // 0=RGBA, 1=Font atlas (R8), 2=none, use vertex color.
 } pc;
 
 // Unpack RGBA from uint32 (ABGR format - Vulkan standard)

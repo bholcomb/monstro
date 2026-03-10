@@ -13,24 +13,55 @@
 #include "tooltip.h"
 #include "editstate.h"
 
-enum MonstroStyleVarType {
-    MONSTRO_STYLE_VAR_FLOAT,
-    MONSTRO_STYLE_VAR_VEC2,
-    MONSTRO_STYLE_VAR_COLOR,
-    MONSTRO_STYLE_VAR_ITEM,
-    MONSTRO_STYLE_VAR_INT
+enum MonstroStylePushedType {
+    MONSTRO_PUSHED_TEXT,
+    MONSTRO_PUSHED_BUTTON,
+    MONSTRO_PUSHED_CONTEXTUAL_BUTTON,
+    MONSTRO_PUSHED_MENU_BUTTON,
+    MONSTRO_PUSHED_OPTION,
+    MONSTRO_PUSHED_CHECKBOX,
+    MONSTRO_PUSHED_SELECTABLE,
+    MONSTRO_PUSHED_SLIDER,
+    MONSTRO_PUSHED_KNOB,
+    MONSTRO_PUSHED_PROGRESS,
+    MONSTRO_PUSHED_PROPERTY,
+    MONSTRO_PUSHED_EDIT,
+    MONSTRO_PUSHED_TREE,
+    MONSTRO_PUSHED_TAB,
+    MONSTRO_PUSHED_TABLE,
+    MONSTRO_PUSHED_COMBO,
+    MONSTRO_PUSHED_MENU,
+    MONSTRO_PUSHED_SEPARATOR,
+    MONSTRO_PUSHED_TOOLTIP,
+    MONSTRO_PUSHED_CHART,
+    MONSTRO_PUSHED_SCROLLH,
+    MONSTRO_PUSHED_SCROLLV,
+    MONSTRO_PUSHED_WINDOW
 };
 
-struct MonstroStyleVarBackup {
-    void* ptr;
-    MonstroStyleVarType type;
+struct MonstroStyleBackup {
+    MonstroStylePushedType type;
     union {
-        float f;
-        float v2[2];
-        MonstroColor color;
-        MonstroStyleItem item;
-        int i;
-    } old_value;
+        MonstroStyleText text;
+        MonstroStyleButton button;
+        MonstroStyleToggle toggle;
+        MonstroStyleSelectable selectable;
+        MonstroStyleSlider slider;
+        MonstroStyleKnob knob;
+        MonstroStyleProgress progress;
+        MonstroStyleProperty property;
+        MonstroStyleEdit edit;
+        MonstroStyleTree tree;
+        MonstroStyleTab tab;
+        MonstroStyleTable table;
+        MonstroStyleCombo combo;
+        MonstroStyleMenu menu;
+        MonstroStyleSeparator separator;
+        MonstroStyleTooltip tooltip;
+        MonstroStyleChart chart;
+        MonstroStyleScrollbar scrollbar;
+        MonstroStyleWindow window;
+    } data;
 };
 
 struct MonstroTreeNodeState {
@@ -59,6 +90,18 @@ struct MonstroTableState {
     float table_w = 0.0f;
     float row_y = 0.0f;
     int last_frame_active = 0;
+};
+
+struct MonstroColumnsState {
+    int column_count = 0;
+    int current_column = 0;
+    float columns_x = 0.0f;
+    float start_y = 0.0f;
+    float row_y = 0.0f;
+    float columns_w = 0.0f;
+    float row_max_h = 0.0f;
+    float widths[MONSTRO_MAX_COLUMNS] = {};
+    float offsets[MONSTRO_MAX_COLUMNS] = {};
 };
 
 struct MonstroTabBarState {
@@ -113,8 +156,8 @@ struct Context {
     IdStack id_stack;
 
     MonstroStyle style = {};
-    MonstroStyleVarBackup style_var_stack[MONSTRO_MAX_STYLE_VAR_STACK] = {};
-    int style_var_stack_top = 0;
+    MonstroStyleBackup style_stack[MONSTRO_MAX_STYLE_VAR_STACK] = {};
+    int style_stack_top = 0;
 
     Window windows[MONSTRO_MAX_WINDOWS] = {};
     int window_count = 0;
@@ -140,6 +183,9 @@ struct Context {
     MonstroTableState tables[MONSTRO_MAX_TABLES] = {};
     int table_count = 0;
     MonstroTableState* current_table = nullptr;
+
+    MonstroColumnsState columns_stack[MONSTRO_MAX_COLUMN_STACK] = {};
+    int columns_stack_top = 0;
 
     uint64_t hovered_id = 0;
     uint64_t hovered_id_prev_frame = 0;

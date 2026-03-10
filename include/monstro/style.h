@@ -438,19 +438,98 @@ typedef struct MonstroStyle {
     MonstroStyleWindow window;
 } MonstroStyle;
 
+/* ------------------------------------------------------------------------- */
+/* Whole-style access (themes, serialization)                                */
+/* ------------------------------------------------------------------------- */
+
 MonstroStyle* monstro_get_style(MonstroContext* ctx);
 void monstro_set_style(MonstroContext* ctx, const MonstroStyle* style);
-
-void monstro_push_style_float(MonstroContext* ctx, float* var, float new_value);
-void monstro_push_style_vec2(MonstroContext* ctx, float var[2], float x, float y);
-void monstro_push_style_color(MonstroContext* ctx, MonstroColor* var, MonstroColor new_value);
-void monstro_push_style_item(MonstroContext* ctx, MonstroStyleItem* var, MonstroStyleItem new_value);
-void monstro_push_style_int(MonstroContext* ctx, int* var, int new_value);
-void monstro_pop_style_var(MonstroContext* ctx, int count);
 
 void monstro_style_set_default(MonstroStyle* style);
 void monstro_style_set_dark(MonstroStyle* style);
 void monstro_style_set_light(MonstroStyle* style);
+
+/* ------------------------------------------------------------------------- */
+/* Per-widget style get/set                                                  */
+/* ------------------------------------------------------------------------- */
+
+const MonstroStyleText*       monstro_get_text_style(MonstroContext* ctx);
+const MonstroStyleButton*     monstro_get_button_style(MonstroContext* ctx);
+const MonstroStyleButton*     monstro_get_contextual_button_style(MonstroContext* ctx);
+const MonstroStyleButton*     monstro_get_menu_button_style(MonstroContext* ctx);
+const MonstroStyleToggle*     monstro_get_option_style(MonstroContext* ctx);
+const MonstroStyleToggle*     monstro_get_checkbox_style(MonstroContext* ctx);
+const MonstroStyleSelectable* monstro_get_selectable_style(MonstroContext* ctx);
+const MonstroStyleSlider*     monstro_get_slider_style(MonstroContext* ctx);
+const MonstroStyleKnob*       monstro_get_knob_style(MonstroContext* ctx);
+const MonstroStyleProgress*   monstro_get_progress_style(MonstroContext* ctx);
+const MonstroStyleProperty*   monstro_get_property_style(MonstroContext* ctx);
+const MonstroStyleEdit*       monstro_get_edit_style(MonstroContext* ctx);
+const MonstroStyleTree*       monstro_get_tree_style(MonstroContext* ctx);
+const MonstroStyleTab*        monstro_get_tab_style(MonstroContext* ctx);
+const MonstroStyleTable*      monstro_get_table_style(MonstroContext* ctx);
+const MonstroStyleCombo*      monstro_get_combo_style(MonstroContext* ctx);
+const MonstroStyleMenu*       monstro_get_menu_style(MonstroContext* ctx);
+const MonstroStyleSeparator*  monstro_get_separator_style(MonstroContext* ctx);
+const MonstroStyleTooltip*    monstro_get_tooltip_style(MonstroContext* ctx);
+const MonstroStyleChart*      monstro_get_chart_style(MonstroContext* ctx);
+const MonstroStyleScrollbar*  monstro_get_scrollh_style(MonstroContext* ctx);
+const MonstroStyleScrollbar*  monstro_get_scrollv_style(MonstroContext* ctx);
+const MonstroStyleWindow*     monstro_get_window_style(MonstroContext* ctx);
+
+void monstro_set_text_style(MonstroContext* ctx, const MonstroStyleText* style);
+void monstro_set_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_set_contextual_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_set_menu_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_set_option_style(MonstroContext* ctx, const MonstroStyleToggle* style);
+void monstro_set_checkbox_style(MonstroContext* ctx, const MonstroStyleToggle* style);
+void monstro_set_selectable_style(MonstroContext* ctx, const MonstroStyleSelectable* style);
+void monstro_set_slider_style(MonstroContext* ctx, const MonstroStyleSlider* style);
+void monstro_set_knob_style(MonstroContext* ctx, const MonstroStyleKnob* style);
+void monstro_set_progress_style(MonstroContext* ctx, const MonstroStyleProgress* style);
+void monstro_set_property_style(MonstroContext* ctx, const MonstroStyleProperty* style);
+void monstro_set_edit_style(MonstroContext* ctx, const MonstroStyleEdit* style);
+void monstro_set_tree_style(MonstroContext* ctx, const MonstroStyleTree* style);
+void monstro_set_tab_style(MonstroContext* ctx, const MonstroStyleTab* style);
+void monstro_set_table_style(MonstroContext* ctx, const MonstroStyleTable* style);
+void monstro_set_combo_style(MonstroContext* ctx, const MonstroStyleCombo* style);
+void monstro_set_menu_style(MonstroContext* ctx, const MonstroStyleMenu* style);
+void monstro_set_separator_style(MonstroContext* ctx, const MonstroStyleSeparator* style);
+void monstro_set_tooltip_style(MonstroContext* ctx, const MonstroStyleTooltip* style);
+void monstro_set_chart_style(MonstroContext* ctx, const MonstroStyleChart* style);
+void monstro_set_scrollh_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
+void monstro_set_scrollv_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
+void monstro_set_window_style(MonstroContext* ctx, const MonstroStyleWindow* style);
+
+/* ------------------------------------------------------------------------- */
+/* Per-widget style push/pop                                                 */
+/* ------------------------------------------------------------------------- */
+
+void monstro_push_text_style(MonstroContext* ctx, const MonstroStyleText* style);
+void monstro_push_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_push_contextual_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_push_menu_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
+void monstro_push_option_style(MonstroContext* ctx, const MonstroStyleToggle* style);
+void monstro_push_checkbox_style(MonstroContext* ctx, const MonstroStyleToggle* style);
+void monstro_push_selectable_style(MonstroContext* ctx, const MonstroStyleSelectable* style);
+void monstro_push_slider_style(MonstroContext* ctx, const MonstroStyleSlider* style);
+void monstro_push_knob_style(MonstroContext* ctx, const MonstroStyleKnob* style);
+void monstro_push_progress_style(MonstroContext* ctx, const MonstroStyleProgress* style);
+void monstro_push_property_style(MonstroContext* ctx, const MonstroStyleProperty* style);
+void monstro_push_edit_style(MonstroContext* ctx, const MonstroStyleEdit* style);
+void monstro_push_tree_style(MonstroContext* ctx, const MonstroStyleTree* style);
+void monstro_push_tab_style(MonstroContext* ctx, const MonstroStyleTab* style);
+void monstro_push_table_style(MonstroContext* ctx, const MonstroStyleTable* style);
+void monstro_push_combo_style(MonstroContext* ctx, const MonstroStyleCombo* style);
+void monstro_push_menu_style(MonstroContext* ctx, const MonstroStyleMenu* style);
+void monstro_push_separator_style(MonstroContext* ctx, const MonstroStyleSeparator* style);
+void monstro_push_tooltip_style(MonstroContext* ctx, const MonstroStyleTooltip* style);
+void monstro_push_chart_style(MonstroContext* ctx, const MonstroStyleChart* style);
+void monstro_push_scrollh_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
+void monstro_push_scrollv_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
+void monstro_push_window_style(MonstroContext* ctx, const MonstroStyleWindow* style);
+
+void monstro_pop_style(MonstroContext* ctx, int count);
 
 #ifdef __cplusplus
 }

@@ -68,6 +68,11 @@ bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_
     float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     float field_w = 120.0f;
+    monstro::Layout* layout = win->getCurrentLayout();
+    if (layout && layout->myAvailableWidth > 0.0f) {
+        float avail = layout->myAvailableWidth - label_w - es->padding[0];
+        if (avail > 0.0f) field_w = avail;
+    }
     float field_h = text_h + es->padding[1] * 2.0f;
     float total_w = label_w + es->padding[0] + field_w;
 
@@ -391,6 +396,13 @@ bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* 
     float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
     float field_w = width > 0.0f ? width : 200.0f;
+    if (width <= 0.0f) {
+        monstro::Layout* layout = win->getCurrentLayout();
+        if (layout && layout->myAvailableWidth > 0.0f) {
+            float avail = layout->myAvailableWidth - label_w - es->padding[0];
+            if (avail > 0.0f) field_w = avail;
+        }
+    }
     float field_h = height > 0.0f ? height : text_h * 4.0f + es->padding[1] * 2.0f;
     float total_w = label_w + es->padding[0] + field_w;
 

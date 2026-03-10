@@ -17,11 +17,9 @@ static void draw_arrow(monstro::Canvas* canvas, float x, float y, float size, bo
     }
 }
 
-bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags) {
-    if (!ctx || !ctx->current_window || !label) return false;
-
+static bool tree_item_internal(MonstroContext* ctx, uint64_t id, const char* label,
+                               MonstroTreeFlags flags, bool is_leaf, bool* out_clicked) {
     monstro::Window* win = ctx->current_window;
-    if (win->skip_items) return false;
 
     MonstroStyle* style = &ctx->style;
     MonstroStyleTree* ts = &style->tree;
@@ -29,7 +27,6 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
     monstro::Canvas* canvas = &win->canvas;
 
     const char* display = monstro_display_text(label);
-    bool is_leaf = (flags & MONSTRO_TREE_LEAF) != 0;
     bool default_open = (flags & MONSTRO_TREE_DEFAULT_OPEN) != 0;
     bool force_selected = (flags & MONSTRO_TREE_SELECTED) != 0;
 
@@ -75,6 +72,8 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
         state->open = !state->open;
         is_open = state->open;
     }
+
+    if (out_clicked) *out_clicked = clicked;
 
     MonstroStyleItem* bg = &ts->normal;
     MonstroColor text_col = ts->text_normal;
@@ -126,16 +125,31 @@ bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, M
     return false;
 }
 
-bool monstro_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags) {
+bool monstro_begin_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags) {
     if (!ctx || !ctx->current_window || !label) return false;
-    uint64_t id = ctx->current_window->getChildId(label);
-    return monstro_tree_node_id(ctx, id, label, flags);
+    if (ctx->current_window->skip_items) return false;
+    return tree_item_internal(ctx, id, label, flags, false, nullptr);
 }
 
-void monstro_tree_pop(MonstroContext* ctx) {
+bool monstro_begin_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags) {
+    if (!ctx || !ctx->current_window || !label) return false;
+    uint64_t id = ctx->current_window->getChildId(label);
+    return monstro_begin_tree_node_id(ctx, id, label, flags);
+}
+
+void monstro_end_tree_node(MonstroContext* ctx) {
     if (!ctx || !ctx->current_window) return;
     ctx->id_stack.pop();
     monstro_unindent(ctx, 0.0f);
+}
+
+bool monstro_tree_leaf(MonstroContext* ctx, const char* label, MonstroTreeFlags flags) {
+    if (!ctx || !ctx->current_window || !label) return false;
+    if (ctx->current_window->skip_items) return false;
+    uint64_t id = ctx->current_window->getChildId(label);
+    bool clicked = false;
+    tree_item_internal(ctx, id, label, flags, true, &clicked);
+    return clicked;
 }
 
 bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_visible) {

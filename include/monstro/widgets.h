@@ -41,7 +41,6 @@ typedef enum MonstroInputTextFlags {
 typedef enum MonstroTreeFlags {
     MONSTRO_TREE_NONE         = 0,
     MONSTRO_TREE_DEFAULT_OPEN = 1 << 0,
-    MONSTRO_TREE_LEAF         = 1 << 1,
     MONSTRO_TREE_SELECTED     = 1 << 2
 } MonstroTreeFlags;
 
@@ -223,9 +222,10 @@ bool monstro_is_popup_open(MonstroContext* ctx, const char* str_id);
 /* Tree / Collapsible                                                        */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
-bool monstro_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags);
-void monstro_tree_pop(MonstroContext* ctx);
+bool monstro_begin_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
+bool monstro_begin_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags);
+void monstro_end_tree_node(MonstroContext* ctx);
+bool monstro_tree_leaf(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
 bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_visible);
 
 float monstro_get_tree_indent(MonstroContext* ctx);

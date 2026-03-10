@@ -175,6 +175,111 @@ float monstro_percent(MonstroContext* ctx, float percent, MonstroLayoutDirection
     }
 }
 
+/* ------------------------------------------------------------------------- */
+/* Columns                                                                   */
+/* ------------------------------------------------------------------------- */
+
+void monstro_begin_columns_ex(MonstroContext* ctx, const char* str_id, int count, const float* widths) {
+    if (!ctx || !ctx->current_window || count < 1) return;
+    if (ctx->columns_stack_top >= MONSTRO_MAX_COLUMN_STACK) return;
+    if (count > MONSTRO_MAX_COLUMNS) count = MONSTRO_MAX_COLUMNS;
+
+    monstro::Layout* layout = ctx->getCurrentLayout();
+    if (!layout) return;
+
+    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
+    float avail_w = layout->myAvailableWidth;
+    if (avail_w <= 0.0f) avail_w = ctx->current_window->size.x - ctx->style.window.padding[0] * 2.0f;
+
+    MonstroColumnsState* cs = &ctx->columns_stack[ctx->columns_stack_top++];
+    cs->column_count = count;
+    cs->current_column = 0;
+    cs->columns_x = pos.x;
+    cs->start_y = pos.y;
+    cs->row_y = pos.y;
+    cs->columns_w = avail_w;
+    cs->row_max_h = 0.0f;
+
+    float fixed_total = 0.0f;
+    int flex_count = 0;
+    for (int i = 0; i < count; i++) {
+        float w = widths ? widths[i] : 0.0f;
+        if (w > 0.0f) {
+            cs->widths[i] = w;
+            fixed_total += w;
+        } else {
+            cs->widths[i] = 0.0f;
+            flex_count++;
+        }
+    }
+
+    float flex_each = flex_count > 0 ? (avail_w - fixed_total) / (float)flex_count : 0.0f;
+    if (flex_each < 0.0f) flex_each = 0.0f;
+
+    float offset = 0.0f;
+    for (int i = 0; i < count; i++) {
+        cs->offsets[i] = offset;
+        if (cs->widths[i] <= 0.0f) {
+            cs->widths[i] = flex_each;
+        }
+        offset += cs->widths[i];
+    }
+
+    monstro_set_cursor_screen_pos(ctx, cs->columns_x + cs->offsets[0], cs->row_y);
+    layout->myAvailableWidth = cs->widths[0];
+}
+
+void monstro_begin_columns(MonstroContext* ctx, const char* str_id, int count) {
+    monstro_begin_columns_ex(ctx, str_id, count, nullptr);
+}
+
+void monstro_next_column(MonstroContext* ctx) {
+    if (!ctx || ctx->columns_stack_top <= 0) return;
+
+    MonstroColumnsState* cs = &ctx->columns_stack[ctx->columns_stack_top - 1];
+    monstro::Layout* layout = ctx->getCurrentLayout();
+    if (!layout) return;
+
+    MonstroVec2 cur = monstro_get_cursor_screen_pos(ctx);
+    float col_h = cur.y - cs->row_y;
+    if (col_h > cs->row_max_h) cs->row_max_h = col_h;
+
+    cs->current_column++;
+
+    if (cs->current_column >= cs->column_count) {
+        cs->current_column = 0;
+        cs->row_y += cs->row_max_h;
+        cs->row_max_h = 0.0f;
+    }
+
+    monstro_set_cursor_screen_pos(ctx,
+        cs->columns_x + cs->offsets[cs->current_column],
+        cs->row_y);
+    layout->myAvailableWidth = cs->widths[cs->current_column];
+}
+
+void monstro_end_columns(MonstroContext* ctx) {
+    if (!ctx || ctx->columns_stack_top <= 0) return;
+
+    MonstroColumnsState* cs = &ctx->columns_stack[ctx->columns_stack_top - 1];
+    monstro::Layout* layout = ctx->getCurrentLayout();
+
+    MonstroVec2 cur = monstro_get_cursor_screen_pos(ctx);
+    float col_h = cur.y - cs->row_y;
+    if (col_h > cs->row_max_h) cs->row_max_h = col_h;
+
+    float final_y = cs->row_y + cs->row_max_h;
+    float total_h = final_y - cs->start_y;
+
+    ctx->columns_stack_top--;
+
+    if (layout) {
+        layout->myAvailableWidth = cs->columns_w;
+        monstro_set_cursor_screen_pos(ctx, cs->columns_x, final_y);
+        monstro_add_item(ctx, cs->columns_w, total_h);
+    }
+}
+
 void monstro_draw_disabled_overlay(MonstroContext* ctx, MonstroRect rect) {
     if (!ctx || !ctx->disabled || !ctx->current_window) return;
     MonstroColor bg = ctx->style.window.background;

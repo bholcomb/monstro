@@ -663,7 +663,7 @@ static void updateUI(App* app, float deltaTime) {
         monstro_input_text(ctx, "Password", app->textInput, sizeof(app->textInput),
                            MONSTRO_INPUT_TEXT_PASSWORD, "Enter password");
         monstro_input_text_multiline(ctx, "Notes", app->multilineInput, sizeof(app->multilineInput),
-                                     200.0f, 80.0f, MONSTRO_INPUT_TEXT_NONE, "Enter notes");
+                                     0.0f, 80.0f, MONSTRO_INPUT_TEXT_NONE, "Enter notes");
 
         monstro_separator_text(ctx, "Numeric Input");
         monstro_input_int(ctx, "Count", &app->intInput, 1, 10, "Integer with +/- buttons");
@@ -704,26 +704,54 @@ static void updateUI(App* app, float deltaTime) {
         
         monstro_separator_text(ctx, "Tree View");
 
-        if (monstro_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN)) {
-            if (monstro_tree_node(ctx, "Meshes", MONSTRO_TREE_NONE)) {
-                monstro_tree_node(ctx, "Cube", MONSTRO_TREE_LEAF);
-                monstro_tree_node(ctx, "Sphere", MONSTRO_TREE_LEAF);
-                monstro_tree_node(ctx, "Plane", MONSTRO_TREE_LEAF);
-                monstro_tree_pop(ctx);
+        if (monstro_begin_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN)) {
+            if (monstro_begin_tree_node(ctx, "Meshes", MONSTRO_TREE_NONE)) {
+                monstro_tree_leaf(ctx, "Cube", MONSTRO_TREE_NONE);
+                monstro_tree_leaf(ctx, "Sphere", MONSTRO_TREE_NONE);
+                monstro_tree_leaf(ctx, "Plane", MONSTRO_TREE_NONE);
+                monstro_end_tree_node(ctx);
             }
-            if (monstro_tree_node(ctx, "Lights", MONSTRO_TREE_NONE)) {
-                monstro_tree_node(ctx, "Sun", (MonstroTreeFlags)(MONSTRO_TREE_LEAF | MONSTRO_TREE_SELECTED));
-                monstro_tree_node(ctx, "Point Light", MONSTRO_TREE_LEAF);
-                monstro_tree_pop(ctx);
+            if (monstro_begin_tree_node(ctx, "Lights", MONSTRO_TREE_NONE)) {
+                monstro_tree_leaf(ctx, "Sun", MONSTRO_TREE_SELECTED);
+                monstro_tree_leaf(ctx, "Point Light", MONSTRO_TREE_NONE);
+                monstro_end_tree_node(ctx);
             }
-            monstro_tree_node(ctx, "Camera", MONSTRO_TREE_LEAF);
-            monstro_tree_pop(ctx);
+            monstro_tree_leaf(ctx, "Camera", MONSTRO_TREE_NONE);
+            monstro_end_tree_node(ctx);
         }
 
         if (monstro_collapsing_header(ctx, "Extra Settings", nullptr)) {
             monstro_label(ctx, "These are extra settings.");
             monstro_checkbox(ctx, "Wireframe", &app->checkboxValue, nullptr);
         }
+
+        monstro_separator_text(ctx, "Columns");
+
+        monstro_begin_columns(ctx, "cols_equal", 3);
+            monstro_label(ctx, "Column 1");
+            monstro_next_column(ctx);
+            monstro_label(ctx, "Column 2");
+            monstro_next_column(ctx);
+            monstro_label(ctx, "Column 3");
+            monstro_next_column(ctx);
+        monstro_end_columns(ctx);
+
+        float col_widths[] = { 100.0f, 0.0f, 80.0f };
+        monstro_begin_columns_ex(ctx, "cols_form", 3, col_widths);
+            monstro_label(ctx, "Name:");
+            monstro_next_column(ctx);
+            monstro_input_text(ctx, "col_name##Name", app->textInput, sizeof(app->textInput), MONSTRO_INPUT_TEXT_NONE, nullptr);
+            monstro_next_column(ctx);
+            if (monstro_button(ctx, "Clear", nullptr)) { app->textInput[0] = '\0'; }
+            monstro_next_column(ctx);
+
+            monstro_label(ctx, "Volume:");
+            monstro_next_column(ctx);
+            monstro_slider_float(ctx, "col_vol##Vol", &app->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
+            monstro_next_column(ctx);
+            if (monstro_button(ctx, "Reset##vol", nullptr)) { app->sliderValue = 0.5f; }
+            monstro_next_column(ctx);
+        monstro_end_columns(ctx);
 
         monstro_separator_text(ctx, "Groups");
 
@@ -775,8 +803,10 @@ static void updateUI(App* app, float deltaTime) {
             monstro_table_headers_row(ctx);
 
 
-            MonstroStyle* s = monstro_get_style(ctx);
-            monstro_push_style_vec2(ctx, s->button.padding, 0.0f, 0.0f);
+            MonstroStyleButton btn_s = *monstro_get_button_style(ctx);
+            btn_s.padding[0] = 0.0f;
+            btn_s.padding[1] = 0.0f;
+            monstro_push_button_style(ctx, &btn_s);
 
             monstro_table_next_row(ctx);
             monstro_table_next_column(ctx);
@@ -802,7 +832,7 @@ static void updateUI(App* app, float deltaTime) {
             monstro_table_next_column(ctx);
             if (monstro_button(ctx, "g##Reset", nullptr)) { printf("Reset Gamma\n"); }
 
-            monstro_pop_style_var(ctx, 1);
+            monstro_pop_style(ctx, 1);
 
             monstro_end_table(ctx);
         }
@@ -817,11 +847,24 @@ static void updateUI(App* app, float deltaTime) {
             monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
             monstro_table_headers_row(ctx);
 
-            MonstroStyle* s = monstro_get_style(ctx);
-            monstro_push_style_vec2(ctx, s->button.padding, 0.0f, 0.0f);
-            monstro_push_style_vec2(ctx, s->edit.padding, 0.0f, 0.0f);
-            monstro_push_style_vec2(ctx, s->property.padding, 0.0f, 0.0f);
-            monstro_push_style_int(ctx, (int*)&s->text.alignment, MONSTRO_ALIGN_CENTER);
+            MonstroStyleButton btn_s2 = *monstro_get_button_style(ctx);
+            btn_s2.padding[0] = 0.0f;
+            btn_s2.padding[1] = 0.0f;
+            monstro_push_button_style(ctx, &btn_s2);
+
+            MonstroStyleEdit edit_s = *monstro_get_edit_style(ctx);
+            edit_s.padding[0] = 0.0f;
+            edit_s.padding[1] = 0.0f;
+            monstro_push_edit_style(ctx, &edit_s);
+
+            MonstroStyleProperty prop_s = *monstro_get_property_style(ctx);
+            prop_s.padding[0] = 0.0f;
+            prop_s.padding[1] = 0.0f;
+            monstro_push_property_style(ctx, &prop_s);
+
+            MonstroStyleText text_s = *monstro_get_text_style(ctx);
+            text_s.alignment = MONSTRO_ALIGN_CENTER;
+            monstro_push_text_style(ctx, &text_s);
 
             const char* row_ids[] = {"name0##", "name1##", "name2##"};
             const char* val_ids[] = {"val0##",  "val1##",  "val2##"};
@@ -842,7 +885,7 @@ static void updateUI(App* app, float deltaTime) {
                 }
             }
 
-            monstro_pop_style_var(ctx, 4);
+            monstro_pop_style(ctx, 4);
 
             monstro_end_table(ctx);
         }

@@ -66,6 +66,13 @@ bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* valu
 
     float slider_h = height > 0.0f ? height : std::max(text_h, ss->cursor_size[1]) + ss->padding[1] * 2.0f;
     float slider_w = width > 0.0f ? width : 120.0f;
+    if (width <= 0.0f) {
+        monstro::Layout* layout = win->getCurrentLayout();
+        if (layout && layout->myAvailableWidth > 0.0f) {
+            float avail = layout->myAvailableWidth - label_w - ss->spacing[0];
+            if (avail > 0.0f) slider_w = avail;
+        }
+    }
     float total_w = label_w + ss->spacing[0] + slider_w;
 
     MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
