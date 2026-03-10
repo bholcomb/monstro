@@ -460,9 +460,9 @@ for (int i = 0; i < count; i++) {
 
 ### Window flags
 
-`MONSTRO_WINDOW_DEFAULT` enables background, title bar, menu bar, borders,
-movable, collapsable, resizable, input handling, and scrolling.  You can
-compose flags manually:
+`MONSTRO_WINDOW_DEFAULT` enables background, title bar, borders, movable,
+collapsable, resizable, input handling, and scrolling.  You can compose flags
+manually:
 
 ```c
 MonstroWindowFlags flags = MONSTRO_WINDOW_BACKGROUND
@@ -472,6 +472,10 @@ MonstroWindowFlags flags = MONSTRO_WINDOW_BACKGROUND
 ```
 
 Notable flags:
+- `MONSTRO_WINDOW_MENU_BAR` -- reserves space for a menu bar below the title
+  bar and draws its background.  Add this flag when your window uses
+  `monstro_begin_menu_bar` / `monstro_end_menu_bar`.  It is **not** included
+  in `MONSTRO_WINDOW_DEFAULT` -- you must opt in explicitly.
 - `MONSTRO_WINDOW_AUTO_RESIZE` -- window sizes to fit its content.
 - `MONSTRO_WINDOW_SCROLL_WITH_MOUSE` -- mouse wheel scrolls the window.
 - `MONSTRO_WINDOW_COLLAPSABLE` -- adds a collapse toggle.
@@ -722,18 +726,30 @@ if (monstro_begin_table(ctx, "tbl", 3,
 
 ### Menus
 
+To use a menu bar, add `MONSTRO_WINDOW_MENU_BAR` to the window flags:
+
 ```c
-if (monstro_begin_menu_bar(ctx)) {
-    if (monstro_begin_menu(ctx, "File", true)) {
-        if (monstro_menu_item(ctx, "Open", NULL, true)) { /* ... */ }
-        if (monstro_menu_item(ctx, "Save", NULL, true)) { /* ... */ }
-        monstro_separator(ctx);
-        monstro_menu_item(ctx, "Exit", NULL, true);
-        monstro_end_menu(ctx);
+MonstroWindowFlags flags = (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR);
+if (monstro_begin_window(ctx, "My Window", NULL, flags)) {
+    if (monstro_begin_menu_bar(ctx)) {
+        if (monstro_begin_menu(ctx, "File", true)) {
+            if (monstro_menu_item(ctx, "Open", NULL, true)) { /* ... */ }
+            if (monstro_menu_item(ctx, "Save", NULL, true)) { /* ... */ }
+            monstro_separator(ctx);
+            monstro_menu_item(ctx, "Exit", NULL, true);
+            monstro_end_menu(ctx);
+        }
+        monstro_end_menu_bar(ctx);
     }
-    monstro_end_menu_bar(ctx);
+    /* ... window content ... */
+    monstro_end_window(ctx);
 }
 ```
+
+The `MONSTRO_WINDOW_MENU_BAR` flag reserves space for the menu bar and draws
+its background.  The `begin_menu_bar` / `end_menu_bar` calls populate it with
+menu items.  If you set the flag but never call `begin_menu_bar`, the bar area
+is drawn but left empty.
 
 ### Popups and Modals
 
@@ -1723,6 +1739,107 @@ if (color_picker_update(ctx, &picker)) {
     cur_b = picker.b;
 }
 ```
+
+---
+
+## Examples
+
+The `examples/` directory contains runnable demos that show Monstro in action.
+Each example beyond the basic demo is structured as a **reusable library**:
+the feature logic lives in its own `.h` / `.cpp` pair with a plain C API,
+while `main.cpp` is a thin harness that wires it up.  This means you can drop
+the library files directly into your own project and call the same `_init`,
+`_draw`, or `_update` functions -- no need to extract code from a monolithic
+demo.
+
+All examples share a common application shell (`examples/common/example_app.h`)
+that handles GLFW window creation, Vulkan rendering via VulkEase, Monstro
+context setup, input forwarding, and the main loop.  To create a new example,
+define an `ExampleAppDesc` with init/update callbacks and call
+`example_app_run`.
+
+### basic
+
+The kitchen-sink demo (`examples/basic/main.cpp`).  Exercises most of the
+widget catalog in a single window: labels, buttons, checkboxes, sliders, knobs,
+text input, tables, trees, tabs, color picker, child scroll regions, file
+dialog, menus, and more.  Also serves as the reference for GLFW/Vulkan
+integration.
+
+### console
+
+An interactive debug console with log levels (info, warning, error, debug),
+text filtering, command history, auto-scroll, and a pluggable command system.
+
+- **Library:** `console.h` / `console.cpp`
+- **API:** `console_init`, `console_log`, `console_add_command`,
+  `console_draw`, `console_clear`
+
+### node
+
+A node graph editor with draggable nodes, typed input/output ports, and
+link connections drawn as Bezier curves.  Demonstrates custom canvas drawing
+inside a Monstro window.
+
+- **Library:** `node.h` / `node.cpp`
+- **API:** `node_editor_init`, `node_editor_add_node`,
+  `node_editor_add_port`, `node_editor_add_link`, `node_editor_draw`
+
+### plot
+
+Line, bar, and scatter chart widgets with configurable axis ranges, multiple
+series, and automatic legend rendering.
+
+- **Library:** `plot.h` / `plot.cpp`
+- **API:** `plot_init`, `plot_add_series`, `plot_set_data`, `plot_set_range`,
+  `plot_draw`
+
+### curve
+
+A Bezier curve editor with draggable control points, useful for animation
+curves, color ramps, or audio envelopes.
+
+- **Library:** `curve.h` / `curve.cpp`
+- **API:** `curve_editor_init`, `curve_editor_add_point`, `curve_editor_draw`
+
+### timeline
+
+A multi-track timeline with clips and a playhead, suited for animation
+sequencing, audio arrangement, or video editing UIs.
+
+- **Library:** `timeline.h` / `timeline.cpp`
+- **API:** `timeline_init`, `timeline_add_track`, `timeline_add_clip`,
+  `timeline_draw`
+
+### property
+
+A property inspector panel that supports bool, int, float, string, color,
+and enum fields organized into collapsible sections.
+
+- **Library:** `property.h` / `property.cpp`
+- **API:** `property_editor_init`, `property_editor_add_section`,
+  `property_editor_add_bool`, `property_editor_add_int`,
+  `property_editor_add_float`, `property_editor_add_string`,
+  `property_editor_add_color`, `property_editor_add_enum`,
+  `property_editor_draw`
+
+### shortcut
+
+A keyboard shortcut editor for defining and displaying key bindings with
+modifier keys.
+
+- **Library:** `shortcut.h` / `shortcut.cpp`
+- **API:** `shortcut_editor_init`, `shortcut_editor_add`,
+  `shortcut_editor_draw`
+
+### toast
+
+A toast notification system that displays timed popup messages in the corner
+of the screen with per-type color coding (info, success, warning, error) and
+fade-in / fade-out animation.
+
+- **Library:** `toast.h` / `toast.cpp`
+- **API:** `toast_init`, `toast_show`, `toast_draw`
 
 ---
 
