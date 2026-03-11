@@ -48,6 +48,17 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
       if (!win)
          return false;
    }
+   else
+   {
+      if (!win->title_overridden)
+      {
+         const char *title = monstro_display_text(name);
+         if (!title)
+            title = "";
+         std::strncpy(win->title, title, sizeof(win->title) - 1);
+         win->title[sizeof(win->title) - 1] = '\0';
+      }
+   }
 
    win->flags = flags;
 
@@ -96,6 +107,15 @@ void monstro_set_window_layout(MonstroContext *ctx, MonstroLayoutDirection direc
    ctx->current_window->setLayoutDirection(direction);
 }
 
+void monstro_set_window_title(MonstroContext *ctx, const char *title)
+{
+   if (!ctx || !ctx->current_window || !title)
+      return;
+   std::strncpy(ctx->current_window->title, title, sizeof(ctx->current_window->title) - 1);
+   ctx->current_window->title[sizeof(ctx->current_window->title) - 1] = '\0';
+   ctx->current_window->title_overridden = true;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Window Configuration by Name                                              */
 /* ------------------------------------------------------------------------- */
@@ -135,6 +155,18 @@ void monstro_set_window_layout_named(MonstroContext *ctx, const char *name, Mons
    monstro::Window *win = ctx->findWindow(name);
    if (win)
       win->setLayoutDirection(direction);
+}
+
+void monstro_set_window_title_named(MonstroContext *ctx, const char *name, const char *title)
+{
+   if (!ctx || !title)
+      return;
+   monstro::Window *win = ctx->findWindow(name);
+   if (!win)
+      return;
+   std::strncpy(win->title, title, sizeof(win->title) - 1);
+   win->title[sizeof(win->title) - 1] = '\0';
+   win->title_overridden = true;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -243,18 +275,20 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
    if (parent->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-
    MonstroVec2 cursor = parent->getCursorScreenPos();
 
-   monstro::Layout *parent_layout = parent->getCurrentLayout();
-   if (width <= 0.0f && parent_layout)
+   MonstroVec2 avail = monstro_get_content_region_avail(ctx);
+   if (width <= 0.0f)
    {
-      width = parent_layout->myAvailableWidth;
+      width = avail.x + width;
+      if (width < 0.0f)
+         width = 0.0f;
    }
-   if (height <= 0.0f && parent_layout)
+   if (height <= 0.0f)
    {
-      height = parent_layout->myAvailableHeight;
+      height = avail.y + height;
+      if (height < 0.0f)
+         height = 0.0f;
    }
 
    MonstroWindowFlags child_flags =
@@ -266,8 +300,23 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
       child_flags = (MonstroWindowFlags)(child_flags & ~MONSTRO_WINDOW_BORDERS);
    }
 
+   char child_id[256];
+   monstro_copy_id_text(str_id, child_id, sizeof(child_id));
+   if (child_id[0] == '\0')
+   {
+      const char *fallback_id = monstro_display_text(str_id);
+      if (!fallback_id)
+         fallback_id = "";
+      std::strncpy(child_id, fallback_id, sizeof(child_id) - 1);
+      child_id[sizeof(child_id) - 1] = '\0';
+   }
+
+   const char *child_title = monstro_display_text(str_id);
+   if (!child_title)
+      child_title = "";
+
    char child_name[320];
-   snprintf(child_name, sizeof(child_name), "child_%s_%s", parent->name, str_id);
+   snprintf(child_name, sizeof(child_name), "child_%s_%s##%s", parent->name, child_id, child_title);
 
    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);
    monstro_set_next_window_size(ctx, width, height, MONSTRO_COND_ALWAYS);

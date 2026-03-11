@@ -14,6 +14,25 @@ static bool is_popup_open_internal(MonstroContext *ctx, uint64_t popup_id)
    return false;
 }
 
+static void build_window_name(char *out, size_t out_size, const char *prefix, const char *label)
+{
+   if (!out || out_size == 0)
+      return;
+
+   char id[256];
+   monstro_copy_id_text(label, id, sizeof(id));
+   const char *title = monstro_display_text(label);
+   if (!title)
+      title = "";
+   if (id[0] == '\0')
+   {
+      strncpy(id, title, sizeof(id) - 1);
+      id[sizeof(id) - 1] = '\0';
+   }
+
+   snprintf(out, out_size, "%s%s##%s", prefix ? prefix : "", id, title);
+}
+
 void monstro_open_popup(MonstroContext *ctx, const char *label) { monstro_open_popup_ex(ctx, label, false); }
 
 void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
@@ -74,15 +93,15 @@ bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFl
    char popup_name[320];
    if (flags & MONSTRO_WINDOW_CHILD_MENU)
    {
-      snprintf(popup_name, sizeof(popup_name), "menu_%s", label);
+      build_window_name(popup_name, sizeof(popup_name), "menu_", label);
    }
    else if (flags & MONSTRO_WINDOW_COMBO)
    {
-      snprintf(popup_name, sizeof(popup_name), "combo_%s", label);
+      build_window_name(popup_name, sizeof(popup_name), "combo_", label);
    }
    else
    {
-      snprintf(popup_name, sizeof(popup_name), "popup_%s", label);
+      build_window_name(popup_name, sizeof(popup_name), "popup_", label);
    }
 
    bool popup_open = true;
@@ -139,7 +158,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
                             MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_MOVABLE | MONSTRO_WINDOW_AUTO_RESIZE);
 
    char popup_name[320];
-   snprintf(popup_name, sizeof(popup_name), "modal_%s", label);
+   build_window_name(popup_name, sizeof(popup_name), "modal_", label);
 
    monstro::Window *existing = ctx->findWindow(popup_name);
    if (existing && existing->size.x > 0.0f && existing->size.y > 0.0f)
@@ -149,8 +168,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
       monstro_set_next_window_pos(ctx, cx, cy, MONSTRO_COND_ALWAYS);
    }
 
-   bool modal_open = true;
-   bool opened = monstro_begin_window(ctx, popup_name, &modal_open, modal_flags);
+   bool opened = monstro_begin_window(ctx, popup_name, p_open, modal_flags);
 
    if (ctx->current_window)
    {
@@ -163,6 +181,11 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
       monstro_close_current_popup(ctx);
       monstro_end_popup(ctx);
       return false;
+   }
+
+   if (opened && p_open && !*p_open)
+   {
+      monstro_close_current_popup(ctx);
    }
 
    if (!opened)

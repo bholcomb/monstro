@@ -30,6 +30,7 @@ void monstro_set_window_pos(MonstroContext* ctx, float x, float y, MonstroCondit
 void monstro_set_window_size(MonstroContext* ctx, float width, float height, MonstroCondition cond);
 void monstro_set_window_focus(MonstroContext* ctx);
 void monstro_set_window_layout(MonstroContext* ctx, MonstroLayoutDirection direction);
+void monstro_set_window_title(MonstroContext* ctx, const char* title);
 
 /*
  * Window Configuration by Name
@@ -39,6 +40,7 @@ void monstro_set_window_pos_named(MonstroContext* ctx, const char* name, float x
 void monstro_set_window_size_named(MonstroContext* ctx, const char* name, float width, float height, MonstroCondition cond);
 void monstro_set_window_focus_named(MonstroContext* ctx, const char* name);
 void monstro_set_window_layout_named(MonstroContext* ctx, const char* name, MonstroLayoutDirection direction);
+void monstro_set_window_title_named(MonstroContext* ctx, const char* name, const char* title);
 
 /*
  * Window Properties (call after begin_window)

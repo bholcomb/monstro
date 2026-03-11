@@ -108,6 +108,7 @@ struct MonstroColumnsState
    float row_y = 0.0f;
    float columns_w = 0.0f;
    float row_max_h = 0.0f;
+   float prev_visible_max_screen_x = 0.0f;
    float widths[MONSTRO_MAX_COLUMNS] = {};
    float offsets[MONSTRO_MAX_COLUMNS] = {};
 };

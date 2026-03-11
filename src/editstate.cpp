@@ -5,6 +5,15 @@
 namespace monstro
 {
 
+static int clamp_index(int value, int min_value, int max_value)
+{
+   if (value < min_value)
+      return min_value;
+   if (value > max_value)
+      return max_value;
+   return value;
+}
+
 void EditState::clear()
 {
    myId = 0;
@@ -52,9 +61,13 @@ void EditState::deleteSelection()
    if (!myHasSelection || !myBuf)
       return;
 
+   int len = (int)strlen(myBuf);
+   myCursorPos = clamp_index(myCursorPos, 0, len);
+   mySelectStart = clamp_index(mySelectStart, 0, len);
+   mySelectEnd = clamp_index(mySelectEnd, 0, len);
+
    int sel_start = getSelectionStart();
    int sel_end = getSelectionEnd();
-   int len = (int)strlen(myBuf);
 
    if (sel_start >= sel_end)
       return;
@@ -77,6 +90,10 @@ void EditState::insertText(const char *text)
    }
 
    int len = (int)strlen(myBuf);
+   myCursorPos = clamp_index(myCursorPos, 0, len);
+   mySelectStart = clamp_index(mySelectStart, 0, len);
+   mySelectEnd = clamp_index(mySelectEnd, 0, len);
+
    int insert_len = (int)strlen(text);
    int available = (int)myBufSize - len - 1;
    if (available <= 0)

@@ -131,15 +131,15 @@ static MonstroColor level_color(ConsoleLogLevel level)
    switch (level)
    {
    case CONSOLE_LOG_INFO:
-      return {200, 200, 200, 255};
+      return MONSTRO_COLOR_LIGHT_GRAY;
    case CONSOLE_LOG_WARNING:
-      return {255, 200, 80, 255};
+      return MONSTRO_COLOR_GOLD;
    case CONSOLE_LOG_ERROR:
-      return {255, 80, 80, 255};
+      return MONSTRO_COLOR_RED;
    case CONSOLE_LOG_DEBUG:
-      return {120, 180, 255, 255};
+      return MONSTRO_COLOR_CYAN;
    default:
-      return {200, 200, 200, 255};
+      return MONSTRO_COLOR_LIGHT_GRAY;
    }
 }
 
@@ -186,11 +186,16 @@ void console_draw(Console *con, MonstroContext *ctx, float dt)
       monstro_input_text(ctx, "Filter##con_filter", con->filter, sizeof(con->filter), MONSTRO_INPUT_TEXT_NONE, nullptr);
       monstro_separator(ctx);
 
+      MonstroStyle *style = monstro_get_style(ctx);
+      MonstroFont *font = style->font;
+      float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
+      float command_row_h = text_h + style->edit.padding[1] * 3.0f;
+
       MonstroWindowFlags child_flags =
           (MonstroWindowFlags)(MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_INPUTS |
                                MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_VERTICAL_SCROLLBAR);
 
-      if (monstro_begin_child(ctx, "##log_area", 0, -30, child_flags))
+      if (monstro_begin_child(ctx, "log_area##", 0, -command_row_h, child_flags))
       {
          int total = con->entry_count < CONSOLE_MAX_ENTRIES ? con->entry_count : CONSOLE_MAX_ENTRIES;
          for (int i = 0; i < total; i++)

@@ -21,6 +21,7 @@ void monstro_set_cursor_pos(MonstroContext* ctx, float x, float y);
 
 MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext* ctx);
 void monstro_set_cursor_screen_pos(MonstroContext* ctx, float x, float y);
+MonstroVec2 monstro_get_content_region_avail(MonstroContext* ctx);
 
 void monstro_indent(MonstroContext* ctx, float indent_width);
 void monstro_unindent(MonstroContext* ctx, float indent_width);

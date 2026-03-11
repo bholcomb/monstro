@@ -28,6 +28,20 @@ static bool icon_lookup_from_context(void *user_data, uint32_t icon_id, uint64_t
 namespace monstro
 {
 
+static void set_window_name_and_title(Window *window, const char *window_name)
+{
+   if (!window)
+      return;
+
+   monstro_copy_id_text(window_name, window->name, sizeof(window->name));
+
+   const char *title = monstro_display_text(window_name);
+   if (!title)
+      title = "";
+   std::strncpy(window->title, title, sizeof(window->title) - 1);
+   window->title[sizeof(window->title) - 1] = '\0';
+}
+
 /* ------------------------------------------------------------------------- */
 /* Window Member Functions                                                   */
 /* ------------------------------------------------------------------------- */
@@ -37,10 +51,9 @@ void Window::init(Context *context, const char *windowName, MonstroWindowFlags w
    std::memset(this, 0, sizeof(Window));
    ctx = context;
 
-   std::strncpy(name, windowName, sizeof(name) - 1);
-   name[sizeof(name) - 1] = '\0';
+   set_window_name_and_title(this, windowName);
 
-   id = ctx->id_stack.getId(windowName);
+   id = ctx->id_stack.getId(name);
    move_id = getChildId("MOVE");
    flags = windowFlags;
 
@@ -194,6 +207,9 @@ bool Window::begin(bool *p_open)
          layout_stack[layout_stack_top].myScrollOffsetY = -scroll_y;
          layout_stack[layout_stack_top].myAvailableWidth = content_view_width;
          layout_stack[layout_stack_top].myAvailableHeight = content_view_height;
+         MonstroVec2 cursor = getCursorScreenPos();
+         layout_stack[layout_stack_top].myVisibleMaxScreenX = cursor.x + content_view_width;
+         layout_stack[layout_stack_top].myVisibleMaxScreenY = cursor.y + content_view_height;
       }
    }
 
@@ -338,6 +354,9 @@ bool Window::end()
 void Window::updateScrollState(float header_h)
 {
    MonstroStyle *style = &ctx->style;
+   const float scroll_epsilon = 1.0f;
+   float scroll_content_w = getScrollableContentWidth();
+   float scroll_content_h = getScrollableContentHeight();
    float bar_w = style->window.scrollbar_size[0];
    float bar_h = style->window.scrollbar_size[1];
    if (bar_w <= 0.0f)
@@ -363,19 +382,19 @@ void Window::updateScrollState(float header_h)
    bool allow_x = (flags & MONSTRO_WINDOW_HORIZONTAL_SCROLLBAR) != 0;
    bool allow_y = (flags & MONSTRO_WINDOW_VERTICAL_SCROLLBAR) != 0;
 
-   if (allow_y && content_height > base_h)
+   if (allow_y && scroll_content_h > base_h + scroll_epsilon)
    {
       show_scrollbar_y = true;
    }
-   if (allow_x && content_width > base_w - (show_scrollbar_y ? bar_w : 0.0f))
+   if (allow_x && scroll_content_w > base_w - (show_scrollbar_y ? bar_w : 0.0f) + scroll_epsilon)
    {
       show_scrollbar_x = true;
    }
-   if (allow_y && !show_scrollbar_y && content_height > base_h - (show_scrollbar_x ? bar_h : 0.0f))
+   if (allow_y && !show_scrollbar_y && scroll_content_h > base_h - (show_scrollbar_x ? bar_h : 0.0f) + scroll_epsilon)
    {
       show_scrollbar_y = true;
    }
-   if (allow_x && !show_scrollbar_x && content_width > base_w - (show_scrollbar_y ? bar_w : 0.0f))
+   if (allow_x && !show_scrollbar_x && scroll_content_w > base_w - (show_scrollbar_y ? bar_w : 0.0f) + scroll_epsilon)
    {
       show_scrollbar_x = true;
    }
@@ -390,14 +409,28 @@ void Window::updateScrollState(float header_h)
 
 float Window::getMaxScrollX() const
 {
-   float max_scroll = content_width - content_view_width;
+   float max_scroll = getScrollableContentWidth() - content_view_width;
    return max_scroll > 0.0f ? max_scroll : 0.0f;
 }
 
 float Window::getMaxScrollY() const
 {
-   float max_scroll = content_height - content_view_height;
+   float max_scroll = getScrollableContentHeight() - content_view_height;
    return max_scroll > 0.0f ? max_scroll : 0.0f;
+}
+
+float Window::getScrollableContentWidth() const
+{
+   float padding = ctx ? ctx->style.window.padding[0] * 2.0f : 0.0f;
+   float scroll_content_w = content_width - padding;
+   return scroll_content_w > 0.0f ? scroll_content_w : 0.0f;
+}
+
+float Window::getScrollableContentHeight() const
+{
+   float padding = ctx ? ctx->style.window.padding[1] * 2.0f : 0.0f;
+   float scroll_content_h = content_height - padding;
+   return scroll_content_h > 0.0f ? scroll_content_h : 0.0f;
 }
 
 void Window::clampScrollOffsets()
@@ -438,7 +471,8 @@ void Window::drawVerticalScrollbar(float header_h)
       canvas.addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
    }
 
-   float thumb_ratio = content_height > 0.0f ? (content_rect.h / content_height) : 1.0f;
+   float scroll_content_h = getScrollableContentHeight();
+   float thumb_ratio = scroll_content_h > 0.0f ? (content_rect.h / scroll_content_h) : 1.0f;
    float thumb_h = track_rect.h * thumb_ratio;
    if (thumb_h < 20.0f)
       thumb_h = 20.0f;
@@ -525,7 +559,8 @@ void Window::drawHorizontalScrollbar(float header_h)
       canvas.addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
    }
 
-   float thumb_ratio = content_width > 0.0f ? (content_rect.w / content_width) : 1.0f;
+   float scroll_content_w = getScrollableContentWidth();
+   float thumb_ratio = scroll_content_w > 0.0f ? (content_rect.w / scroll_content_w) : 1.0f;
    float thumb_w = track_rect.w * thumb_ratio;
    if (thumb_w < 20.0f)
       thumb_w = 20.0f;
@@ -719,7 +754,7 @@ void Window::drawForeground()
       MonstroRect text_rect = {text_left, title_rect.y, title_rect.w - (text_left - title_rect.x), title_rect.h};
       if (style->font)
       {
-         canvas.addTextEx(style->font, text_rect, monstro_color_to_u32(style->window.header.label_normal), name,
+         canvas.addTextEx(style->font, text_rect, monstro_color_to_u32(style->window.header.label_normal), title,
                           MONSTRO_ALIGN_LEFT);
       }
    }
@@ -797,7 +832,7 @@ void Window::drawForeground()
          uint32_t label_color = monstro_color_to_u32(style->window.header.label_normal);
          if (style->font)
          {
-            canvas.addTextEx(style->font, text_rect, label_color, name, MONSTRO_ALIGN_CENTER);
+            canvas.addTextEx(style->font, text_rect, label_color, title, MONSTRO_ALIGN_CENTER);
          }
 
       }
@@ -1005,6 +1040,8 @@ void Window::beginLayout(MonstroLayoutDirection direction)
 
    float parent_avail_w = 0.0f;
    float parent_avail_h = 0.0f;
+   float parent_visible_max_screen_x = 0.0f;
+   float parent_visible_max_screen_y = 0.0f;
 
    if (layout_stack_top >= 0)
    {
@@ -1016,6 +1053,8 @@ void Window::beginLayout(MonstroLayoutDirection direction)
       Layout &parent = layout_stack[layout_stack_top];
       parent_avail_w = parent.myAvailableWidth;
       parent_avail_h = parent.myAvailableHeight;
+      parent_visible_max_screen_x = parent.myVisibleMaxScreenX;
+      parent_visible_max_screen_y = parent.myVisibleMaxScreenY;
    }
 
    layout_stack_top++;
@@ -1024,6 +1063,8 @@ void Window::beginLayout(MonstroLayoutDirection direction)
    layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
    layout_stack[layout_stack_top].myAvailableWidth = parent_avail_w;
    layout_stack[layout_stack_top].myAvailableHeight = parent_avail_h;
+   layout_stack[layout_stack_top].myVisibleMaxScreenX = parent_visible_max_screen_x;
+   layout_stack[layout_stack_top].myVisibleMaxScreenY = parent_visible_max_screen_y;
 }
 
 void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
@@ -1031,8 +1072,32 @@ void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
    if (layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1)
       return;
 
+   float parent_scroll_x = 0.0f;
+   float parent_scroll_y = 0.0f;
+   float parent_avail_w = 0.0f;
+   float parent_avail_h = 0.0f;
+   float parent_visible_max_screen_x = 0.0f;
+   float parent_visible_max_screen_y = 0.0f;
+
+   if (layout_stack_top >= 0)
+   {
+      Layout &parent = layout_stack[layout_stack_top];
+      parent_scroll_x = parent.myScrollOffsetX;
+      parent_scroll_y = parent.myScrollOffsetY;
+      parent_avail_w = parent.myAvailableWidth;
+      parent_avail_h = parent.myAvailableHeight;
+      parent_visible_max_screen_x = parent.myVisibleMaxScreenX;
+      parent_visible_max_screen_y = parent.myVisibleMaxScreenY;
+   }
+
    layout_stack_top++;
    layout_stack[layout_stack_top].init(direction, x, y);
+   layout_stack[layout_stack_top].myScrollOffsetX = parent_scroll_x;
+   layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
+   layout_stack[layout_stack_top].myAvailableWidth = parent_avail_w;
+   layout_stack[layout_stack_top].myAvailableHeight = parent_avail_h;
+   layout_stack[layout_stack_top].myVisibleMaxScreenX = parent_visible_max_screen_x;
+   layout_stack[layout_stack_top].myVisibleMaxScreenY = parent_visible_max_screen_y;
 }
 
 void Window::endLayout()
@@ -1139,9 +1204,12 @@ Window *Context::findWindow(const char *name)
    if (!name)
       return nullptr;
 
+   char window_id[256];
+   monstro_copy_id_text(name, window_id, sizeof(window_id));
+
    for (int i = 0; i < window_count; i++)
    {
-      if (std::strcmp(windows[i].name, name) == 0)
+      if (std::strcmp(windows[i].name, window_id) == 0)
       {
          return &windows[i];
       }
@@ -1196,6 +1264,18 @@ static Window *findHoveredWindowRecursive(Window *w, float x, float y, bool excl
    return nullptr;
 }
 
+static bool window_belongs_to_modal_popup(const Window *w)
+{
+   const Window *current = w;
+   while (current != nullptr)
+   {
+      if ((current->flags & MONSTRO_WINDOW_MODAL) || (current->flags & MONSTRO_WINDOW_POPUP))
+         return true;
+      current = current->parent;
+   }
+   return false;
+}
+
 Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
 {
    if (root_window != nullptr)
@@ -1204,7 +1284,7 @@ Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
 
       if (result && popup_stack_top > 0 && popup_stack[popup_stack_top - 1].is_modal)
       {
-         if (!(result->flags & MONSTRO_WINDOW_MODAL) && !(result->flags & MONSTRO_WINDOW_POPUP))
+         if (!window_belongs_to_modal_popup(result))
          {
             return nullptr;
          }

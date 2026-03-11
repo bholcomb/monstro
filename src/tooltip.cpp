@@ -46,7 +46,7 @@ void TooltipState::endFrame(Context *ctx)
    MonstroWindowFlags flags = (MonstroWindowFlags)(MONSTRO_WINDOW_TOOLTIP | MONSTRO_WINDOW_AUTO_RESIZE |
                                                    MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_BORDERS);
 
-   if (monstro_begin_window(ctx, "##tooltip", nullptr, flags))
+   if (monstro_begin_window(ctx, "tooltip##", nullptr, flags))
    {
       monstro_label(ctx, myText);
       monstro_end_window(ctx);

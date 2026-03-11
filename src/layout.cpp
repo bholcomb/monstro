@@ -23,6 +23,8 @@ void Layout::init(MonstroLayoutDirection direction, float posX, float posY)
    myScrollOffsetY = 0.0f;
    myAvailableWidth = 0.0f;
    myAvailableHeight = 0.0f;
+   myVisibleMaxScreenX = 0.0f;
+   myVisibleMaxScreenY = 0.0f;
    myLastItemX = 0.0f;
    myLastItemY = 0.0f;
    myLastItemW = 0.0f;
@@ -95,6 +97,28 @@ const char *monstro_display_text(const char *label)
    return label;
 }
 
+void monstro_copy_id_text(const char *label, char *out, size_t out_size)
+{
+   if (!out || out_size == 0)
+      return;
+
+   out[0] = '\0';
+   if (!label)
+      return;
+
+   size_t len = 0;
+   while (label[len] != '\0')
+   {
+      if (label[len] == '#' && label[len + 1] == '#')
+         break;
+      if (len >= out_size - 1)
+         break;
+      out[len] = label[len];
+      len++;
+   }
+   out[len] = '\0';
+}
+
 MonstroVec2 monstro_get_cursor_pos(MonstroContext *ctx)
 {
    if (!ctx || !ctx->current_window)
@@ -121,6 +145,27 @@ void monstro_set_cursor_screen_pos(MonstroContext *ctx, float x, float y)
    if (!ctx || !ctx->current_window)
       return;
    ctx->current_window->setCursorScreenPos(x, y);
+}
+
+MonstroVec2 monstro_get_content_region_avail(MonstroContext *ctx)
+{
+   if (!ctx || !ctx->current_window)
+      return {0.0f, 0.0f};
+
+   monstro::Layout *layout = ctx->getCurrentLayout();
+   if (!layout)
+      return {0.0f, 0.0f};
+
+   MonstroVec2 cursor = ctx->current_window->getCursorScreenPos();
+   float avail_w = layout->myVisibleMaxScreenX - cursor.x;
+   float avail_h = layout->myVisibleMaxScreenY - cursor.y;
+
+   if (avail_w < 0.0f)
+      avail_w = 0.0f;
+   if (avail_h < 0.0f)
+      avail_h = 0.0f;
+
+   return {avail_w, avail_h};
 }
 
 void monstro_indent(MonstroContext *ctx, float indent_width)
@@ -225,6 +270,7 @@ void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count
    cs->row_y = pos.y;
    cs->columns_w = avail_w;
    cs->row_max_h = 0.0f;
+   cs->prev_visible_max_screen_x = layout->myVisibleMaxScreenX;
 
    float fixed_total = 0.0f;
    int flex_count = 0;
@@ -260,6 +306,7 @@ void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count
 
    monstro_set_cursor_screen_pos(ctx, cs->columns_x + cs->offsets[0], cs->row_y);
    layout->myAvailableWidth = cs->widths[0];
+   layout->myVisibleMaxScreenX = cs->columns_x + cs->widths[0];
 }
 
 void monstro_begin_columns(MonstroContext *ctx, const char *str_id, int count)
@@ -293,6 +340,7 @@ void monstro_next_column(MonstroContext *ctx)
 
    monstro_set_cursor_screen_pos(ctx, cs->columns_x + cs->offsets[cs->current_column], cs->row_y);
    layout->myAvailableWidth = cs->widths[cs->current_column];
+   layout->myVisibleMaxScreenX = cs->columns_x + cs->offsets[cs->current_column] + cs->widths[cs->current_column];
 }
 
 void monstro_end_columns(MonstroContext *ctx)
@@ -316,6 +364,7 @@ void monstro_end_columns(MonstroContext *ctx)
    if (layout)
    {
       layout->myAvailableWidth = cs->columns_w;
+      layout->myVisibleMaxScreenX = cs->prev_visible_max_screen_x;
       monstro_set_cursor_screen_pos(ctx, cs->columns_x, final_y);
       monstro_add_item(ctx, cs->columns_w, total_h);
    }

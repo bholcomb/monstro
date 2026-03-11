@@ -17,6 +17,8 @@ struct Window
    Canvas canvas;
 
    char name[256] = {};
+   char title[256] = {};
+   bool title_overridden = false;
    uint64_t id = 0;
    MonstroWindowFlags flags = MONSTRO_WINDOW_NONE;
    int last_frame_active = 0;
@@ -95,6 +97,8 @@ struct Window
    void pushContentClipRect();
 
  private:
+   float getScrollableContentWidth() const;
+   float getScrollableContentHeight() const;
    void drawBackground();
    void drawForeground();
    void updateScrollState(float header_h);

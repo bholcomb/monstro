@@ -44,6 +44,30 @@ static int find_click_position(MonstroFont *font, const char *text, int text_len
    return text_len;
 }
 
+static void clamp_edit_state_to_buffer(monstro::EditState *edit, const char *buf)
+{
+   if (!edit || !buf)
+      return;
+
+   int len = (int)strlen(buf);
+   if (edit->myCursorPos < 0)
+      edit->myCursorPos = 0;
+   else if (edit->myCursorPos > len)
+      edit->myCursorPos = len;
+
+   if (edit->mySelectStart < 0)
+      edit->mySelectStart = 0;
+   else if (edit->mySelectStart > len)
+      edit->mySelectStart = len;
+
+   if (edit->mySelectEnd < 0)
+      edit->mySelectEnd = 0;
+   else if (edit->mySelectEnd > len)
+      edit->mySelectEnd = len;
+
+   edit->myHasSelection = edit->mySelectStart != edit->mySelectEnd;
+}
+
 bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, MonstroInputTextFlags flags,
                         const char *tooltip)
 {
@@ -89,6 +113,10 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    int text_len = (int)strlen(buf);
    bool is_active = edit->isActiveFor(id);
    bool value_changed = false;
+   bool submitted = false;
+
+   if (is_active)
+      clamp_edit_state_to_buffer(edit, buf);
 
    char display_buf[1024];
    if (is_password)
@@ -178,7 +206,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
          {
             if (enter_returns)
             {
-               value_changed = true;
+               submitted = true;
             }
             edit->deactivate();
             is_active = false;
@@ -451,7 +479,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
       monstro_tooltip(ctx, tooltip);
    }
 
-   return value_changed;
+   return enter_returns ? submitted : value_changed;
 }
 
 bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, float width,
@@ -499,6 +527,9 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
    int text_len = (int)strlen(buf);
    bool is_active = edit->isActiveFor(id);
    bool value_changed = false;
+
+   if (is_active)
+      clamp_edit_state_to_buffer(edit, buf);
 
    // Hit testing
    bool hovered = false;

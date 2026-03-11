@@ -874,6 +874,16 @@ MonstroVec2 spos = monstro_get_cursor_screen_pos(ctx); /* screen pixels */
 monstro_set_cursor_pos(ctx, 10.0f, 50.0f);
 ```
 
+### Remaining content space
+
+```c
+MonstroVec2 avail = monstro_get_content_region_avail(ctx);
+monstro_button_sized(ctx, "Fill Width", avail.x, 30.0f, NULL);
+```
+
+This returns the visible content space remaining from the current cursor
+position to the edge of the current layout region.
+
 ---
 
 ## Windows
@@ -919,7 +929,9 @@ if (monstro_begin_child(ctx, "list", 0, 150,
 }
 ```
 
-Width of `0` means "use all available width".
+Width or height of `0` means "use the remaining visible content space" on
+that axis.  Negative values reserve space from that remaining region, so
+`-30` means "use all but 30 pixels".
 
 ### Window state queries
 

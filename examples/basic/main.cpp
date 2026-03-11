@@ -569,11 +569,13 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
       {
           if (monstro_button(ctx, "Open File...", nullptr)) {
-              monstro_file_dialog_open(d->fileDialog, "Open File", nullptr, "*.cpp;*.h;*.txt",
+              monstro_file_dialog_open(d->fileDialog, "Open File", nullptr,
+         "Source Files|*.cpp;*.h;*.txt|All Files|*",
          MONSTRO_FILE_DIALOG_OPEN);
           }
           if (monstro_button(ctx, "Save File...", nullptr)) {
-              monstro_file_dialog_open(d->fileDialog, "Save File", nullptr, "*", MONSTRO_FILE_DIALOG_SAVE);
+              monstro_file_dialog_open(d->fileDialog, "Save File", nullptr,
+         "Text Files|*.txt|All Files|*", MONSTRO_FILE_DIALOG_SAVE);
           }
       }
       monstro_end_layout(ctx);
