@@ -900,6 +900,19 @@ if (monstro_begin_window(ctx, "My Window", NULL, MONSTRO_WINDOW_DEFAULT)) {
 }
 ```
 
+Window names can include `##` to separate the internal window identifier from
+the displayed title.  The part before `##` is used to persist window state;
+the part after `##` is shown in the title bar.  If `##` is not present, the
+same string is used for both.
+
+```c
+if (monstro_begin_window(ctx, "main_window##Hello World", NULL,
+        MONSTRO_WINDOW_DEFAULT)) {
+    /* internal id: main_window, title: Hello World */
+    monstro_end_window(ctx);
+}
+```
+
 ### Close button
 
 Pass a `bool*` as `p_open`.  When the user clicks the close button, Monstro
@@ -912,6 +925,16 @@ if (monstro_begin_window(ctx, "Closeable", &window_open, flags)) {
     /* content */
     monstro_end_window(ctx);
 }
+```
+
+### Changing the title
+
+Change the title of the current window or a named window without changing its
+internal identifier:
+
+```c
+monstro_set_window_title(ctx, "Runtime Title");
+monstro_set_window_title_named(ctx, "main_window##Hello World", "Renamed");
 ```
 
 ### Child windows (scroll regions)
