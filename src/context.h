@@ -101,6 +101,7 @@ struct MonstroTableState
 
 struct MonstroColumnsState
 {
+   uint64_t id = 0;
    int column_count = 0;
    int current_column = 0;
    float columns_x = 0.0f;

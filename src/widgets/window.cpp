@@ -315,7 +315,7 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
    if (!child_title)
       child_title = "";
 
-   char child_name[320];
+   char child_name[256 + 256 + 256 + 16];
    snprintf(child_name, sizeof(child_name), "child_%s_%s##%s", parent->name, child_id, child_title);
 
    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);

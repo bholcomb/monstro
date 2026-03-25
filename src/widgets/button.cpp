@@ -94,6 +94,8 @@ static void draw_button_background(monstro::Canvas *canvas, MonstroRect r, Monst
       canvas->addImage(background->data.texture_id, r, uv_min, uv_max, 0xFFFFFFFF);
       break;
    }
+   default:
+      break;
    }
 }
 

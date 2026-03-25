@@ -263,6 +263,7 @@ void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count
       avail_w = ctx->current_window->size.x - ctx->style.window.padding[0] * 2.0f;
 
    MonstroColumnsState *cs = &ctx->columns_stack[ctx->columns_stack_top++];
+   cs->id = ctx->current_window->getChildId(str_id);
    cs->column_count = count;
    cs->current_column = 0;
    cs->columns_x = pos.x;

@@ -122,8 +122,8 @@ void monstro_style_set_default(MonstroStyle *style)
    style->checkbox.normal = styleItemColor(TOGGLE);
    style->checkbox.hover = styleItemColor(TOGGLE_HOVER);
    style->checkbox.active = styleItemColor(TOGGLE_HOVER);
-   style->checkbox.cursor_normal = styleItemColor(ACCENT);
-   style->checkbox.cursor_hover = styleItemColor(ACCENT);
+   style->checkbox.cursor_normal = styleItemColor(TOGGLE_CURSOR);
+   style->checkbox.cursor_hover = styleItemColor(TOGGLE_CURSOR);
    style->checkbox.border_color = rgba(55, 68, 87, 179);
    style->checkbox.text_background = WINDOW;
    style->checkbox.text_normal = TEXT;
@@ -141,8 +141,8 @@ void monstro_style_set_default(MonstroStyle *style)
    style->option.normal = styleItemColor(TOGGLE);
    style->option.hover = styleItemColor(TOGGLE_HOVER);
    style->option.active = styleItemColor(rgba(45, 60, 80, 255));
-   style->option.cursor_normal = styleItemColor(ACCENT);
-   style->option.cursor_hover = styleItemColor(ACCENT);
+   style->option.cursor_normal = styleItemColor(TOGGLE_CURSOR);
+   style->option.cursor_hover = styleItemColor(TOGGLE_CURSOR);
    style->option.border_color = rgba(80, 100, 120, 220);
    style->option.text_background = WINDOW;
    style->option.text_normal = TEXT;

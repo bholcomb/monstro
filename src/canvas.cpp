@@ -639,8 +639,6 @@ void Canvas::addTextWrapped(MonstroFont *font, MonstroVec2 pos, uint32_t color, 
    float line_height = monstro_font_get_line_height(font);
    float start_x = pos.x;
 
-   const char *line_start = text;
-   const char *word_start = text;
    const char *s = text;
 
    while (*s)
@@ -665,28 +663,19 @@ void Canvas::addTextWrapped(MonstroFont *font, MonstroVec2 pos, uint32_t color, 
             addImage(icon_tex, icon_rect, icon_uv_min, icon_uv_max, tint);
             pen_x += icon_sz;
          }
-         word_start = s;
          continue;
       }
 
-      const char *prev = s;
       uint32_t codepoint = decode_utf8(&s);
 
       if (codepoint == '\n')
       {
          pen_x = start_x;
          line_y += line_height;
-         word_start = s;
-         line_start = s;
          continue;
       }
       if (codepoint == '\r')
          continue;
-
-      if (codepoint == ' ' || codepoint == '\t')
-      {
-         word_start = s;
-      }
 
       MonstroGlyph glyph;
       if (!monstro_font_get_glyph(font, codepoint, &glyph))

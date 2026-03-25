@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <cstring>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -129,13 +132,10 @@ static bool match_filter(const char *name, const char *filter)
       if (!*p)
          break;
 
-      const char *start = p;
       if (*p == '*' && *(p + 1) == '.')
          p += 2;
       else if (*p == '.')
          p++;
-
-      start = p;
       int len = 0;
       while (*p && *p != ' ' && *p != ';' && *p != ',' && len < 63)
       {
@@ -479,3 +479,5 @@ bool monstro_file_dialog_is_open(const MonstroFileDialogState *state)
 }
 
 } // extern "C"
+
+#pragma GCC diagnostic pop

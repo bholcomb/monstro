@@ -48,7 +48,6 @@ static void set_window_name_and_title(Window *window, const char *window_name)
 
 void Window::init(Context *context, const char *windowName, MonstroWindowFlags windowFlags)
 {
-   std::memset(this, 0, sizeof(Window));
    ctx = context;
 
    set_window_name_and_title(this, windowName);
@@ -142,8 +141,6 @@ bool Window::begin(bool *p_open)
       ctx->focusWindow(this);
    }
    ctx->next_window_focus = false;
-
-   MonstroStyle *style = &ctx->style;
 
    if ((flags & MONSTRO_WINDOW_TITLE_BAR) && (flags & MONSTRO_WINDOW_COLLAPSABLE))
    {

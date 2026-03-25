@@ -192,8 +192,8 @@ bool monstro_slider_int_ex(MonstroContext *ctx, const char *label, int *value, i
       return false;
 
    float fval = (float)*value;
-   bool changed = monstro_slider_float_ex(ctx, label, &fval, (float)min_val, (float)max_val, "%.0f", width, height,
-                                          flags, tooltip);
+   bool changed = monstro_slider_float_ex(ctx, label, &fval, (float)min_val, (float)max_val, format ? format : "%.0f",
+                                          width, height, flags, tooltip);
    int new_val = (int)(fval + 0.5f);
    if (new_val != *value)
    {

@@ -170,9 +170,6 @@ bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *
       return false;
 
    monstro::Canvas *canvas = &win->canvas;
-   MonstroFont *font = ctx->style.font;
-   float line_h = font ? monstro_font_get_line_height(font) : 16.0f;
-
    bool changed = false;
    float h, s, v;
    rgb_to_hsv(color->r, color->g, color->b, &h, &s, &v);
@@ -180,7 +177,6 @@ bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *
    const float sv_size = 150.0f;
    const float bar_w = 20.0f;
    const float bar_gap = 6.0f;
-   const float slider_h = line_h + 4.0f;
 
    bool show_alpha = !(flags & MONSTRO_COLOR_PICKER_NO_ALPHA);
    bool show_sliders = !(flags & MONSTRO_COLOR_PICKER_NO_SLIDERS);

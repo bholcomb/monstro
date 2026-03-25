@@ -15,7 +15,7 @@ static MonstroTableState *find_or_create_table(MonstroContext *ctx, uint64_t id)
       return nullptr;
 
    MonstroTableState *state = &ctx->tables[ctx->table_count++];
-   memset(state, 0, sizeof(MonstroTableState));
+   *state = MonstroTableState{};
    state->id = id;
    return state;
 }

@@ -4,8 +4,6 @@
 #include <cstdlib>
 #include <cstring>
 
-static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
-
 static bool spinner_button(MonstroContext *ctx, monstro::Canvas *canvas, MonstroRect rect, const char *symbol,
                            MonstroStyleButton *bs, MonstroFont *font, uint64_t id)
 {

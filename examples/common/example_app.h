@@ -17,17 +17,7 @@
 
 #include <GLFW/glfw3.h>
 #include <vulkease.h>
-
-#ifdef _WIN32
-#define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#elif defined(__linux__)
-#define GLFW_EXPOSE_NATIVE_X11
-#include <GLFW/glfw3native.h>
-#elif defined(__APPLE__)
-#define GLFW_EXPOSE_NATIVE_COCOA
-#include <GLFW/glfw3native.h>
-#endif
 
 #include <monstro.h>
 #include <stdio.h>

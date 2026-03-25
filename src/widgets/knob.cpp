@@ -103,7 +103,7 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
    float total_w = label_w + ks->padding[0] + knob_diameter;
-   float total_h = knob_diameter;
+   float total_h = knob_diameter > text_h ? knob_diameter : text_h;
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
 

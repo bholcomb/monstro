@@ -216,7 +216,7 @@ MonstroFont *monstro_font_load_ttf_from_file(MonstroFontManager *manager, const 
 
 MonstroFont *monstro_font_load_bitmap(MonstroFontManager *manager, const void *image_data, uint32_t image_width,
                                       uint32_t image_height, uint32_t grid_cols, uint32_t grid_rows,
-                                      uint32_t cell_width, uint32_t cell_height, uint32_t first_code_point,
+                                      uint32_t /*cell_width*/, uint32_t /*cell_height*/, uint32_t first_code_point,
                                       float font_size_px, MonstroTextureData *out_atlas_data)
 {
    if (!manager || !image_data || grid_cols == 0 || grid_rows == 0)
