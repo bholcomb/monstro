@@ -1,4 +1,5 @@
-// What cockpit screens need.
+// What cockpit screens need: culling, ellipses, turned text, vertical sliders and bars, absolute knobs, page tabs,
+// host textures.
 #include "context.h"
 #include "harness.h"
 #include <cmath>
@@ -554,4 +555,37 @@ FATAL_TEST(page_tabs_with_a_selection_out_of_range_abort, "monstro_page_tabs 'pa
    PageTabs t;
    t.page = 3;
    t.frame();
+}
+
+/* ------------------------------------------------------------------------- */
+/* Host textures: a camera feed on a screen                                  */
+/* ------------------------------------------------------------------------- */
+
+TEST(a_host_texture_is_drawn_with_its_own_id_in_draw_order)
+{
+   Ui ui(false);
+   monstro_env_set_atlas_texture(ui.env, 1);
+   const uint64_t camera = 0xCA3E5A;
+   ui.begin();
+   begin_screen(ui);
+   MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+   uint32_t first_command = ui.ctx->canvas->command_count;
+   uint32_t first = ui.vertexCount();
+   monstro_draw_image(canvas, camera, {16, 16, 320, 240}, {0, 0}, {1, 1}, 0xffffffff);
+   monstro_draw_rect(canvas, {16, 16, 320, 240}, 0xff00ff00, 0, MONSTRO_CORNER_NONE, 2); // a frame over the feed
+   monstro_set_cursor_screen_pos(ui.ctx, 16, 300);
+   monstro_image(ui.ctx, camera, 160, 120); // the same feed as a widget
+   monstro_end_window(ui.ctx);
+   const MonstroDrawData *data = ui.end();
+
+   // The feed, then the frame in the atlas, then the feed again: three commands, in that order.
+   const MonstroDrawCommand *commands = data->commands + first_command;
+   CHECK(data->command_count - first_command == 3);
+   CHECK(commands[0].texture_id == camera && commands[1].texture_id == 1 && commands[2].texture_id == camera);
+   CHECK(commands[0].index_count == 6 && commands[2].index_count == 6);
+   const MonstroVertex *feed = data->vertices + first;
+   CHECK(feed[0].position[0] == 16 && feed[0].position[1] == 16 && feed[2].position[0] == 336 &&
+         feed[2].position[1] == 256);
+   CHECK(feed[0].texcoord[0] == 0 && feed[0].texcoord[1] == 0 && feed[2].texcoord[0] == 1 && feed[2].texcoord[1] == 1);
+   CHECK(feed[0].color == 0xffffffff);
 }
