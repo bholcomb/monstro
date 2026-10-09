@@ -26,11 +26,11 @@ static void build_window_name(char *out, size_t out_size, const char *prefix, co
       title = "";
    if (id[0] == '\0')
    {
-      strncpy(id, title, sizeof(id) - 1);
-      id[sizeof(id) - 1] = '\0';
+      monstro_utf8_copy(id, sizeof(id), title);
    }
 
    snprintf(out, out_size, "%s%s##%s", prefix ? prefix : "", id, title);
+   monstro_utf8_trim_partial(out);
 }
 
 void monstro_open_popup(MonstroContext *ctx, const char *label) { monstro_open_popup_ex(ctx, label, false); }

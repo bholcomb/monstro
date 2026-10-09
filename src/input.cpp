@@ -181,16 +181,15 @@ void KeyboardState::addInputText(const char *text)
    if (!text)
       return;
 
-   int available = (int)sizeof(input_text) - input_text_len - 1;
-   if (available <= 0)
-      return;
-
-   int len = 0;
-   while (text[len] && len < available)
-      len++;
+   size_t len = strlen(text);
+   size_t needed = (size_t)input_text_len + len;
+   MONSTRO_REQUIRE(needed < sizeof(input_text),
+                   "input text overflow: capacity %zu bytes per frame, needed %zu; deliver large pastes some other "
+                   "way or raise MONSTRO_MAX_INPUT_TEXT",
+                   sizeof(input_text) - 1, needed);
 
    memcpy(input_text + input_text_len, text, len);
-   input_text_len += len;
+   input_text_len += (int)len;
    input_text[input_text_len] = '\0';
 }
 

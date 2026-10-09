@@ -56,8 +56,7 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
          const char *title = monstro_display_text(name);
          if (!title)
             title = "";
-         std::strncpy(win->title, title, sizeof(win->title) - 1);
-         win->title[sizeof(win->title) - 1] = '\0';
+         monstro_utf8_copy(win->title, sizeof(win->title), title);
       }
    }
 
@@ -108,8 +107,7 @@ void monstro_set_window_title(MonstroContext *ctx, const char *title)
    monstro::requireWindow(ctx, __func__);
    if (!title)
       return;
-   std::strncpy(ctx->current_window->title, title, sizeof(ctx->current_window->title) - 1);
-   ctx->current_window->title[sizeof(ctx->current_window->title) - 1] = '\0';
+   monstro_utf8_copy(ctx->current_window->title, sizeof(ctx->current_window->title), title);
    ctx->current_window->title_overridden = true;
 }
 
@@ -161,8 +159,7 @@ void monstro_set_window_title_named(MonstroContext *ctx, const char *name, const
    monstro::Window *win = ctx->findWindow(name);
    if (!win)
       return;
-   std::strncpy(win->title, title, sizeof(win->title) - 1);
-   win->title[sizeof(win->title) - 1] = '\0';
+   monstro_utf8_copy(win->title, sizeof(win->title), title);
    win->title_overridden = true;
 }
 
@@ -294,8 +291,7 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
       const char *fallback_id = monstro_display_text(str_id);
       if (!fallback_id)
          fallback_id = "";
-      std::strncpy(child_id, fallback_id, sizeof(child_id) - 1);
-      child_id[sizeof(child_id) - 1] = '\0';
+      monstro_utf8_copy(child_id, sizeof(child_id), fallback_id);
    }
 
    const char *child_title = monstro_display_text(str_id);
@@ -304,6 +300,7 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
 
    char child_name[256 + 256 + 256 + 16];
    snprintf(child_name, sizeof(child_name), "child_%s_%s##%s", parent->name, child_id, child_title);
+   monstro_utf8_trim_partial(child_name);
 
    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);
    monstro_set_next_window_size(ctx, width, height, MONSTRO_COND_ALWAYS);

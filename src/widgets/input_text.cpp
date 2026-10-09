@@ -4,17 +4,24 @@
 #include <cstdio>
 #include <cstring>
 
-static float measure_substring(MonstroFont *font, const char *text, int start, int end)
+// Width of the first `bytes` bytes of the field's text as drawn; a password
+// shows one '*' per code point.
+static float text_prefix_width(MonstroFont *font, const char *buf, int bytes, bool password)
 {
-   if (!font || !text || start >= end)
+   if (!font || bytes <= 0)
       return 0.0f;
-   char tmp[1024];
-   int len = end - start;
-   if (len >= (int)sizeof(tmp))
-      len = (int)sizeof(tmp) - 1;
-   memcpy(tmp, text + start, len);
-   tmp[len] = '\0';
-   return monstro_font_measure_text(font, tmp, 0.0f).x;
+   if (password)
+      return monstro_font_measure_text(font, "*", 0.0f).x * (float)monstro_utf8_count(buf, bytes);
+   return monstro_font_measure_prefix(font, buf, (size_t)bytes);
+}
+
+static void make_password_text(char *out, size_t out_size, const char *buf)
+{
+   size_t stars = (size_t)monstro_utf8_count(buf, (int)strlen(buf));
+   if (stars > out_size - 1)
+      stars = out_size - 1;
+   memset(out, '*', stars);
+   out[stars] = '\0';
 }
 
 static bool is_ctrl_pressed(MonstroContext *ctx) { return (ctx->keyboard.getMods() & MONSTRO_MOD_CTRL) != 0; }
@@ -23,25 +30,26 @@ static bool is_shift_pressed(MonstroContext *ctx) { return (ctx->keyboard.getMod
 
 static bool key_pressed(MonstroContext *ctx, MonstroKey key) { return monstro_is_key_pressed(ctx, key, true); }
 
-static int find_click_position(MonstroFont *font, const char *text, int text_len, float click_x, float field_x,
+// The code point boundary nearest to a click.
+static int find_click_position(MonstroFont *font, const char *buf, bool password, float click_x, float field_x,
                                float pad_x)
 {
    float offset = click_x - field_x - pad_x;
    if (offset <= 0.0f)
       return 0;
 
-   for (int i = 1; i <= text_len; i++)
+   int pos = 0;
+   float width = 0.0f;
+   while (buf[pos])
    {
-      float w = measure_substring(font, text, 0, i);
-      if (w >= offset)
-      {
-         float prev_w = measure_substring(font, text, 0, i - 1);
-         if (offset - prev_w < w - offset)
-            return i - 1;
-         return i;
-      }
+      int next = monstro_utf8_next(buf, pos);
+      float next_width = text_prefix_width(font, buf, next, password);
+      if (next_width >= offset)
+         return (offset - width < next_width - offset) ? pos : next;
+      pos = next;
+      width = next_width;
    }
-   return text_len;
+   return pos;
 }
 
 static void clamp_edit_state_to_buffer(monstro::EditState *edit, const char *buf)
@@ -64,6 +72,11 @@ static void clamp_edit_state_to_buffer(monstro::EditState *edit, const char *buf
       edit->mySelectEnd = 0;
    else if (edit->mySelectEnd > len)
       edit->mySelectEnd = len;
+
+   // The caller may have changed the text since the last frame.
+   edit->myCursorPos = monstro_utf8_snap(buf, edit->myCursorPos);
+   edit->mySelectStart = monstro_utf8_snap(buf, edit->mySelectStart);
+   edit->mySelectEnd = monstro_utf8_snap(buf, edit->mySelectEnd);
 
    edit->myHasSelection = edit->mySelectStart != edit->mySelectEnd;
 }
@@ -119,19 +132,8 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    if (is_active)
       clamp_edit_state_to_buffer(edit, buf);
 
-   char display_buf[1024];
-   if (is_password)
-   {
-      int dlen = text_len < (int)sizeof(display_buf) - 1 ? text_len : (int)sizeof(display_buf) - 1;
-      memset(display_buf, '*', dlen);
-      display_buf[dlen] = '\0';
-   }
-   else
-   {
-      int dlen = text_len < (int)sizeof(display_buf) - 1 ? text_len : (int)sizeof(display_buf) - 1;
-      memcpy(display_buf, buf, dlen);
-      display_buf[dlen] = '\0';
-   }
+   char password_text[1024];
+   const char *field_text = buf;
 
    // Hit testing
    bool hovered = false;
@@ -157,8 +159,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
       }
       if (is_active && font)
       {
-         int click_pos =
-             find_click_position(font, display_buf, text_len, ctx->mouse.pos_x, field_rect.x, es->padding[0]);
+         int click_pos = find_click_position(font, buf, is_password, ctx->mouse.pos_x, field_rect.x, es->padding[0]);
          edit->myCursorPos = click_pos;
          if (!is_shift_pressed(ctx))
          {
@@ -260,8 +261,9 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
                else if (edit->myCursorPos > 0)
                {
                   text_len = (int)strlen(buf);
-                  memmove(buf + edit->myCursorPos - 1, buf + edit->myCursorPos, text_len - edit->myCursorPos + 1);
-                  edit->myCursorPos--;
+                  int prev = monstro_utf8_prev(buf, edit->myCursorPos);
+                  memmove(buf + prev, buf + edit->myCursorPos, text_len - edit->myCursorPos + 1);
+                  edit->myCursorPos = prev;
                   edit->mySelectStart = edit->myCursorPos;
                   edit->mySelectEnd = edit->myCursorPos;
                   value_changed = true;
@@ -281,7 +283,8 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
                   text_len = (int)strlen(buf);
                   if (edit->myCursorPos < text_len)
                   {
-                     memmove(buf + edit->myCursorPos, buf + edit->myCursorPos + 1, text_len - edit->myCursorPos);
+                     int next = monstro_utf8_next(buf, edit->myCursorPos);
+                     memmove(buf + edit->myCursorPos, buf + next, text_len - next + 1);
                      value_changed = true;
                   }
                }
@@ -295,8 +298,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 
             if (key_pressed(ctx, MONSTRO_KEY_LEFT_ARROW))
             {
-               if (edit->myCursorPos > 0)
-                  edit->myCursorPos--;
+               edit->myCursorPos = monstro_utf8_prev(buf, edit->myCursorPos);
                if (shift)
                {
                   edit->mySelectEnd = edit->myCursorPos;
@@ -314,8 +316,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
             if (key_pressed(ctx, MONSTRO_KEY_RIGHT_ARROW))
             {
                text_len = (int)strlen(buf);
-               if (edit->myCursorPos < text_len)
-                  edit->myCursorPos++;
+               edit->myCursorPos = monstro_utf8_next(buf, edit->myCursorPos);
                if (shift)
                {
                   edit->mySelectEnd = edit->myCursorPos;
@@ -371,22 +372,13 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
                edit->myCursorBlinkTimer = 0.0f;
             }
          }
-
-         // Refresh display buf after edits
-         text_len = (int)strlen(buf);
-         if (is_password)
-         {
-            int dlen = text_len < (int)sizeof(display_buf) - 1 ? text_len : (int)sizeof(display_buf) - 1;
-            memset(display_buf, '*', dlen);
-            display_buf[dlen] = '\0';
-         }
-         else
-         {
-            int dlen = text_len < (int)sizeof(display_buf) - 1 ? text_len : (int)sizeof(display_buf) - 1;
-            memcpy(display_buf, buf, dlen);
-            display_buf[dlen] = '\0';
-         }
       }
+   }
+
+   if (is_password)
+   {
+      make_password_text(password_text, sizeof(password_text), buf);
+      field_text = password_text;
    }
 
    // Drawing
@@ -417,7 +409,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 
    if (is_active && font)
    {
-      float cursor_x = measure_substring(font, display_buf, 0, edit->myCursorPos);
+      float cursor_x = text_prefix_width(font, buf, edit->myCursorPos, is_password);
       if (cursor_x - scroll_offset > visible_w)
       {
          scroll_offset = cursor_x - visible_w;
@@ -433,18 +425,18 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    {
       int sel_s = edit->getSelectionStart();
       int sel_e = edit->getSelectionEnd();
-      float sel_start_x = measure_substring(font, display_buf, 0, sel_s) - scroll_offset;
-      float sel_end_x = measure_substring(font, display_buf, 0, sel_e) - scroll_offset;
+      float sel_start_x = text_prefix_width(font, buf, sel_s, is_password) - scroll_offset;
+      float sel_end_x = text_prefix_width(font, buf, sel_e, is_password) - scroll_offset;
       MonstroRect sel_rect = {text_x + sel_start_x, field_rect.y + 1.0f, sel_end_x - sel_start_x, field_rect.h - 2.0f};
       canvas->addRectFilled(sel_rect, monstro_color_to_u32(es->selected_normal), 0.0f, MONSTRO_CORNER_ALL);
    }
 
    // Text
-   if (font && display_buf[0] != '\0')
+   if (font && field_text[0] != '\0')
    {
       MonstroColor text_col = is_active ? es->text_active : (hovered ? es->text_hover : es->text_normal);
       MonstroVec2 text_pos = {text_x - scroll_offset, text_y};
-      canvas->addText(font, text_pos, monstro_color_to_u32(text_col), display_buf);
+      canvas->addText(font, text_pos, monstro_color_to_u32(text_col), field_text);
    }
 
    // Cursor
@@ -453,7 +445,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
       bool blink_on = fmodf(edit->myCursorBlinkTimer, 1.0f) < 0.5f;
       if (blink_on)
       {
-         float cursor_x_pos = measure_substring(font, display_buf, 0, edit->myCursorPos) - scroll_offset;
+         float cursor_x_pos = text_prefix_width(font, buf, edit->myCursorPos, is_password) - scroll_offset;
          MonstroVec2 c1 = {text_x + cursor_x_pos, field_rect.y + 2.0f};
          MonstroVec2 c2 = {text_x + cursor_x_pos, field_rect.y + field_rect.h - 2.0f};
          canvas->addLine(c1, c2, monstro_color_to_u32(es->cursor_normal),
@@ -609,8 +601,9 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
                else if (edit->myCursorPos > 0)
                {
                   text_len = (int)strlen(buf);
-                  memmove(buf + edit->myCursorPos - 1, buf + edit->myCursorPos, text_len - edit->myCursorPos + 1);
-                  edit->myCursorPos--;
+                  int prev = monstro_utf8_prev(buf, edit->myCursorPos);
+                  memmove(buf + prev, buf + edit->myCursorPos, text_len - edit->myCursorPos + 1);
+                  edit->myCursorPos = prev;
                   edit->mySelectStart = edit->myCursorPos;
                   edit->mySelectEnd = edit->myCursorPos;
                }
@@ -629,7 +622,8 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
                   text_len = (int)strlen(buf);
                   if (edit->myCursorPos < text_len)
                   {
-                     memmove(buf + edit->myCursorPos, buf + edit->myCursorPos + 1, text_len - edit->myCursorPos);
+                     int next = monstro_utf8_next(buf, edit->myCursorPos);
+                     memmove(buf + edit->myCursorPos, buf + next, text_len - next + 1);
                   }
                }
                value_changed = true;
@@ -641,7 +635,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
          {
             if (key_pressed(ctx, MONSTRO_KEY_LEFT_ARROW) && edit->myCursorPos > 0)
             {
-               edit->myCursorPos--;
+               edit->myCursorPos = monstro_utf8_prev(buf, edit->myCursorPos);
                edit->mySelectStart = edit->myCursorPos;
                edit->mySelectEnd = edit->myCursorPos;
                edit->myHasSelection = false;
@@ -650,8 +644,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             if (key_pressed(ctx, MONSTRO_KEY_RIGHT_ARROW))
             {
                text_len = (int)strlen(buf);
-               if (edit->myCursorPos < text_len)
-                  edit->myCursorPos++;
+               edit->myCursorPos = monstro_utf8_next(buf, edit->myCursorPos);
                edit->mySelectStart = edit->myCursorPos;
                edit->mySelectEnd = edit->myCursorPos;
                edit->myHasSelection = false;
@@ -723,7 +716,8 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
       if (line_len > 0 && font)
       {
          char line_buf[1024];
-         int copy_len = line_len < (int)sizeof(line_buf) - 1 ? line_len : (int)sizeof(line_buf) - 1;
+         int copy_len =
+             line_len < (int)sizeof(line_buf) - 1 ? line_len : (int)monstro_utf8_fit(line_start, sizeof(line_buf) - 1);
          memcpy(line_buf, line_start, copy_len);
          line_buf[copy_len] = '\0';
          MonstroVec2 tpos = {field_rect.x + es->padding[0], line_y};
@@ -762,7 +756,6 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
          }
          float cy = field_rect.y + es->padding[1] + cur_line * line_h;
 
-         char col_buf[1024];
          const char *ls = buf;
          for (int l = 0; l < cur_line; l++)
          {
@@ -771,10 +764,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             if (*ls == '\n')
                ls++;
          }
-         int clen = col < (int)sizeof(col_buf) - 1 ? col : (int)sizeof(col_buf) - 1;
-         memcpy(col_buf, ls, clen);
-         col_buf[clen] = '\0';
-         float cx = field_rect.x + es->padding[0] + monstro_font_measure_text(font, col_buf, 0.0f).x;
+         float cx = field_rect.x + es->padding[0] + monstro_font_measure_prefix(font, ls, (size_t)col);
 
          MonstroVec2 c1 = {cx, cy};
          MonstroVec2 c2 = {cx, cy + text_h};

@@ -163,8 +163,7 @@ void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroT
    MonstroTableColumn *col = &table->columns[idx];
    if (label)
    {
-      strncpy(col->label, label, sizeof(col->label) - 1);
-      col->label[sizeof(col->label) - 1] = '\0';
+      monstro_utf8_copy(col->label, sizeof(col->label), label);
    }
    else
    {

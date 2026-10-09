@@ -1,4 +1,5 @@
 #include "editstate.h"
+#include "helpers.h"
 #include <algorithm>
 #include <cstring>
 
@@ -95,7 +96,7 @@ void EditState::insertText(char *buf, size_t buf_size, const char *text)
    if (available <= 0)
       return;
    if (insert_len > available)
-      insert_len = available;
+      insert_len = (int)monstro_utf8_fit(text, (size_t)available);
 
    memmove(buf + myCursorPos + insert_len, buf + myCursorPos, len - myCursorPos + 1);
    memcpy(buf + myCursorPos, text, insert_len);

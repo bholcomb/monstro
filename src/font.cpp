@@ -372,8 +372,7 @@ void monstro_font_add(MonstroFontManager *manager, MonstroFont *font, const char
    MONSTRO_REQUIRE(manager->font_count < MONSTRO_MAX_FONTS, "font table full: all %d slots are in use",
                    MONSTRO_MAX_FONTS);
 
-   strncpy(font->name, name, sizeof(font->name) - 1);
-   font->name[sizeof(font->name) - 1] = '\0';
+   monstro_utf8_copy(font->name, sizeof(font->name), name);
    font->size = size;
 
    manager->fonts[manager->font_count++] = font;
@@ -403,27 +402,16 @@ MonstroFont *monstro_font_find(MonstroFontManager *manager, const char *name, fl
 /* Font Measurement                                                          */
 /* ------------------------------------------------------------------------- */
 
-MonstroVec2 monstro_font_measure_text(MonstroFont *font, const char *text_utf8, float wrap_width)
+// Measures text up to its terminator or, when end is given, up to end.
+static MonstroVec2 measure_unwrapped(MonstroFont *font, const char *text_utf8, const char *end)
 {
-   MonstroVec2 result = {0.0f, 0.0f};
-
-   if (!font || !text_utf8)
-   {
-      return result;
-   }
-
-   if (wrap_width > 0.0f)
-   {
-      return monstro_font_measure_text_wrapped(font, text_utf8, wrap_width);
-   }
-
    float width = 0;
    float max_width = 0;
    int line_count = 1;
    float icon_size = font->line_height;
 
    const char *s = text_utf8;
-   while (*s)
+   while (*s && (!end || s < end))
    {
       uint32_t icon_id;
       if (parse_icon_tag(&s, &icon_id))
@@ -456,9 +444,32 @@ MonstroVec2 monstro_font_measure_text(MonstroFont *font, const char *text_utf8, 
    if (width > max_width)
       max_width = width;
 
+   MonstroVec2 result;
    result.x = max_width;
    result.y = font->line_height * line_count;
    return result;
+}
+
+MonstroVec2 monstro_font_measure_text(MonstroFont *font, const char *text_utf8, float wrap_width)
+{
+   if (!font || !text_utf8)
+   {
+      return {0.0f, 0.0f};
+   }
+
+   if (wrap_width > 0.0f)
+   {
+      return monstro_font_measure_text_wrapped(font, text_utf8, wrap_width);
+   }
+
+   return measure_unwrapped(font, text_utf8, nullptr);
+}
+
+float monstro_font_measure_prefix(MonstroFont *font, const char *text_utf8, size_t bytes)
+{
+   if (!font || !text_utf8)
+      return 0.0f;
+   return measure_unwrapped(font, text_utf8, text_utf8 + bytes).x;
 }
 
 MonstroVec2 monstro_font_measure_text_wrapped(MonstroFont *font, const char *text_utf8, float wrap_width)

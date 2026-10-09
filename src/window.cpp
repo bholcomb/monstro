@@ -38,8 +38,7 @@ static void set_window_name_and_title(Window *window, const char *window_name)
    const char *title = monstro_display_text(window_name);
    if (!title)
       title = "";
-   std::strncpy(window->title, title, sizeof(window->title) - 1);
-   window->title[sizeof(window->title) - 1] = '\0';
+   monstro_utf8_copy(window->title, sizeof(window->title), title);
 }
 
 /* ------------------------------------------------------------------------- */

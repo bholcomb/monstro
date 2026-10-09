@@ -1,5 +1,6 @@
 #include "context.h"
 #include <algorithm>
+#include <cstring>
 
 /* ------------------------------------------------------------------------- */
 /* Layout member functions                                                   */
@@ -101,16 +102,11 @@ void monstro_copy_id_text(const char *label, char *out, size_t out_size)
    if (!label)
       return;
 
-   size_t len = 0;
-   while (label[len] != '\0')
-   {
-      if (label[len] == '#' && label[len + 1] == '#')
-         break;
-      if (len >= out_size - 1)
-         break;
-      out[len] = label[len];
-      len++;
-   }
+   size_t id_len = 0;
+   while (label[id_len] != '\0' && !(label[id_len] == '#' && label[id_len + 1] == '#'))
+      id_len++;
+   size_t len = monstro_utf8_fit(label, id_len < out_size - 1 ? id_len : out_size - 1);
+   memcpy(out, label, len);
    out[len] = '\0';
 }
 

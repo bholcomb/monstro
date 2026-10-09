@@ -1,6 +1,7 @@
 #ifndef MONSTRO_INTERNAL_INPUT_H
 #define MONSTRO_INTERNAL_INPUT_H
 
+#include "constants.h"
 #include "monstro.h"
 
 namespace monstro
@@ -72,7 +73,7 @@ struct KeyboardState
 {
    KeyState keys[MONSTRO_KEY_COUNT];
    MonstroModFlags mods = MONSTRO_MOD_NONE;
-   char input_text[256] = {};
+   char input_text[MONSTRO_MAX_INPUT_TEXT] = {};
    int input_text_len = 0;
 
    float repeat_delay = 0.25f;

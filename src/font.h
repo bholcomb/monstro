@@ -25,6 +25,9 @@ struct MonstroFont
    MonstroTextureFormat atlas_format = MONSTRO_TEXTURE_FORMAT_R8;
 };
 
+// Width of the first `bytes` bytes of text, which end on a code point boundary.
+float monstro_font_measure_prefix(MonstroFont *font, const char *text_utf8, size_t bytes);
+
 struct MonstroFontManager
 {
    MonstroFont *fonts[MONSTRO_MAX_FONTS] = {};
