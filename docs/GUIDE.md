@@ -1447,7 +1447,8 @@ shapes use it, with the ID you give it (from `examples/common/example_app.h`):
 MonstroTextureData atlas = monstro_env_get_atlas(app->env);
 veCreateTexture2D(app->device, atlas.width, atlas.height, VK_FORMAT_R8G8B8A8_UNORM, usage, "EAAtlas",
                   &app->atlasTexture);
-monstro_env_set_atlas_texture(app->env, (uint64_t)app->atlasTexture);
+/* VulkEase shaders index bindless textures by view, so the ID is the texture's view */
+monstro_env_set_atlas_texture(app->env, (uint64_t)veGetDefaultTextureView(app->device, app->atlasTexture));
 veHostWriteTextureRegion(app->device, app->atlasTexture, atlas.data, atlas.data_size, nullptr);
 ```
 
