@@ -1194,6 +1194,8 @@ Window *Context::findWindow(const char *name)
 
    char window_id[256];
    monstro_copy_id_text(name, window_id, sizeof(window_id));
+   if (window_id[0] == '\0')
+      return nullptr;
 
    for (Window &window : windows)
    {
@@ -1207,7 +1209,17 @@ Window *Context::findWindow(const char *name)
 
 Window *Context::createWindow(const char *name, MonstroWindowFlags flags)
 {
-   Window *win = &windows.add();
+   Window *win = nullptr;
+   for (Window &w : windows)
+   {
+      if (w.name[0] == '\0')
+      {
+         win = &w;
+         break;
+      }
+   }
+   if (!win)
+      win = &windows.add();
 
    win->init(this, name, flags);
 

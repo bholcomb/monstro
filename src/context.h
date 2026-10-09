@@ -67,7 +67,11 @@ struct Context
    bool hoverItem(uint64_t id, MonstroRect rect, bool enabled = true);
 
    Window *findWindow(const char *name);
+   // A window takes a free slot of the window table (one whose name is empty), else a new one.
    Window *createWindow(const char *name, MonstroWindowFlags flags);
+   void freeWindow(Window *w);
+   // Frees the windows, tree nodes, tab bars and tables not used for config.evict_after_frames frames.
+   void evictStaleState();
    Window *findHoveredWindow(float x, float y, bool excludeChildren = false);
    // Numbers every window in draw order, which hover testing follows too.
    void rankWindowsForDrawing();

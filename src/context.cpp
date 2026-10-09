@@ -228,12 +228,68 @@ const MonstroDrawData *Context::endFrame()
       }
    }
 
+   evictStaleState();
+
    mouse.endFrame();
    keyboard.endFrame();
    env->returnCanvas(canvas);
    canvas = nullptr;
    in_frame = false;
    return data;
+}
+
+// Whether state last used in frame `used` has gone unused for longer than the config allows.
+static bool is_stale(int frame, int used, uint32_t evict_after_frames)
+{
+   return (int64_t)frame - (int64_t)used > (int64_t)evict_after_frames;
+}
+
+template <typename T> static void evict_stale(ConfiguredArray<T> &states, int frame, uint32_t evict_after_frames)
+{
+   for (int i = states.size() - 1; i >= 0; i--)
+   {
+      if (is_stale(frame, states[i].last_frame_active, evict_after_frames))
+         states.removeAt(i);
+   }
+}
+
+void Context::evictStaleState()
+{
+   uint32_t after = config.evict_after_frames;
+   evict_stale(tree_states, frame, after);
+   evict_stale(tab_bars, frame, after);
+   evict_stale(tables, frame, after);
+   for (Window &w : windows)
+   {
+      if (w.name[0] != '\0' && &w != root_window && is_stale(frame, w.last_frame_active, after))
+         freeWindow(&w);
+   }
+}
+
+void Context::freeWindow(Window *w)
+{
+   // Its child windows outlive it under its parent; its popups close.
+   Window *heir = w->parent ? w->parent : root_window;
+   while (w->child)
+   {
+      Window *c = w->child;
+      c->remove();
+      heir->addChild(c);
+   }
+   w->remove();
+   for (int i = 0; i < popup_stack.size(); i++)
+   {
+      if (popup_stack[i].parent_window == w)
+      {
+         popup_stack.truncate(i);
+         break;
+      }
+   }
+   if (focused_window == w)
+      focused_window = nullptr;
+   if (hovered_window == w)
+      hovered_window = nullptr;
+   *w = Window{};
 }
 
 void Context::requireBalanced(const char *where) const
@@ -321,6 +377,7 @@ MonstroContextConfig monstro_context_config_default(void)
    config.max_tables = MONSTRO_DEFAULT_MAX_TABLES;
    config.max_popups = MONSTRO_DEFAULT_MAX_POPUPS;
    config.max_input_events = MONSTRO_DEFAULT_MAX_INPUT_EVENTS;
+   config.evict_after_frames = MONSTRO_DEFAULT_EVICT_AFTER_FRAMES;
    return config;
 }
 
@@ -330,11 +387,12 @@ MonstroContext *monstro_context_create(MonstroEnv *env, const MonstroContextConf
    MonstroContextConfig defaults = monstro_context_config_default();
    const MonstroContextConfig &c = config ? *config : defaults;
    MONSTRO_REQUIRE(c.max_windows >= 2 && c.max_tree_nodes >= 1 && c.max_tab_bars >= 1 && c.max_tables >= 1 &&
-                       c.max_popups >= 1 && c.max_input_events >= 1,
+                       c.max_popups >= 1 && c.max_input_events >= 1 && c.evict_after_frames >= 1,
                    "MonstroContextConfig capacities too small (max_windows %u, at least 2 with the root; "
-                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, max_input_events %u, at "
-                   "least 1 each)",
-                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups, c.max_input_events);
+                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, max_input_events %u, "
+                   "evict_after_frames %u, at least 1 each)",
+                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups, c.max_input_events,
+                   c.evict_after_frames);
 
    MonstroContext *ctx = new (std::nothrow) MonstroContext(env, c);
    if (!ctx)
