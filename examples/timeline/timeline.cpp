@@ -63,6 +63,7 @@ void timeline_draw(Timeline *tl, MonstroContext *ctx, float dt)
          time_range = 1.0f;
 
       MonstroCanvas *canvas = monstro_get_window_canvas(ctx);
+      MonstroFont *font = monstro_get_style(ctx)->font;
       MonstroRect tl_rect = {origin.x, origin.y, tl_w, tl_h + 20.0f};
 
       monstro_draw_rect_filled(canvas, tl_rect, 0xFF1A1A2E, 0, MONSTRO_CORNER_NONE);
@@ -83,7 +84,7 @@ void timeline_draw(Timeline *tl, MonstroContext *ctx, float dt)
          monstro_draw_line(canvas, {x, ruler_y}, {x, ruler_y + ruler_h}, 0x60FFFFFF, 1.0f);
          char buf[16];
          snprintf(buf, sizeof(buf), "%.0f", t);
-         monstro_draw_text(canvas, nullptr, {x + 2, ruler_y + 2}, 0xFFCCCCCC, buf);
+         monstro_draw_text(canvas, font, {x + 2, ruler_y + 2}, 0xFFCCCCCC, buf);
       }
 
       float tracks_y = origin.y + ruler_h + 2;
@@ -93,7 +94,7 @@ void timeline_draw(Timeline *tl, MonstroContext *ctx, float dt)
          MonstroRect header = {origin.x, ty, tl->header_width, tl->track_height};
          monstro_draw_rect_filled(canvas, header, 0xFF222236, 0, MONSTRO_CORNER_NONE);
          monstro_draw_rect(canvas, header, 0x40FFFFFF, 0, MONSTRO_CORNER_NONE, 1.0f);
-         monstro_draw_text(canvas, nullptr, {origin.x + 4, ty + 8}, 0xFFCCCCCC, tl->tracks[tr].name);
+         monstro_draw_text(canvas, font, {origin.x + 4, ty + 8}, 0xFFCCCCCC, tl->tracks[tr].name);
 
          MonstroRect track_bg = {origin.x + tl->header_width, ty, content_w, tl->track_height};
          uint32_t bg = (tr % 2 == 0) ? 0xFF1E1E30 : 0xFF222238;
@@ -119,7 +120,7 @@ void timeline_draw(Timeline *tl, MonstroContext *ctx, float dt)
          monstro_draw_rect(canvas, cr, col, 4.0f, MONSTRO_CORNER_ALL, c == tl->selected_clip ? 2.0f : 1.0f);
 
          monstro_push_clip_rect(canvas, cr);
-         monstro_draw_text(canvas, nullptr, {x0 + 4, cy + 6}, 0xFFFFFFFF, clip->name);
+         monstro_draw_text(canvas, font, {x0 + 4, cy + 6}, 0xFFFFFFFF, clip->name);
          monstro_pop_clip_rect(canvas);
       }
 

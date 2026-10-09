@@ -97,6 +97,7 @@ void node_editor_draw(NodeEditor *ne, MonstroContext *ctx)
       MonstroRect area = {origin.x, origin.y, area_w, area_h};
 
       MonstroCanvas *canvas = monstro_get_window_canvas(ctx);
+      MonstroFont *font = monstro_get_style(ctx)->font;
       monstro_draw_rect_filled(canvas, area, 0xFF1A1A2A, 0, MONSTRO_CORNER_NONE);
 
       float grid_step = 20.0f;
@@ -152,7 +153,7 @@ void node_editor_draw(NodeEditor *ne, MonstroContext *ctx)
          MonstroRect header_rect = {nx, ny, n->w, header_h};
          monstro_draw_rect_filled(canvas, header_rect, n->color, 6.0f,
                                   (MonstroCornerFlags)(MONSTRO_CORNER_UL | MONSTRO_CORNER_UR));
-         monstro_draw_text(canvas, nullptr, {nx + 6, ny + 5}, 0xFFFFFFFF, n->name);
+         monstro_draw_text(canvas, font, {nx + 6, ny + 5}, 0xFFFFFFFF, n->name);
 
          uint32_t border = (i == ne->selected_node) ? 0xFFAAAAFF : 0x60FFFFFF;
          monstro_draw_rect(canvas, node_rect, border, 6.0f, MONSTRO_CORNER_ALL, 1.0f);
@@ -166,7 +167,7 @@ void node_editor_draw(NodeEditor *ne, MonstroContext *ctx)
             monstro_draw_circle(canvas, pc, port_radius, 0xFFFFFFFF, 12, 1.0f);
 
             float text_x = n->ports[p].is_output ? (pp.x - 60.0f) : (pp.x + 8.0f);
-            monstro_draw_text(canvas, nullptr, {text_x, pp.y - 6}, 0xFFCCCCCC, n->ports[p].name);
+            monstro_draw_text(canvas, font, {text_x, pp.y - 6}, 0xFFCCCCCC, n->ports[p].name);
          }
       }
 
