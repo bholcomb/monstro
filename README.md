@@ -9,11 +9,14 @@ A C API immediate mode UI library with a C++ internal implementation.
 - Comprehensive widget set
 - Flexible styling system
 - Font rendering with TTF and bitmap font support
+- Fails hard and loudly on misuse and exhausted capacities instead of throwing
+  or silently dropping output (see the [guide](docs/GUIDE.md#errors-and-limits))
 
 ## Building
 
 ```bash
 ./buildy
+./tests/run.sh   # headless tests, normal and with ASan/UBSan
 ```
 
 ## Example
@@ -22,29 +25,30 @@ A C API immediate mode UI library with a C++ internal implementation.
 #include <monstro.h>
 
 // Create context
-MonstroContext* ctx = monstro_create_context();
+MonstroContext* ctx = monstro_context_create();
+monstro_set_display_size(ctx, width, height);
 
 // Main loop
 while (running) {
-    monstro_begin_frame(ctx, width, height, delta_time);
-    
+    monstro_begin_frame(ctx, delta_time);
+
     if (monstro_begin_window(ctx, "Demo", NULL, MONSTRO_WINDOW_DEFAULT)) {
         if (monstro_button(ctx, "Click Me!", NULL)) {
             // Button was clicked
         }
+        monstro_end_window(ctx);
     }
-    monstro_end_window(ctx);
-    
+
     monstro_end_frame(ctx);
-    
-    // Get draw commands and render
+
+    // Get vertices, indices and draw commands, then render
+    const MonstroDrawCommand* cmds;
     uint32_t count;
-    const MonstroDrawCommand* cmds = monstro_canvas_get_draw_commands(
-        monstro_get_canvas(ctx), &count);
+    monstro_context_get_draw_commands(ctx, &cmds, &count);
     // ... render using your graphics API
 }
 
-monstro_destroy_context(ctx);
+monstro_context_destroy(ctx);
 ```
 
 ## .NET bindings

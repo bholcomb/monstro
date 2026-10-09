@@ -52,8 +52,9 @@ through `Native`. Dispose contexts explicitly, as with MobiusState.
 call; native editing keeps only the cursor and selection between frames.
 
 Use one context on one thread at a time, including disposal. Balance every
-window/layout/ID/style/disabled stack before `EndFrame`; do not allow native C++
-exceptions to cross P/Invoke. When mixing the two layers, manage the raw API's
+window/layout/ID/style/disabled stack before `EndFrame`: native Monstro never
+throws, and it aborts the process with a message on misuse, unbalanced stacks
+or exhausted capacities (see docs/GUIDE.md, Errors and Limits). When mixing the two layers, manage the raw API's
 lifetimes and stack pairing yourself. The convenience `BeginWindow` has no close
 pointer. With `Native.monstro_begin_window`, `byte* p_open` must stay valid through
 `monstro_end_window`; if it was already zero, the window is not begun and must not

@@ -336,6 +336,8 @@ monstro_draw_buffer_set_index_buffer(buf, mapped_indices, max_indices);
 
 Monstro will write into these buffers during widget calls.  After
 `monstro_end_frame`, the data is ready to draw without an upload step.
+Their capacities are fixed: a frame that needs more stops the program (see
+Errors and Limits).  Passing `NULL` returns to the context's own buffer.
 
 ---
 
@@ -506,6 +508,86 @@ if (monstro_begin_window(ctx, "My Window", NULL, MONSTRO_WINDOW_DEFAULT)) {
 }
 ```
 
+A missing or extra `end` stops the program; see the next section.
+
+---
+
+## Errors and Limits
+
+Monstro treats a broken rule as a bug to fix, not a condition to survive.
+Nothing in the C API throws, returns an error code, or quietly ignores a
+mistake: the library prints where it caught the problem, what was wrong and
+the values involved to `stderr`, then calls `abort()`.  Run under a debugger
+and the stack shows the call that caused it.
+
+```
+monstro: fatal error at src/fixed.h:97: requirement 'needed <= myCapacity' failed: vertex buffer overflow: capacity 65536, needed 65539 (window 'Status', frame 812); simplify that UI or raise MonstroContextConfig.max_vertices
+```
+
+These checks are always on, in release builds too.  They catch:
+
+- **Calls outside a frame.** Window and widget calls belong between
+  `monstro_begin_frame` and `monstro_end_frame`; so does a null context.
+- **Unbalanced pairs.** Every `begin`/`end` and `push`/`pop` must close:
+  windows (and children, popups, menus, combos), IDs, styles, disabled
+  scopes, columns, tables and tab bars are checked at both frame boundaries;
+  layouts, groups and clip rects when their window ends.  Popping an empty
+  stack fails where it happens.
+- **Out-of-range arguments**, such as a table with more than 128 columns or a
+  column set of more than 16.
+- **Exhausted capacities.** Monstro never grows its storage to hide a UI that
+  outgrew it; a frame that needs more stops with the numbers, so you can
+  simplify that UI or size the capacity for it deliberately.
+
+### Capacities
+
+The per-frame draw output has capacities set when the context is created:
+
+```c
+MonstroContextConfig config = monstro_context_config_default();
+config.max_vertices = 262144;
+config.max_indices = 786432;
+MonstroContext* ctx = monstro_context_create_ex(&config);
+```
+
+| Capacity | Default | Set by |
+| --- | --- | --- |
+| Vertices per frame | 65,536 | `max_vertices`, or a caller vertex buffer |
+| Indices per frame | 196,608 | `max_indices`, or a caller index buffer |
+| Draw commands per window, and per frame | 4,096 | `max_draw_commands` |
+| Points in one canvas path | 1,024 | `max_path_points` |
+
+The remaining limits are fixed for now:
+
+| Limit | Value |
+| --- | --- |
+| Windows (created over the context's life) | 64 |
+| Nested IDs (each open window, table, tab bar, tree node and menu bar uses one) | 64 |
+| Style pushes, disabled scopes | 64 each |
+| Layouts and groups per window (the window itself uses two layouts) | 32 each |
+| Clip rects per window (the window uses three) | 32 |
+| Layers and textures per window (each group adds a layer) | 16 each |
+| Open popups | 8 |
+| Remembered tree nodes, tab bars, tables | 256, 32, 32 |
+| Table columns | 128 |
+| Columns in one set, nested column sets | 16, 8 |
+| Fonts per font manager | 32 |
+| Text typed in one frame (`monstro_add_input_text`) | 255 bytes |
+| Tooltip text | 1,023 bytes |
+
+### Text
+
+All text is UTF-8.  Invalid or truncated sequences draw as U+FFFD (when the
+font has that glyph), and decoding never reads past the terminator.  Where
+Monstro shortens text to fit its own storage, such as window titles (255
+bytes) and table column labels (127 bytes), it cuts between code points.
+Text fields move the cursor, backspace and delete by whole code points, and a
+password field shows one `*` per code point.
+
+Monstro keeps no pointer you pass it beyond the call: tooltip text is copied,
+and text fields edit the buffer passed in the current call, so the buffer may
+move between frames as long as it holds the same text.
+
 ---
 
 ## Widget Reference
@@ -612,7 +694,6 @@ monstro_input_double(ctx, "Precise", &precise, 0.001, 0.1, "%.6f", NULL);
 Each field keeps its own type's precision: `monstro_input_int` edits whole
 numbers and shows them with `"%d"`, and `monstro_input_double` never passes its
 value through a `float`. The float and double formats receive a `double`.
-
 
 ### Selectable
 
@@ -1096,8 +1177,9 @@ monstro_push_text_style(ctx, &my_text);
 monstro_pop_style(ctx, 3);  /* pops text, then edit, then button */
 ```
 
-**Style pushes and pops must be balanced within a frame.**  Monstro will throw
-an exception at the next `monstro_begin_frame` if the stack is not empty.
+**Style pushes and pops must be balanced within a frame.**  `monstro_end_frame`
+stops the program if a push is left open, and popping more than was pushed
+stops it at the pop.
 
 ### Creating a custom theme
 
@@ -1908,11 +1990,12 @@ Minimize the total widget count per frame.
 application logic.  This prevents camera movement while dragging a slider, for
 example.
 
-**Balanced stacks.** Style pushes (`monstro_push_style_*`), ID pushes
-(`monstro_push_id`), and disabled scopes (`monstro_begin_disabled`) must be
-balanced with their corresponding pops/ends within each frame.  Monstro
-validates stack balance at the start of each frame and throws an exception if
-any stack is unbalanced.
+**Balanced stacks.** Style pushes (`monstro_push_*_style`), ID pushes
+(`monstro_push_id`), disabled scopes (`monstro_begin_disabled`), layouts,
+groups and clip rects must be balanced with their pops/ends within each frame
+(layouts, groups and clip rects within their window).  Monstro checks this at
+window end and at both frame boundaries and stops the program if anything is
+left open; see Errors and Limits.
 
 **`end` calls go inside the `if` block.** When a `begin_*` function returns
 `false` (window closed, off-screen, etc.), the window was not processed and you
