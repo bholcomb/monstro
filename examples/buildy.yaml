@@ -181,6 +181,23 @@ targets:
         targets: [monstro]
         artifacts: [ui_shaders]
 
+    - name: monstro_cockpit
+      language: cpp
+      sources:
+        - "cockpit/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
 staging:
   name: monstro_examples_dist
   destination: "../bin"
@@ -199,6 +216,7 @@ staging:
         - monstro_timeline
         - monstro_node
         - monstro_interaction
+        - monstro_cockpit
         - monstro
 
     - folder: data/shaders
