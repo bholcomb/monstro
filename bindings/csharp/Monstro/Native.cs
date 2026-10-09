@@ -950,6 +950,14 @@ public static unsafe partial class Native
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_is_item_activated(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_is_item_deactivated(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
     public static extern bool monstro_is_item_deactivated_after_edit(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

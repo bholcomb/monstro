@@ -213,6 +213,20 @@ public sealed unsafe class Context : IDisposable
             return changed;
         }
     }
+    // The state of the widget just built; see the item state queries in widgets.h.
+    public bool ItemHovered => Native.monstro_is_item_hovered(RequireFrame());
+    /// <summary>Held, dragged, being edited or open.</summary>
+    public bool ItemActive => Native.monstro_is_item_active(RequireFrame());
+    /// <summary>Its value changed this frame.</summary>
+    public bool ItemEdited => Native.monstro_is_item_edited(RequireFrame());
+    /// <summary>It became active this frame: a press, a drag or an edit started.</summary>
+    public bool ItemActivated => Native.monstro_is_item_activated(RequireFrame());
+    /// <summary>It stopped being active this frame.</summary>
+    public bool ItemDeactivated => Native.monstro_is_item_deactivated(RequireFrame());
+    /// <summary>It stopped being active this frame and changed its value while it was: the moment to commit.</summary>
+    public bool ItemDeactivatedAfterEdit => Native.monstro_is_item_deactivated_after_edit(RequireFrame());
+    public MonstroRect ItemRect => Native.monstro_get_item_rect(RequireFrame());
+
     public void BeginLayout(MonstroLayoutDirection direction) => Native.monstro_begin_layout(RequireFrame(), direction);
     public void EndLayout() => Native.monstro_end_layout(RequireFrame());
     public void SetCursorPosition(float x, float y) => Native.monstro_set_cursor_pos(RequireFrame(), x, y);
@@ -226,8 +240,10 @@ public sealed unsafe class Context : IDisposable
     /// <summary>The current style: the frame's working copy, or the theme's between frames.</summary>
     public ref readonly MonstroStyle Style => ref *Native.monstro_get_style(Handle);
 
+    // Input changes are queued and taken by the next frames, so none is lost between frames; see input.h.
     public void SetMousePosition(float x, float y) => Native.monstro_set_mouse_pos(Handle, x, y);
     public void SetMouseButton(MonstroMouseButton button, bool down) => Native.monstro_set_mouse_button(Handle, button, down);
+    /// <summary>Adds a wheel movement.</summary>
     public void SetMouseWheel(float x, float y) => Native.monstro_set_mouse_wheel(Handle, x, y);
     public void SetKey(MonstroKey key, bool down) => Native.monstro_set_key(Handle, key, down);
     public void SetKeyModifiers(MonstroModFlags modifiers) => Native.monstro_set_key_mods(Handle, modifiers);

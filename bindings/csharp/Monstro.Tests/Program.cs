@@ -100,12 +100,18 @@ unsafe class Program
                 }
             }
 
+            // Input waits for the next frame.
             ui.SetMousePosition(23, 45);
+            ui.SetKey(MonstroKey.A, true);
+            Check("input is queued", !Native.monstro_is_key_down(ui.Handle, MonstroKey.A));
+            ui.BeginFrame(640, 480, 1.0f / 60);
+            ui.EndFrame();
             MonstroVec2 mouse = Native.monstro_get_mouse_pos(ui.Handle);
             Check("struct return", mouse.x == 23 && mouse.y == 45);
-            ui.SetKey(MonstroKey.A, true);
             Check("one-byte bool true", Native.monstro_is_key_down(ui.Handle, MonstroKey.A));
             ui.SetKey(MonstroKey.A, false);
+            ui.BeginFrame(640, 480, 1.0f / 60);
+            ui.EndFrame();
             Check("one-byte bool false", !Native.monstro_is_key_down(ui.Handle, MonstroKey.A));
             ui.AddInputText("héλlo 🚀");
             Check("UTF-8 input/result", Native.Utf8(Native.monstro_get_input_text(ui.Handle)) == "héλlo 🚀");
@@ -257,6 +263,50 @@ unsafe class Program
             ui.EndFrame();
         }
 
+        // A slider drag through the convenience layer: one activation, then one deactivation after the edit.
+        {
+            using var env = new Env();
+            env.LoadFont("sans", args[1], 16);
+            using var ui = env.CreateContext();
+            float throttle = 0.5f;
+            MonstroRect rect = default;
+            int activations = 0, deactivations = 0, commits = 0;
+            bool activeThroughout = true;
+            void Frame(bool dragging)
+            {
+                ui.BeginFrame(640, 480, 1.0f / 60);
+                ui.SetNextWindowPosition(20, 20);
+                ui.SetNextWindowSize(300, 200);
+                if (ui.BeginWindow("Engine"))
+                {
+                    ui.SliderFloat("throttle##Throttle " + throttle.ToString("0.00"), ref throttle, 0, 1);
+                    rect = ui.ItemRect;
+                    activations += ui.ItemActivated ? 1 : 0;
+                    deactivations += ui.ItemDeactivated ? 1 : 0;
+                    commits += ui.ItemDeactivatedAfterEdit ? 1 : 0;
+                    if (dragging && !ui.ItemActive) activeThroughout = false;
+                }
+                ui.EndWindow();
+                ui.EndFrame();
+            }
+            Frame(false);
+            ui.SetMousePosition(rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f);
+            Frame(false);
+            ui.SetMouseButton(MonstroMouseButton.Left, true);
+            Frame(true);
+            for (int i = 1; i <= 4; i++)
+            {
+                ui.SetMousePosition(rect.x + rect.w * 0.5f + i * 10, rect.y + rect.h * 0.5f);
+                Frame(true);
+            }
+            ui.SetMouseButton(MonstroMouseButton.Left, false);
+            Frame(false);
+            Frame(false);
+            Check("item edges over a drag", activations == 1 && deactivations == 1 && commits == 1 && activeThroughout && throttle != 0.5f);
+            MonstroContextConfig defaults = Native.monstro_context_config_default();
+            Check("context config defaults", defaults.max_input_events == 64 && defaults.evict_after_frames == 3600);
+        }
+
         using (var edit = new Env())
         using (var ctx = edit.CreateContext())
         {
@@ -266,8 +316,12 @@ unsafe class Program
             ctx.InputText("edit", ref text, 64);
             MonstroRect rect = Native.monstro_get_item_rect(ctx.Handle);
             ctx.EndFrame();
+            // The move and the press are taken in separate frames.
             ctx.SetMousePosition(rect.x + rect.w - 10, rect.y + rect.h / 2);
             ctx.SetMouseButton(MonstroMouseButton.Left, true);
+            ctx.BeginFrame(400, 100, 0.01f);
+            ctx.InputText("edit", ref text, 64);
+            ctx.EndFrame();
             ctx.BeginFrame(400, 100, 0.01f);
             ctx.InputText("edit", ref text, 64);
             Check("text activated", ctx.WantTextInput);
