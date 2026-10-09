@@ -558,6 +558,10 @@ monstro_slider_float_ex(ctx, "Custom", &val, 0, 1, "%.2f",
                         200.0f, 30.0f, MONSTRO_SLIDER_NONE, NULL);
 ```
 
+The format formats the value shown on the bar: a float slider passes its value
+as a `double` (`"%.2f"`), an int slider as an `int` (`"%d"`, the default when the
+format is `NULL`). Int sliders snap to whole numbers.
+
 ### Knobs
 
 ```c
@@ -569,9 +573,14 @@ monstro_knob_sized(ctx, "Rate", &gain, 0.0f, 100.0f, "%.1f", 60.0f, NULL);
 ### Progress bar
 
 ```c
-monstro_progress_bar(ctx, 0.75f, 120.0f, 20.0f, NULL);          /* shows "75%" */
-monstro_progress_bar(ctx, fraction, 120.0f, 20.0f, "%.1f%%");   /* custom format */
+monstro_progress_bar(ctx, 0.75f, 120.0f, 20.0f, NULL);      /* shows "75%" */
+
+/* The overlay is plain text, drawn as given; format it yourself. */
+char overlay[32];
+snprintf(overlay, sizeof(overlay), "%d of %d files", done, total);
+monstro_progress_bar(ctx, fraction, 120.0f, 20.0f, overlay);
 ```
+
 
 ### Text input
 
@@ -599,6 +608,11 @@ monstro_input_float(ctx, "Amount", &amount, 0.1f, 1.0f, "%.2f", NULL);
 static double precise = 0.0;
 monstro_input_double(ctx, "Precise", &precise, 0.001, 0.1, "%.6f", NULL);
 ```
+
+Each field keeps its own type's precision: `monstro_input_int` edits whole
+numbers and shows them with `"%d"`, and `monstro_input_double` never passes its
+value through a `float`. The float and double formats receive a `double`.
+
 
 ### Selectable
 

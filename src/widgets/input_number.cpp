@@ -1,4 +1,5 @@
 #include "../context.h"
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -77,13 +78,46 @@ static bool spinner_button(MonstroContext *ctx, monstro::Canvas *canvas, Monstro
    return pressed;
 }
 
-bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, float step, float step_fast,
-                         const char *format, const char *tooltip)
+enum NumberKind
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   NUMBER_INT,
+   NUMBER_FLOAT,
+   NUMBER_DOUBLE
+};
 
+// Ints format through an int argument (format "%d"); floats and doubles through a double.
+static void format_number(char *out, size_t out_size, NumberKind kind, const char *format, double value)
+{
+   if (kind == NUMBER_INT)
+      snprintf(out, out_size, format, (int)value);
+   else
+      snprintf(out, out_size, format, value);
+   monstro_utf8_trim_partial(out);
+}
+
+static double parse_number(NumberKind kind, const char *text)
+{
+   if (kind == NUMBER_INT)
+   {
+      long long parsed = strtoll(text, nullptr, 10);
+      return (double)(parsed < INT_MIN ? INT_MIN : parsed > INT_MAX ? INT_MAX : parsed);
+   }
+   double parsed = strtod(text, nullptr);
+   return kind == NUMBER_FLOAT ? (double)(float)parsed : parsed;
+}
+
+static bool accepts_number_char(NumberKind kind, char c)
+{
+   if ((c >= '0' && c <= '9') || c == '-' || c == '+')
+      return true;
+   return kind != NUMBER_INT && (c == '.' || c == 'e' || c == 'E');
+}
+
+// The numeric field for all three value types. The value travels as a double,
+// which holds every int, float and double exactly.
+static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind, double *value, double step,
+                        double step_fast, const char *format, const char *tooltip)
+{
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
@@ -94,9 +128,6 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    MonstroStyleProperty *ps = &style->property;
    MonstroStyleEdit *es = &ps->edit;
    monstro::EditState *edit = &ctx->edit_state;
-
-   if (!format)
-      format = "%.3f";
 
    uint64_t id = win->getChildId(label);
    const char *display = monstro_display_text(label);
@@ -127,7 +158,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    MonstroRect field_rect = {field_x, pos.y, field_w, field_h};
 
    bool is_active = edit->isActiveFor(id);
-   float old_value = *value;
+   double old_value = *value;
    bool value_changed = false;
 
    // Spinner buttons
@@ -136,7 +167,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
       MonstroRect dec_rect = {pos.x + label_w + ps->padding[0], pos.y, btn_w, field_h};
       MonstroRect inc_rect = {field_x + field_w, pos.y, btn_w, field_h};
 
-      float actual_step = step;
+      double actual_step = step;
       if (ctx->active_id == dec_id || ctx->active_id == inc_id)
       {
          float down_time = ctx->mouse.buttons[MONSTRO_MOUSE_BUTTON_LEFT].down_time;
@@ -174,7 +205,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    {
       if (ctx->disabled)
       {
-         *value = (float)atof(edit->myNumberText);
+         *value = parse_number(kind, edit->myNumberText);
          edit->deactivate();
          is_active = false;
          ctx->want_text_input = false;
@@ -195,7 +226,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
          if (is_active && monstro_is_key_pressed(ctx, MONSTRO_KEY_ENTER, false))
          {
-            *value = (float)atof(edit->myNumberText);
+            *value = parse_number(kind, edit->myNumberText);
             edit->deactivate();
             is_active = false;
             ctx->want_text_input = false;
@@ -210,7 +241,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
                bool accept = true;
                for (const char *c = input; *c; c++)
                {
-                  if (!((*c >= '0' && *c <= '9') || *c == '.' || *c == '-' || *c == '+' || *c == 'e' || *c == 'E'))
+                  if (!accepts_number_char(kind, *c))
                   {
                      accept = false;
                      break;
@@ -278,7 +309,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
          if (is_active && !hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
          {
-            *value = (float)atof(edit->myNumberText);
+            *value = parse_number(kind, edit->myNumberText);
             edit->deactivate();
             is_active = false;
             ctx->want_text_input = false;
@@ -290,7 +321,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    {
       if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
       {
-         snprintf(edit->myNumberText, sizeof(edit->myNumberText), format, *value);
+         format_number(edit->myNumberText, sizeof(edit->myNumberText), kind, format, *value);
          edit->activate(id, edit->myNumberText, true);
          is_active = true;
          ctx->want_text_input = true;
@@ -321,7 +352,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
       }
       else
       {
-         snprintf(value_text, sizeof(value_text), format, *value);
+         format_number(value_text, sizeof(value_text), kind, format, *value);
       }
 
       MonstroColor text_col = is_active ? es->text_active : (hovered ? es->text_hover : es->text_normal);
@@ -377,34 +408,37 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    return value_changed || *value != old_value;
 }
 
+bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, float step, float step_fast,
+                         const char *format, const char *tooltip)
+{
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
+      return false;
+
+   double v = *value;
+   bool changed = number_impl(ctx, label, NUMBER_FLOAT, &v, step, step_fast, format ? format : "%.3f", tooltip);
+   *value = (float)v;
+   return changed;
+}
+
 bool monstro_input_int(MonstroContext *ctx, const char *label, int *value, int step, int step_fast, const char *tooltip)
 {
-   if (!value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
-   float fval = (float)*value;
-   bool changed = monstro_input_float(ctx, label, &fval, (float)step, (float)step_fast, "%.0f", tooltip);
-   int new_val = (int)(fval + (fval >= 0.0f ? 0.5f : -0.5f));
-   if (new_val != *value)
-   {
-      *value = new_val;
-      return true;
-   }
+
+   double v = *value;
+   bool changed = number_impl(ctx, label, NUMBER_INT, &v, step, step_fast, "%d", tooltip);
+   *value = v < INT_MIN ? INT_MIN : v > INT_MAX ? INT_MAX : (int)v;
    return changed;
 }
 
 bool monstro_input_double(MonstroContext *ctx, const char *label, double *value, double step, double step_fast,
                           const char *format, const char *tooltip)
 {
-   if (!value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
-   float fval = (float)*value;
-   float fstep = (float)step;
-   float fstep_fast = (float)step_fast;
-   bool changed = monstro_input_float(ctx, label, &fval, fstep, fstep_fast, format ? format : "%.6f", tooltip);
-   if (changed)
-   {
-      *value = (double)fval;
-      return true;
-   }
-   return false;
+
+   return number_impl(ctx, label, NUMBER_DOUBLE, value, step, step_fast, format ? format : "%.6f", tooltip);
 }

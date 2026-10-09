@@ -62,18 +62,17 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
    }
 
    // Overlay text
+   // The overlay is plain text, never a format string; without one the bar shows its percentage.
    if (font)
    {
-      char buf[64];
-      if (overlay)
+      char percent[16];
+      const char *text = overlay;
+      if (!text)
       {
-         snprintf(buf, sizeof(buf), overlay, fraction);
+         snprintf(percent, sizeof(percent), "%.0f%%", t * 100.0f);
+         text = percent;
       }
-      else
-      {
-         snprintf(buf, sizeof(buf), "%.0f%%", t * 100.0f);
-      }
-      canvas->addTextEx(font, bar_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_CENTER);
+      canvas->addTextEx(font, bar_rect, monstro_color_to_u32(style->text.color), text, MONSTRO_ALIGN_CENTER);
    }
 
    monstro_draw_disabled_overlay(ctx, bar_rect);

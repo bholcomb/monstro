@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <string.h>
 
-static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
+static double clampd(double v, double lo, double hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 static bool slider_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool *out_hovered, bool *out_held)
 {
@@ -48,14 +48,12 @@ static bool slider_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, boo
    return held;
 }
 
-bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
-                             const char *format, float width, float height, MonstroSliderFlags flags,
-                             const char *tooltip)
+// The slider body for both value types. Values travel as double so that an
+// int slider keeps every int exactly; an int slider snaps to whole numbers
+// and formats its value text as an int.
+static bool slider_impl(MonstroContext *ctx, const char *label, double *value, double min_val, double max_val,
+                        bool integer, const char *format, float width, float height, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
-   (void)flags;
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -99,21 +97,20 @@ bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *valu
    bool held = false;
    bool dragging = slider_behavior(ctx, slider_rect, id, &hovered, &held);
 
-   float range = max_val - min_val;
-   if (range == 0.0f)
-      range = 1.0f;
+   double range = max_val - min_val;
+   if (range == 0.0)
+      range = 1.0;
 
-   float old_value = *value;
+   double old_value = *value;
 
    if (held)
    {
-      float ratio = (ctx->mouse.pos_x - slider_rect.x) / slider_rect.w;
-      ratio = clampf(ratio, 0.0f, 1.0f);
-      *value = min_val + ratio * range;
+      double ratio = clampd((ctx->mouse.pos_x - slider_rect.x) / slider_rect.w, 0.0, 1.0);
+      *value = integer ? min_val + std::round(ratio * range) : min_val + ratio * range;
    }
 
-   *value = clampf(*value, min_val, max_val);
-   float t = (*value - min_val) / range;
+   *value = clampd(*value, min_val, max_val);
+   float t = (float)((*value - min_val) / range);
 
    // Background bar
    float bar_y = slider_rect.y + (slider_rect.h - ss->bar_height) * 0.5f;
@@ -155,7 +152,11 @@ bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *valu
    if (format && font)
    {
       char buf[64];
-      snprintf(buf, sizeof(buf), format, *value);
+      if (integer)
+         snprintf(buf, sizeof(buf), format, (int)*value);
+      else
+         snprintf(buf, sizeof(buf), format, *value);
+      monstro_utf8_trim_partial(buf);
       canvas->addTextEx(font, slider_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_CENTER);
    }
 
@@ -179,6 +180,21 @@ bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *valu
    return *value != old_value;
 }
 
+bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
+                             const char *format, float width, float height, MonstroSliderFlags flags,
+                             const char *tooltip)
+{
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
+      return false;
+   (void)flags;
+
+   double v = *value;
+   bool changed = slider_impl(ctx, label, &v, min_val, max_val, false, format, width, height, tooltip);
+   *value = (float)v;
+   return changed;
+}
+
 bool monstro_slider_float(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
                           const char *format, const char *tooltip)
 {
@@ -189,18 +205,14 @@ bool monstro_slider_float(MonstroContext *ctx, const char *label, float *value, 
 bool monstro_slider_int_ex(MonstroContext *ctx, const char *label, int *value, int min_val, int max_val,
                            const char *format, float width, float height, MonstroSliderFlags flags, const char *tooltip)
 {
-   if (!value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
+   (void)flags;
 
-   float fval = (float)*value;
-   bool changed = monstro_slider_float_ex(ctx, label, &fval, (float)min_val, (float)max_val, format ? format : "%.0f",
-                                          width, height, flags, tooltip);
-   int new_val = (int)(fval + 0.5f);
-   if (new_val != *value)
-   {
-      *value = new_val;
-      return true;
-   }
+   double v = *value;
+   bool changed = slider_impl(ctx, label, &v, min_val, max_val, true, format ? format : "%d", width, height, tooltip);
+   *value = (int)v;
    return changed;
 }
 

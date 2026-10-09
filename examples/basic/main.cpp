@@ -199,7 +199,10 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_knob(ctx, "Rate", &d->knobValue2, 0.0f, 100.0f, "%.1f", "Adjust rate");
 
       monstro_separator_text(ctx, "Progress Bars");
-      monstro_progress_bar(ctx, d->knobValue, 100.0f, 20.0f, "Gain: %.2f");
+      char gain_text[32];
+      snprintf(gain_text, sizeof(gain_text), "Gain: %.2f", d->knobValue);
+      monstro_progress_bar(ctx, d->knobValue, 100.0f, 20.0f, gain_text);
+
       monstro_progress_bar(ctx, d->knobValue2 / 100.0f, 100.0f, 20.0f, NULL);
 
       monstro_separator_text(ctx, "Radio Buttons");
