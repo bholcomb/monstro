@@ -9,8 +9,10 @@ Metal, or anything else.
 If you have used Dear ImGui, Monstro will feel familiar.  The key differences
 are:
 
-- Every API call takes an explicit `MonstroContext*` -- there is no hidden
-  global state.
+- Every API call takes an explicit environment or context -- there is no
+  hidden global state.
+- What UIs share (fonts, themes, icons, settings, frame scratch memory) lives
+  once in an environment; each UI is a small context on it.
 - GPU resources (textures, buffers) are owned by *your* application.  Monstro
   only references them through opaque `uint64_t` texture IDs.
 - Style items can be solid colors, full textures, sprite atlas sub-regions, or
@@ -22,28 +24,99 @@ are:
 ## Architecture Overview
 
 ```
- Your Application          Monstro                   Your Renderer
- ┌──────────────┐     ┌────────────────┐        ┌──────────────────┐
- │ input events ├────>│ MonstroContext  ├───────>│ GPU draw calls   │
- │ (mouse, kbd) │     │ begin/end frame │        │ (vertices, idx,  │
- │              │     │ widget calls    │        │  textures, clip) │
- └──────────────┘     └────────────────┘        └──────────────────┘
+ Your Application     Monstro                                Your Renderer
+ ┌──────────────┐     ┌────────────────────────┐              ┌──────────────────┐
+ │ input events ├────>│ MonstroContext         │  draw data   │ GPU draw calls   │
+ │ (mouse, kbd) │     │ (one per UI)           │─────────────>│ (vertices, idx,  │
+ └──────────────┘     │ borrows a canvas       │              │  textures, clip) │
+                      │ for each frame         │              └──────────────────┘
+                      ├────────────────────────┤
+                      │ MonstroEnv (shared)    │
+                      │ fonts and atlas,       │
+                      │ themes, icons,         │
+                      │ settings, canvases     │
+                      └────────────────────────┘
 ```
 
 **Key objects:**
 
-- `MonstroContext` -- holds all UI state.  Create one per logical UI.
-- `MonstroDrawBuffer` -- stores the vertex and index data produced each frame.
-- `MonstroDrawCommand` -- a single batched draw call: clip rect, texture, index
-  offset/count.
-- `MonstroFont` -- a loaded font with its glyph atlas.
+- `MonstroEnv` -- the environment, created by `monstro_init` and destroyed by
+  `monstro_shutdown`.  It holds everything global, once: fonts packed into one
+  atlas, themes, icons, settings (double click, drag, key repeat and tooltip
+  timing), and the canvases frames are built in.
+- `MonstroContext` -- one UI: a screen, a panel, a tool window.  It receives
+  that UI's input, has its display size, and keeps its interaction state
+  between frames (windows and their positions and scroll, popups, tab bars,
+  tree nodes, tables, hot and active widgets, text editing).  Contexts are
+  small; create as many as you have UIs.
+- `MonstroCanvas` -- the frame scratch: vertex, index and command buffers, the
+  path, clip and layer stacks, and the frame's working style and nesting
+  stacks.  The environment lends one to a context for each frame.
+- `MonstroDrawData` -- a finished frame: vertices, indices and draw commands
+  in draw order.
+- `MonstroTheme` -- a style registered in the environment, shared by any
+  number of contexts.
+- `MonstroFont` -- a font in the environment's atlas.
 
 **Frame lifecycle:**
 
-1. Call `monstro_begin_frame(ctx, delta_time)`.
-2. Emit windows and widgets (`monstro_begin_window`, `monstro_button`, etc.).
-3. Call `monstro_end_frame(ctx)`.
-4. Read the draw buffer and draw commands, upload to GPU, issue draw calls.
+1. Feed the context its input.
+2. Call `monstro_begin_frame(ctx, delta_time)`: the context borrows a canvas.
+3. Emit windows and widgets (`monstro_begin_window`, `monstro_button`, etc.).
+4. Call `monstro_end_frame(ctx)`: the canvas goes back to the environment and
+   the call returns the frame's `MonstroDrawData`.
+5. Upload and draw it.
+
+### Ownership and lifetimes
+
+| Object | Created by | Lives until | Owned by |
+| --- | --- | --- | --- |
+| Environment | `monstro_init` | `monstro_shutdown` | you |
+| Context | `monstro_context_create(env, ...)` | `monstro_context_destroy` | you; destroy before its environment |
+| Font | `monstro_font_load_*(env, ...)` | `monstro_shutdown` | the environment |
+| Theme | `monstro_theme_register(env, ...)` | `monstro_shutdown` | the environment |
+| Icon | `monstro_register_icon*(env, ...)` | `monstro_shutdown` | the environment |
+| Canvas | `monstro_init` (`canvas_count` of them) | `monstro_shutdown` | the environment; lent for one frame |
+| Draw data | `monstro_end_frame` | the canvas's next frame | the canvas |
+
+Everything in the environment is set up between frames.  While any frame is
+open the environment is read-only: loading a font, registering a theme or an
+icon, changing settings or the atlas texture, or creating or destroying a
+context then stops the program.  `monstro_shutdown` stops it too while
+contexts still use the environment.
+
+### The canvas lending rule
+
+`monstro_begin_frame` borrows a canvas and `monstro_end_frame` returns it.  The
+draw data `monstro_end_frame` returns lives in that canvas and **stays valid
+until the canvas is lent again**.  With the default single canvas, that is the
+next `monstro_begin_frame` of *any* context on the environment, so render (or
+copy) a context's frame before building the next one:
+
+```c
+monstro_begin_frame(hud, dt);    /* ... */  const MonstroDrawData* a = monstro_end_frame(hud);
+render(a);                                   /* a is valid here */
+monstro_begin_frame(panel, dt);  /* ... */  const MonstroDrawData* b = monstro_end_frame(panel);
+/* a now shows panel's frame: the canvas has been reused */
+```
+
+To keep a frame longer, copy it.  The copy is one allocation:
+
+```c
+MonstroDrawData* kept = monstro_draw_data_copy(a);   /* NULL only when memory runs out */
+/* ... */
+monstro_draw_data_free(kept);
+```
+
+`frame_id` in the draw data numbers the environment's frames, so code that
+holds draw data can tell whether its canvas has built another frame since.
+
+With `MonstroEnvConfig.canvas_count` set to N, the canvases are lent in turn,
+so the draw data of the last N frames stays valid, and up to N frames (of
+different contexts) can be open at once.  The design leaves room for building
+different contexts on different threads later, each on its own canvas, with
+the environment read-only meanwhile; today Monstro supports sequential use
+from one thread.
 
 ---
 
@@ -56,29 +129,23 @@ replaced with comments -- the next sections fill those in.
 #include <monstro.h>
 
 int main(void) {
-    /* --- 1. Create context --- */
-    MonstroContext* ctx = monstro_context_create();
+    /* --- 1. Create the environment and load a font --- */
+    MonstroEnv* env = monstro_init(NULL);           /* NULL: default capacities */
+    monstro_font_load_ttf_from_file(env, "default", "path/to/font.ttf",
+                                    16.0f,          /* pixel size */
+                                    32,             /* first code point (space) */
+                                    96);            /* code point count (ASCII printable) */
 
-    /* --- 2. Load a font --- */
-    MonstroFontManager* fm = monstro_context_get_font_manager(ctx);
-    MonstroTextureData atlas_data = {0};
-    MonstroFont* font = monstro_font_load_ttf_from_file(
-        fm, "path/to/font.ttf",
-        16.0f,    /* pixel size */
-        32,       /* first code point (space) */
-        96,       /* code point count (ASCII printable) */
-        &atlas_data
-    );
-    /* Upload atlas_data.data to a GPU texture, get a handle. */
-    uint64_t font_texture_id = /* your_gpu_create_texture(atlas_data) */;
-    monstro_font_set_atlas_texture(font, font_texture_id);
-    monstro_font_add(fm, font, "default", 16.0f);
-    monstro_context_set_default_font(ctx, font);
+    /* Upload the atlas (fonts and the white texel solid shapes use) to a GPU texture. */
+    MonstroTextureData atlas = monstro_env_get_atlas(env);
+    uint64_t atlas_texture = /* your_gpu_create_texture(atlas) */;
+    monstro_env_set_atlas_texture(env, atlas_texture);
 
-    /* --- 3. Set display size --- */
+    /* --- 2. Create a context for the UI --- */
+    MonstroContext* ctx = monstro_context_create(env, NULL);
     monstro_set_display_size(ctx, 1280.0f, 720.0f);
 
-    /* --- 4. Main loop --- */
+    /* --- 3. Main loop --- */
     while (running) {
         float dt = /* seconds since last frame */;
 
@@ -87,7 +154,7 @@ int main(void) {
         monstro_set_mouse_button(ctx, MONSTRO_MOUSE_BUTTON_LEFT, left_down);
         /* ... keyboard, scroll, text ... */
 
-        /* --- 5. Build UI --- */
+        /* --- 4. Build UI --- */
         monstro_begin_frame(ctx, dt);
 
         monstro_set_next_window_pos(ctx, 50, 50, MONSTRO_COND_FIRST_USE_EVER);
@@ -100,27 +167,22 @@ int main(void) {
             monstro_end_window(ctx);
         }
 
-        monstro_end_frame(ctx);
+        const MonstroDrawData* draw = monstro_end_frame(ctx);
 
-        /* --- 6. Render --- */
-        MonstroDrawBuffer* buf = monstro_context_get_draw_buffer(ctx);
-        const MonstroVertex* verts; size_t vert_bytes;
-        const uint32_t* indices;    uint32_t idx_count;
-        monstro_draw_buffer_get_vertex_buffer(buf, &verts, &vert_bytes);
-        monstro_draw_buffer_get_index_buffer(buf, &indices, &idx_count);
-        /* Upload verts/indices to GPU buffers. */
-
-        const MonstroDrawCommand* cmds; uint32_t cmd_count;
-        monstro_context_get_draw_commands(ctx, &cmds, &cmd_count);
-        for (uint32_t i = 0; i < cmd_count; i++) {
-            /* Set scissor from cmds[i].clip_rect */
-            /* Bind texture from cmds[i].texture_id */
-            /* Draw cmds[i].index_count indices starting at cmds[i].index_offset */
+        /* --- 5. Render --- */
+        if (draw->changed) {
+            /* Upload draw->vertices (draw->vertex_count) and draw->indices (draw->index_count). */
+        }
+        for (uint32_t i = 0; i < draw->command_count; i++) {
+            const MonstroDrawCommand* dc = &draw->commands[i];
+            /* Set scissor from dc->clip_rect, bind dc->texture_id, then draw
+               dc->index_count indices from dc->index_offset with base vertex dc->vertex_offset. */
         }
     }
 
-    /* --- 7. Cleanup --- */
+    /* --- 6. Cleanup --- */
     monstro_context_destroy(ctx);
+    monstro_shutdown(env);
     return 0;
 }
 ```
@@ -144,6 +206,16 @@ Monstro through setter functions.
 | Modifier keys | `monstro_set_key_mods(ctx, mods)` |
 | Text input (characters) | `monstro_add_input_text(ctx, utf8_string)` |
 | Window resize | `monstro_set_display_size(ctx, w, h)` |
+
+Each context has its own input and display size.  The timing that interprets
+input -- double click time and distance, drag threshold, key repeat delay and
+rate, tooltip delay -- is shared, in the environment's settings:
+
+```c
+MonstroSettings settings = monstro_env_get_settings(env);
+settings.key_repeat_delay = 0.4f;
+monstro_env_set_settings(env, &settings);   /* between frames */
+```
 
 ### GLFW example
 
@@ -217,44 +289,74 @@ if (monstro_want_capture_keyboard(ctx)) {
 
 ### What Monstro produces
 
-After `monstro_end_frame`, three things are ready:
+`monstro_end_frame` returns the frame's draw data:
 
-**Vertex buffer** -- an array of `MonstroVertex`:
+```c
+typedef struct MonstroDrawData {
+    const MonstroVertex* vertices;       /* NULL when drawn into host buffers */
+    uint32_t vertex_count;
+    const uint32_t* indices;
+    uint32_t index_count;
+    const MonstroDrawCommand* commands;  /* in draw order */
+    uint32_t command_count;
+    float display_size[2];
+    uint64_t content_hash;               /* equal hashes: identical frames */
+    bool changed;                        /* differs from this context's previous frame */
+    uint64_t atlas_version;              /* the atlas when the frame was built */
+    uint64_t frame_id;                   /* the environment's frame number */
+} MonstroDrawData;
+```
+
+**Vertices** -- `MonstroVertex`:
 
 ```c
 typedef struct MonstroVertex {
     float position[2];   /* screen-space pixel coordinates */
-    float texcoord[2];   /* UV for font atlas or user textures */
+    float texcoord[2];   /* UV in the command's texture */
     uint32_t color;      /* packed RGBA: R in the least significant byte, A in the most significant */
 } MonstroVertex;
 ```
 
-**Index buffer** -- an array of `uint32_t` indices into the vertex buffer.
-
-**Draw commands** -- an array of `MonstroDrawCommand`:
+**Draw commands** -- `MonstroDrawCommand`:
 
 ```c
 typedef struct MonstroDrawCommand {
     float clip_rect[4];    /* x, y, width, height in pixels */
-    int layer;
-    uint32_t order;
-    uint64_t texture_id;   /* 0 = no texture (use white pixel) */
+    uint64_t texture_id;   /* the atlas texture ID for text and solid shapes */
+    uint32_t vertex_offset;
+    uint32_t vertex_count;
     uint32_t index_offset;
     uint32_t index_count;
+    int layer;
     MonstroCustomDrawCallback custom_draw;  /* NULL for normal draws */
     void* user_data;
 } MonstroDrawCommand;
 ```
 
+Each command's vertices are the `vertex_count` vertices from `vertex_offset`,
+and its indices are the `index_count` entries from `index_offset`, **counting
+from `vertex_offset`**.  A renderer binds the vertex range as the base vertex
+(`vkCmdDrawIndexed`'s `vertexOffset`, `glDrawElementsBaseVertex`) and draws the
+index range as is, or slices one command's vertices and indices into its own
+mesh without touching them.
+
+Text and solid shapes are drawn from the same texture: every font lives in the
+environment's atlas, and the atlas has a white texel that solid shapes sample.
+So a window's fills and text batch into few commands.
+
+Commands come in draw order: windows in the order they are stacked (a window,
+then its children, then the windows in front of it), and within a window by
+layer, then in the order things were drawn.
+
 ### Generic rendering loop
 
 ```c
-const MonstroDrawCommand* cmds;
-uint32_t count;
-monstro_context_get_draw_commands(ctx, &cmds, &count);
+const MonstroDrawData* draw = monstro_end_frame(ctx);
+if (draw->changed)
+    upload(draw->vertices, draw->vertex_count, draw->indices, draw->index_count);
 
-for (uint32_t i = 0; i < count; i++) {
-    const MonstroDrawCommand* dc = &cmds[i];
+for (uint32_t i = 0; i < draw->command_count; i++) {
+    const MonstroDrawCommand* dc = &draw->commands[i];
 
     if (dc->custom_draw) {
         dc->custom_draw(dc->user_data, dc->clip_rect, dc->layer);
@@ -266,9 +368,15 @@ for (uint32_t i = 0; i < count; i++) {
 
     bind_texture(resolve_texture_id(dc->texture_id));
 
-    draw_indexed(dc->index_count, dc->index_offset);
+    draw_indexed(dc->index_count, dc->index_offset, /* base vertex */ dc->vertex_offset);
 }
 ```
+
+`content_hash` covers the commands and every vertex and index value written,
+so a renderer that keeps last frame's buffers on the GPU can skip the upload
+when `changed` is false (or compare hashes itself, for example across
+contexts).  Upload the atlas again when `monstro_env_get_atlas(env).version`
+changes; loading a font changes it.
 
 ### Pipeline requirements
 
@@ -278,21 +386,20 @@ for (uint32_t i = 0; i < count; i++) {
 - **Culling**: disabled (none).
 - **Vertex input**: the `MonstroVertex` layout above, or bindless via buffer
   device address.
+- **Textures**: RGBA, multiplied by the vertex color.  The atlas is RGBA8 with
+  white glyphs whose coverage is in alpha.
 
 ### Vulkan worked example
 
-The `examples/basic/main.cpp` demonstrates a full Vulkan integration using the
-VulkEase helper library.  Key excerpts:
+`examples/common/example_app.h` demonstrates a full Vulkan integration using
+the VulkEase helper library.  Key excerpts:
 
-**Buffer upload** -- each frame, read the draw buffer and upload to GPU:
+**Buffer upload** -- after each frame, when it changed:
 
 ```c
-MonstroDrawBuffer* buf = monstro_context_get_draw_buffer(ctx);
-const MonstroVertex* verts; size_t vert_bytes;
-const uint32_t* indices;    uint32_t idx_count;
-monstro_draw_buffer_get_vertex_buffer(buf, &verts, &vert_bytes);
-monstro_draw_buffer_get_index_buffer(buf, &indices, &idx_count);
-/* vkCmdUpdateBuffer or memcpy to mapped memory */
+const MonstroDrawData* data = monstro_end_frame(app.ui);
+if (data->changed)
+    ea_upload_buffers(&app, data);   /* memcpy data->vertices and data->indices to GPU buffers */
 ```
 
 **Scissor** -- set from `clip_rect`:
@@ -303,6 +410,12 @@ VkRect2D scissor = {
     .extent = { (uint32_t)dc->clip_rect[2], (uint32_t)dc->clip_rect[3] }
 };
 vkCmdSetScissor(cmd, 0, 1, &scissor);
+```
+
+**Draw** -- with the command's base vertex:
+
+```c
+vkCmdDrawIndexed(cmd, dc->index_count, 1, dc->index_offset, (int32_t)dc->vertex_offset, 0);
 ```
 
 **Texture resolution** -- map `texture_id` to your `VkImageView` / descriptor
@@ -319,80 +432,125 @@ glDisable(GL_CULL_FACE);
 /* For each draw command: */
 glScissor(clip_x, fb_height - clip_y - clip_h, clip_w, clip_h);
 glBindTexture(GL_TEXTURE_2D, resolve_texture_id(dc->texture_id));
-glDrawElements(GL_TRIANGLES, dc->index_count, GL_UNSIGNED_INT,
-               (void*)(dc->index_offset * sizeof(uint32_t)));
+glDrawElementsBaseVertex(GL_TRIANGLES, dc->index_count, GL_UNSIGNED_INT,
+                         (void*)(dc->index_offset * sizeof(uint32_t)), dc->vertex_offset);
 ```
 
-### User-provided buffers
+### Host buffers
 
-By default Monstro allocates its own vertex and index memory.  If you want to
-write directly into GPU-mapped memory (avoiding a copy), provide your own
-buffers before the frame:
+By default a frame's geometry goes into the canvas's own buffers.  A host can
+have it written straight into its own memory instead -- persistently mapped
+GPU buffers, or arrays its engine takes as is -- and rotate two or three of
+them while the GPU reads an earlier frame.
+
+Where each vertex attribute goes is described once, in the environment's
+vertex layout.  Formats are fixed (position: two floats; texcoord: two floats;
+color: one packed `uint32_t`); only their placement varies.  Each attribute
+names a buffer and its byte offset within that buffer's stride:
 
 ```c
-monstro_draw_buffer_set_vertex_buffer(buf, mapped_verts, max_verts);
-monstro_draw_buffer_set_index_buffer(buf, mapped_indices, max_indices);
+MonstroEnvConfig config = monstro_env_config_default();
+/* Positions in one stream; color then texcoord in a second. */
+config.vertex_layout.buffer_count = 2;
+config.vertex_layout.stride[0] = 8;
+config.vertex_layout.stride[1] = 12;
+config.vertex_layout.position = (MonstroVertexAttribute){ 0, 0 };
+config.vertex_layout.color    = (MonstroVertexAttribute){ 1, 0 };
+config.vertex_layout.texcoord = (MonstroVertexAttribute){ 1, 4 };
+MonstroEnv* env = monstro_init(&config);
 ```
 
-Monstro will write into these buffers during widget calls.  After
-`monstro_end_frame`, the data is ready to draw without an upload step.
-Their capacities are fixed: a frame that needs more stops the program (see
-Errors and Limits).  Passing `NULL` returns to the context's own buffer.
+The default layout is Monstro's own interleaved vertex: one buffer, stride
+`sizeof(MonstroVertex)`, offsets 0, 8 and 16.  `monstro_init` checks the
+layout and stops the program if a buffer index is out of range, an attribute
+does not fit its buffer's stride, two attributes overlap, or a buffer holds no
+attribute.
+
+Each frame, pass the buffers to `monstro_begin_frame_into`:
+
+```c
+MonstroFrameBuffers buffers = {0};
+buffers.vertex_buffers[0] = positions[ring];   /* one pointer per layout buffer */
+buffers.vertex_buffers[1] = attributes[ring];
+buffers.vertex_capacity = max_vertices;        /* in vertices */
+buffers.indices = indices[ring];
+buffers.index_capacity = max_indices;
+monstro_begin_frame_into(ctx, dt, &buffers);
+/* ... */
+const MonstroDrawData* draw = monstro_end_frame(ctx);   /* draw->vertices is NULL; the vertices are in your buffers */
+```
+
+Leave `vertex_buffers[0]` null to keep vertices in the canvas, or `indices`
+null to keep indices there.  The buffers are used for that frame only; Monstro
+keeps no pointer to them afterwards.
+
+Monstro only ever **writes** host buffers, never reads them back, so
+write-combined GPU memory is fine; the content hash is taken from the values
+as they are written.  Their capacity is yours: a frame that needs more stops
+the program naming the host buffer, its capacity and what was needed.  Do not
+copy draw data built into host vertex buffers with `monstro_draw_data_copy`
+(it stops the program); the vertices are already yours.
 
 ---
 
 ## Font System
 
+Fonts belong to the environment.  Each is loaded once, packed into the
+environment's single RGBA8 atlas, and shared by every context.  They live until
+`monstro_shutdown`.
+
 ### Loading TTF fonts
 
 ```c
-MonstroFontManager* fm = monstro_context_get_font_manager(ctx);
-MonstroTextureData atlas = {0};
-
 MonstroFont* font = monstro_font_load_ttf_from_file(
-    fm,
+    env,
+    "body",               /* name, for monstro_font_find */
     "fonts/MyFont.ttf",
-    18.0f,  /* pixel size */
-    32,     /* first codepoint (space) */
-    96,     /* count (ASCII printable range) */
-    &atlas
+    18.0f,                /* pixel size */
+    32,                   /* first codepoint (space) */
+    96                    /* count (ASCII printable range) */
 );
 ```
 
-The `atlas` output contains:
-- `atlas.data` -- pixel data
-- `atlas.width`, `atlas.height` -- dimensions
-- `atlas.data_size` -- byte count
-- `atlas.format` -- `MONSTRO_TEXTURE_FORMAT_R8` (single channel) or
-  `MONSTRO_TEXTURE_FORMAT_RGBA8`
+`monstro_font_load_ttf` takes the font file's bytes instead of a path; Monstro
+reads them only during the call.  Both return `NULL` when the data cannot be
+read as a font.  Running out of atlas space (`atlas_width` x `atlas_height`) or
+font slots (`max_fonts`) stops the program.
 
-Upload this to a GPU texture, then tell Monstro the texture ID:
+The first font loaded becomes the environment's default font, which themes
+without a font of their own use.  `monstro_env_set_default_font` changes it.
 
-```c
-uint64_t tex_id = upload_to_gpu(atlas.data, atlas.width, atlas.height, atlas.format);
-monstro_font_set_atlas_texture(font, tex_id);
-```
-
-Register with the font manager and set as default:
+### The atlas
 
 ```c
-monstro_font_add(fm, font, "default", 18.0f);
-monstro_context_set_default_font(ctx, font);
+MonstroTextureData atlas = monstro_env_get_atlas(env);
+/* atlas.data, atlas.width, atlas.height, atlas.data_size,
+   atlas.format (MONSTRO_TEXTURE_FORMAT_RGBA8), atlas.version */
+uint64_t tex_id = upload_to_gpu(atlas.data, atlas.width, atlas.height);
+monstro_env_set_atlas_texture(env, tex_id);
 ```
+
+Draw commands for text and solid shapes carry this texture ID (0 until you set
+one).  Every font load changes `atlas.version`; upload the pixels again when it
+does.  The atlas also holds a white texel that solid shapes sample, so fills
+and text batch into the same commands.
 
 ### Loading bitmap fonts
 
 ```c
 MonstroFont* bmp_font = monstro_font_load_bitmap_from_file(
-    fm,
+    env,
+    "pixel",
     "fonts/bitmap_8x8.png",
     16,    /* grid columns */
     16,    /* grid rows */
     0,     /* first codepoint */
-    8.0f,  /* font size in pixels */
-    &atlas
+    8.0f   /* font size in pixels */
 );
 ```
+
+The image is copied into the atlas.  `monstro_font_load_bitmap` takes RGBA8
+pixels instead of a path.
 
 ### Multiple fonts
 
@@ -400,13 +558,13 @@ Load additional fonts at different sizes or families.  Use `monstro_font_find`
 to retrieve them later:
 
 ```c
-MonstroFont* large = monstro_font_load_ttf_from_file(fm, "font.ttf", 32.0f, 32, 96, &atlas);
-/* upload atlas, set texture id ... */
-monstro_font_add(fm, large, "default", 32.0f);
+MonstroFont* large = monstro_font_load_ttf_from_file(env, "body", "font.ttf", 32.0f, 32, 96);
 
 /* Later: */
-MonstroFont* f = monstro_font_find(fm, "default", 32.0f);
+MonstroFont* f = monstro_font_find(env, "body", 32.0f);
 ```
+
+A theme picks its font through `MonstroStyle.font`.
 
 ### Text measurement
 
@@ -482,6 +640,8 @@ Notable flags:
 - `MONSTRO_WINDOW_SCROLL_WITH_MOUSE` -- mouse wheel scrolls the window.
 - `MONSTRO_WINDOW_COLLAPSABLE` -- adds a collapse toggle.
 - `MONSTRO_WINDOW_RESIZABLE` -- adds a resize grip.
+- `MONSTRO_WINDOW_CHILD` -- marks a child region, clipped by its parent.
+  `monstro_begin_child` sets it; it is not part of `MONSTRO_WINDOW_DEFAULT`.
 
 ### Conditions
 
@@ -521,57 +681,96 @@ the values involved to `stderr`, then calls `abort()`.  Run under a debugger
 and the stack shows the call that caused it.
 
 ```
-monstro: fatal error at src/fixed.h:97: requirement 'needed <= myCapacity' failed: vertex buffer overflow: capacity 65536, needed 65539 (window 'Status', frame 812); simplify that UI or raise MonstroContextConfig.max_vertices
+monstro: fatal error at src/canvas.cpp:245: requirement 'needed_vertices <= vertex_capacity' failed: vertex buffer overflow: capacity 65536, needed 65539 (window 'Status', frame 812); simplify that UI or raise MonstroEnvConfig.max_vertices
 ```
 
 These checks are always on, in release builds too.  They catch:
 
-- **Calls outside a frame.** Window and widget calls belong between
-  `monstro_begin_frame` and `monstro_end_frame`; so does a null context.
+- **Null handles and arguments.** A null environment, context, canvas, font or
+  theme, and a null label, text or value pointer a function needs, stop the
+  program at the call.  Arguments documented as optional (a tooltip, `p_open`,
+  a format) may be `NULL`.
+- **Calls outside a frame.** Window and widget calls, and drawing on a canvas,
+  belong between `monstro_begin_frame` and `monstro_end_frame`.
+- **Changing the environment during a frame.** It is read-only while any
+  frame is open.
 - **Unbalanced pairs.** Every `begin`/`end` and `push`/`pop` must close:
   windows (and children, popups, menus, combos), IDs, styles, disabled
-  scopes, columns, tables and tab bars are checked at both frame boundaries;
+  scopes, columns, tables and tab bars are checked at the end of the frame;
   layouts, groups and clip rects when their window ends.  Popping an empty
-  stack fails where it happens.
-- **Out-of-range arguments**, such as a table with more than 128 columns or a
-  column set of more than 16.
+  stack fails where it happens, and so does ending a child region with
+  `monstro_end_window` or a window with `monstro_end_child`.
+- **Out-of-range arguments**, such as a table with more than 128 columns, a
+  column set of more than 16, or a vertex layout whose attributes do not fit.
 - **Exhausted capacities.** Monstro never grows its storage to hide a UI that
-  outgrew it; a frame that needs more stops with the numbers, so you can
-  simplify that UI or size the capacity for it deliberately.
+  outgrew it; running out stops with what ran out, its capacity and what was
+  needed, so you can simplify that UI or size the capacity for it
+  deliberately.
+
+Allocation failures are different: `monstro_init`, `monstro_context_create`
+and `monstro_draw_data_copy` return `NULL` when memory runs out, and font
+loading returns `NULL` when the data or file cannot be read as a font.
 
 ### Capacities
 
-The per-frame draw output has capacities set when the context is created:
+Capacities are fixed and explicit.  What the environment holds is set when it
+is created:
+
+```c
+MonstroEnvConfig config = monstro_env_config_default();
+config.max_vertices = 262144;
+config.max_indices = 786432;
+MonstroEnv* env = monstro_init(&config);
+```
+
+| Environment capacity (`MonstroEnvConfig`) | Default |
+| --- | --- |
+| `canvas_count`: canvases lent in turn | 1 |
+| `max_vertices`: vertices per frame in a canvas's own buffer | 65,536 |
+| `max_indices`: indices per frame in a canvas's own buffer | 196,608 |
+| `max_draw_commands`: draw commands per frame | 4,096 |
+| `max_path_points`: points in one canvas path | 1,024 |
+| `atlas_width` x `atlas_height`: the font atlas | 1,024 x 1,024 |
+| `max_fonts` | 16 |
+| `max_themes` (three are built in) | 16 |
+| `max_icons` | 512 |
+
+Host buffers passed to `monstro_begin_frame_into` bring their own capacities.
+
+What a context keeps between frames is set when it is created; the defaults
+suit a cockpit screen or a tool window:
 
 ```c
 MonstroContextConfig config = monstro_context_config_default();
-config.max_vertices = 262144;
-config.max_indices = 786432;
-MonstroContext* ctx = monstro_context_create_ex(&config);
+config.max_windows = 64;
+MonstroContext* ctx = monstro_context_create(env, &config);
 ```
 
-| Capacity | Default | Set by |
-| --- | --- | --- |
-| Vertices per frame | 65,536 | `max_vertices`, or a caller vertex buffer |
-| Indices per frame | 196,608 | `max_indices`, or a caller index buffer |
-| Draw commands per window, and per frame | 4,096 | `max_draw_commands` |
-| Points in one canvas path | 1,024 | `max_path_points` |
+| Context capacity (`MonstroContextConfig`) | Default |
+| --- | --- |
+| `max_windows`: windows, child regions, popups and menus ever begun, the root included | 32 |
+| `max_tree_nodes`: tree nodes and collapsing headers with remembered state | 128 |
+| `max_tab_bars` | 16 |
+| `max_tables` | 8 |
+| `max_popups`: popups open at once | 8 |
 
-The remaining limits are fixed for now:
+A default context holds about 31 KB; a default environment about 7.4 MB
+(a 2.9 MB canvas and a 4 MB atlas).
+
+The remaining limits are nesting depths and per-frame scratch, fixed for now:
 
 | Limit | Value |
 | --- | --- |
-| Windows (created over the context's life) | 64 |
 | Nested IDs (each open window, table, tab bar, tree node and menu bar uses one) | 64 |
 | Style pushes, disabled scopes | 64 each |
-| Layouts and groups per window (the window itself uses two layouts) | 32 each |
-| Clip rects per window (the window uses three) | 32 |
-| Layers and textures per window (each group adds a layer) | 16 each |
-| Open popups | 8 |
-| Remembered tree nodes, tab bars, tables | 256, 32, 32 |
+| Open layouts, across the open windows (each window uses two) | 64 |
+| Open groups | 32 |
+| Nested windows (windows, children, popups open at once) | 32 |
+| Clip rects, across the open windows (each window uses up to three) | 64 |
+| Layers, across the open windows (each window uses one; each group adds one) | 32 |
+| Nested tab bars | 8 |
 | Table columns | 128 |
 | Columns in one set, nested column sets | 16, 8 |
-| Fonts per font manager | 32 |
 | Text typed in one frame (`monstro_add_input_text`) | 255 bytes |
 | Tooltip text | 1,023 bytes |
 
@@ -770,6 +969,9 @@ if (monstro_begin_tab_bar(ctx, "tabs", MONSTRO_TAB_BAR_NONE)) {
 }
 ```
 
+Tab bars nest: a tab's content may hold another tab bar, and once the inner
+bar ends, tab items go to the outer bar again.
+
 ### Trees
 
 ```c
@@ -874,8 +1076,13 @@ if (monstro_begin_popup_modal(ctx, "confirm_dlg", &modal_open, 0)) {
 }
 ```
 
-Modals dim the background and block input to other windows.  Press Escape or
-click the close button (if `p_open` is provided) to dismiss.
+Modals dim everything drawn below them and block input to other windows.
+Press Escape or click the close button (if `p_open` is provided) to dismiss.
+
+`monstro_close_current_popup` closes the popup being built -- the innermost
+popup whose `begin` is open, even when you call it from a child region inside
+it or after a nested popup has ended -- together with any popups opened from
+it.  Calling it outside a popup stops the program.
 
 ---
 
@@ -1051,6 +1258,9 @@ Width or height of `0` means "use the remaining visible content space" on
 that axis.  Negative values reserve space from that remaining region, so
 `-30` means "use all but 30 pixels".
 
+End a child region with `monstro_end_child` and a window with
+`monstro_end_window`; mixing them up stops the program.
+
 ### Window state queries
 
 ```c
@@ -1104,14 +1314,24 @@ monstro_end_disabled(ctx);
 
 ## Styling and Theming
 
-### Built-in themes
+### Themes
+
+A theme is a `MonstroStyle` registered once in the environment.  It is
+immutable from then on, and any number of contexts reference it.
+`monstro_init` registers three built-in themes, `"default"`, `"dark"` and
+`"light"`; a new context uses `"default"`.
 
 ```c
-MonstroStyle* style = monstro_get_style(ctx);
-monstro_style_set_default(style);  /* grey theme */
-monstro_style_set_dark(style);     /* dark theme */
-monstro_style_set_light(style);    /* light theme */
+MonstroTheme* dark = monstro_theme_find(env, "dark");
+monstro_context_set_theme(ctx, dark);        /* between frames */
 ```
+
+Each frame starts from a working copy of the context's theme.  Changes pushed
+during the frame apply to that copy only: never to the theme, and never to
+another context sharing it.
+
+A theme whose `font` is `NULL` (all three built-in themes) uses the
+environment's default font.
 
 ### Style struct hierarchy
 
@@ -1147,19 +1367,13 @@ monstro_button(ctx, "Compact", NULL);
 monstro_pop_style(ctx, 1);  /* count = number of pushes to undo */
 ```
 
-Each widget type has a matching `get`, `set`, and `push` function:
+Each widget type has a matching `get` and `push` function.  The getters
+return the frame's working copy inside a frame and the theme's style between
+frames; both are read-only.
 
 ```c
-/* Get the current live style (read-only) */
 const MonstroStyleButton* cur = monstro_get_button_style(ctx);
 
-/* Set the style permanently (no undo) */
-MonstroStyleButton my_btn = *cur;
-my_btn.rounding = 8.0f;
-my_btn.text_normal = my_color;
-monstro_set_button_style(ctx, &my_btn);
-
-/* Push for temporary override (restore with pop) */
 MonstroStyleText txt = *monstro_get_text_style(ctx);
 txt.alignment = MONSTRO_ALIGN_CENTER;
 monstro_push_text_style(ctx, &txt);
@@ -1179,33 +1393,38 @@ monstro_pop_style(ctx, 3);  /* pops text, then edit, then button */
 
 **Style pushes and pops must be balanced within a frame.**  `monstro_end_frame`
 stops the program if a push is left open, and popping more than was pushed
-stops it at the pop.
+stops it at the pop.  Pushes happen inside a frame.
 
 ### Creating a custom theme
 
+Build a style, then register it:
+
 ```c
-MonstroStyle* s = monstro_get_style(ctx);
-monstro_style_set_dark(s);  /* start from dark base */
+MonstroStyle s;
+monstro_style_set_dark(&s);  /* start from the dark base */
+s.font = monstro_font_find(env, "body", 18.0f);
 
-/* Customize via per-widget set functions */
-MonstroStyleWindow win = *monstro_get_window_style(ctx);
-win.background = monstro_color_rgba(0.12f, 0.12f, 0.15f, 1.0f);
-win.rounding = 6.0f;
-monstro_set_window_style(ctx, &win);
+s.window.background = monstro_color_rgba(0.12f, 0.12f, 0.15f, 1.0f);
+s.window.rounding = 6.0f;
 
-MonstroStyleButton btn = *monstro_get_button_style(ctx);
-btn.rounding = 4.0f;
-btn.normal.type = MONSTRO_STYLE_ITEM_COLOR;
-btn.normal.data.color = monstro_color_rgba(0.2f, 0.4f, 0.8f, 1.0f);
-monstro_set_button_style(ctx, &btn);
+s.button.rounding = 4.0f;
+s.button.normal.type = MONSTRO_STYLE_ITEM_COLOR;
+s.button.normal.data.color = monstro_color_rgba(0.2f, 0.4f, 0.8f, 1.0f);
+
+MonstroTheme* hud = monstro_theme_register(env, "hud", &s);
+monstro_context_set_theme(cockpit_left, hud);
+monstro_context_set_theme(cockpit_right, hud);
 ```
+
+Theme names are unique: registering a name twice stops the program.  To vary
+a theme, register another one.
 
 ### Texture IDs and the renderer mapping
 
 Monstro does not own or manage GPU textures.  A `texture_id` is an opaque
-`uint64_t` that flows through unchanged from style items and font atlases into
-`MonstroDrawCommand::texture_id`.  **Your renderer** is responsible for mapping
-these IDs to real GPU texture handles at draw time.
+`uint64_t` that flows through unchanged from style items, images and icons
+into `MonstroDrawCommand::texture_id`.  **Your renderer** is responsible for
+mapping these IDs to real GPU texture handles at draw time.
 
 **Choosing IDs:** The simplest approach is to cast your GPU texture handle
 directly:
@@ -1223,33 +1442,34 @@ For Vulkan with bindless descriptors, use the descriptor index:
 uint64_t monstro_id = (uint64_t)vk_texture_index;
 ```
 
-**Font atlas example** (from `examples/basic/main.cpp`):
+**The atlas** is the one texture Monstro produces pixels for.  Text and solid
+shapes use it, with the ID you give it (from `examples/common/example_app.h`):
 
 ```c
-app.fontAtlasTextureId = (uint64_t)app.fontAtlasTexture;
-monstro_font_set_atlas_texture(app.font, app.fontAtlasTextureId);
+MonstroTextureData atlas = monstro_env_get_atlas(app->env);
+veCreateTexture2D(app->device, atlas.width, atlas.height, VK_FORMAT_R8G8B8A8_UNORM, usage, "EAAtlas",
+                  &app->atlasTexture);
+monstro_env_set_atlas_texture(app->env, (uint64_t)app->atlasTexture);
+veHostWriteTextureRegion(app->device, app->atlasTexture, atlas.data, atlas.data_size, nullptr);
 ```
 
 **Resolving in the draw loop:**
 
 ```c
-for (uint32_t i = 0; i < cmd_count; i++) {
-    uint64_t tex_id = cmds[i].texture_id;
+for (uint32_t i = 0; i < draw->command_count; i++) {
+    uint64_t tex_id = draw->commands[i].texture_id;
 
-    if (tex_id == font_atlas_id) {
-        bind_texture(font_atlas_gpu_handle);
-    } else if (tex_id != 0) {
-        bind_texture(lookup_user_texture(tex_id));
+    if (tex_id == atlas_id) {
+        bind_texture(atlas_gpu_handle);
     } else {
-        bind_texture(white_pixel_texture);  /* fallback for untextured geometry */
+        bind_texture(lookup_user_texture(tex_id));
     }
     /* ... draw ... */
 }
 ```
 
-**`texture_id == 0`** means untextured geometry (solid-colored shapes).  Your
-renderer should bind a 1x1 white pixel texture so that vertex colors display
-correctly.
+Until you set an atlas ID, text and solid shapes carry `texture_id == 0`;
+whatever you bind for 0 must then be the atlas.
 
 **Registering additional textures** for use with `monstro_image`,
 `monstro_image_button`, sprites, and nine-patches:
@@ -1274,13 +1494,17 @@ resolve that ID back to a GPU handle.
 
 ### Icons
 
-Monstro provides an icon registry that maps user-chosen numeric IDs
-(`MonstroIconId`, a `uint32_t`) to texture sub-regions. Icons can be
-registered from sprite sheet atlases (full color) or icon font glyph ranges
-(monochrome, tinted by text color). For icon fonts, the codepoint *is* the
-icon ID, so you can reference icons directly from the font's documentation.
-Once registered, icons can be embedded inline in any widget label using the
-`{icon:ID}` tag syntax.
+Monstro provides an icon registry in the environment that maps user-chosen
+numeric IDs (`MonstroIconId`, a `uint32_t`) to texture sub-regions, shared by
+every context.  Icons can be registered from sprite sheet atlases (full color)
+or icon font glyph ranges (monochrome, tinted by text color). For icon fonts,
+the codepoint *is* the icon ID, so you can reference icons directly from the
+font's documentation.  Once registered, icons can be embedded inline in any
+widget label using the `{icon:ID}` tag syntax.
+
+The registry is a fixed table of `MonstroEnvConfig.max_icons` slots.
+Registering an ID again replaces it; running out of slots stops the program.
+Register icons between frames.
 
 **Registering a sprite sheet atlas:**
 
@@ -1289,22 +1513,21 @@ Once registered, icons can be embedded inline in any widget label using the
 uint64_t atlas_id = upload_texture("icons.png", &atlas_w, &atlas_h);
 
 /* Register a grid of icons starting at ID 100: 16x16 pixel icons, 8 columns, 4 rows */
-monstro_register_icon_atlas(ctx, 100, atlas_id,
+monstro_register_icon_atlas(env, 100, atlas_id,
                             16, 16,        /* icon size */
                             128, 64,       /* atlas size */
                             8, 4);         /* cols, rows */
 /* Icons are assigned IDs 100..131 */
 ```
 
-Icons are laid out left-to-right, top-to-bottom. The returned ID is the first
-icon; subsequent icons are numbered sequentially.
+Icons are laid out left-to-right, top-to-bottom, numbered from the first ID.
 
 **Registering a single icon with explicit UVs:**
 
 ```c
 MonstroVec2 uv_min = {0.0f, 0.0f};
 MonstroVec2 uv_max = {0.5f, 0.5f};
-monstro_register_icon(ctx, 42, my_texture, uv_min, uv_max);
+monstro_register_icon(env, 42, my_texture, uv_min, uv_max);
 ```
 
 **Registering icon font glyphs (IDs are the codepoints):**
@@ -1312,12 +1535,12 @@ monstro_register_icon(ctx, 42, my_texture, uv_min, uv_max);
 ```c
 /* Register FontAwesome codepoints 0xF000..0xF0FF as monochrome icons.
    Each icon's ID is its codepoint (e.g., 0xF000, 0xF001, ...). */
-monstro_register_icon_font(ctx, fa_font, 0xF000, 256);
+monstro_register_icon_font(env, fa_font, 0xF000, 256);
 ```
 
-Monochrome icons are tinted with the current text color at render time.
-For icon fonts, you can use the codepoint directly in `{icon:ID}` tags,
-making it easy to reference icons from font documentation.
+Icon font glyphs live in the atlas, and monochrome icons are tinted with the
+current text color.  For icon fonts, you can use the codepoint directly in
+`{icon:ID}` tags, making it easy to reference icons from font documentation.
 
 **Using icons in labels:**
 
@@ -1367,7 +1590,7 @@ monstro_icon(ctx, first, 24.0f);  /* draw icon at 24x24 pixels */
 ```c
 uint64_t tex;
 MonstroVec2 uv_min, uv_max;
-if (monstro_get_icon(ctx, first, &tex, &uv_min, &uv_max)) {
+if (monstro_get_icon(env, first, &tex, &uv_min, &uv_max)) {
     /* use tex, uv_min, uv_max with monstro_image or custom drawing */
 }
 ```
@@ -1375,12 +1598,17 @@ if (monstro_get_icon(ctx, first, &tex, &uv_min, &uv_max)) {
 ### Custom drawing
 
 Monstro exposes the full set of canvas drawing primitives through the C API.
-Every function operates on an opaque `MonstroCanvas*` handle, obtained from
-the current window:
+Every function operates on an opaque `MonstroCanvas*` handle: the canvas lent
+to the context for this frame.
 
 ```c
 MonstroCanvas* canvas = monstro_get_window_canvas(ctx);
 ```
+
+What you draw belongs to the current window: it is clipped and stacked with
+that window.  The handle is valid only until `monstro_end_frame`; drawing on a
+canvas that is not lent to a frame stops the program, and so does a null font
+or text.
 
 **Shape primitives:**
 
@@ -1647,10 +1875,12 @@ MonstroSprite btn_normal = { atlas_id, {0.0f, 0.0f}, {0.25f, 0.125f} };
 MonstroSprite btn_hover  = { atlas_id, {0.25f, 0.0f}, {0.5f, 0.125f} };
 ```
 
-**Populate the style:**
+**Populate a style and register it as a theme:**
 
 ```c
-MonstroStyle* s = monstro_get_style(ctx);
+MonstroStyle style;
+monstro_style_set_default(&style);
+MonstroStyle* s = &style;
 
 s->button.normal.type = MONSTRO_STYLE_ITEM_SPRITE;
 s->button.normal.data.sprite = btn_normal;
@@ -1667,6 +1897,8 @@ s->window.fixed_background.data.ninepatch = (MonstroNinePatch){
     .border_top = 24, .border_bottom = 12,
     .texture_width = atlas_w, .texture_height = atlas_h
 };
+
+monstro_context_set_theme(ctx, monstro_theme_register(env, "skin", &style));
 ```
 
 **Multiple atlases.** Different sprites can reference different `texture_id`
@@ -1884,8 +2116,8 @@ the library files directly into your own project and call the same `_init`,
 demo.
 
 All examples share a common application shell (`examples/common/example_app.h`)
-that handles GLFW window creation, Vulkan rendering via VulkEase, Monstro
-context setup, input forwarding, and the main loop.  To create a new example,
+that handles GLFW window creation, Vulkan rendering via VulkEase, the Monstro
+environment and context, input forwarding, and the main loop.  To create a new example,
 define an `ExampleAppDesc` with init/update callbacks and call
 `example_app_run`.
 
@@ -1994,8 +2226,18 @@ example.
 (`monstro_push_id`), disabled scopes (`monstro_begin_disabled`), layouts,
 groups and clip rects must be balanced with their pops/ends within each frame
 (layouts, groups and clip rects within their window).  Monstro checks this at
-window end and at both frame boundaries and stops the program if anything is
+window end and at the end of the frame and stops the program if anything is
 left open; see Errors and Limits.
+
+**One environment, many contexts.** Load fonts and register themes and icons
+once, in one environment, and give each UI (each screen, panel or tool window)
+its own context.  A context costs about 31 KB with the default capacities, so
+contexts are cheap; the canvas and atlas are paid once.
+
+**Render a frame before building the next.** Draw data lives in the canvas
+until the canvas is lent again, which with one canvas is the next
+`monstro_begin_frame` of any context.  Render it, copy it with
+`monstro_draw_data_copy`, or raise `canvas_count`.
 
 **`end` calls go inside the `if` block.** When a `begin_*` function returns
 `false` (window closed, off-screen, etc.), the window was not processed and you
