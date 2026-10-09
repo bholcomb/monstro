@@ -11,10 +11,12 @@ namespace monstro
 
 struct Context;
 
+// A window's state kept between frames. Its per-frame stacks (layouts, groups,
+// clip rects, layers) live in the canvas lent for the frame, above the bases
+// recorded when the window begins.
 struct Window
 {
    Context *ctx = nullptr;
-   Canvas canvas;
 
    char name[256] = {};
    char title[256] = {};
@@ -25,11 +27,15 @@ struct Window
    bool active = false;
    bool skip_items = false;
    uint64_t move_id = 0;
+   uint64_t popup_id = 0;     // the popup this window shows, when it is one
+   bool child_region = false; // begun by monstro_begin_child, so ended by monstro_end_child
 
-   FixedStack<Layout, MONSTRO_MAX_LAYOUT_STACK_DEPTH> layouts{"layout stack"};
-   int layout_depth_at_begin = 0;
-
-   FixedStack<MonstroGroupFlags, MONSTRO_MAX_LAYOUT_STACK_DEPTH> groups{"group stack"};
+   int layout_base = 0;           // layouts below this belong to enclosing windows
+   int layout_depth_at_begin = 0; // the window's own layouts once begin() has set up its content
+   int group_base = 0;
+   int clip_base = 0;
+   int layer_base = 0;
+   int draw_rank = 0; // position in the frame's draw order, set at the end of the frame
 
    MonstroVec2 pos = {0.0f, 0.0f};
    MonstroVec2 size = {0.0f, 0.0f};
@@ -81,7 +87,11 @@ struct Window
    void remove();
    void makeLastSibling();
 
-   void collectDrawCommands(Context *ctx) const;
+   // Numbers this window and those above it in draw order: itself, its children, then later siblings.
+   int rankForDrawing(int rank);
+   int layoutDepth() const;
+   int groupDepth() const;
+   Canvas &canvas() const;
 
    void setPosition(float x, float y, MonstroCondition cond);
    void setSize(float w, float h, MonstroCondition cond);

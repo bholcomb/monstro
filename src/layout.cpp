@@ -156,13 +156,14 @@ MonstroVec2 monstro_get_content_region_avail(MonstroContext *ctx)
 
 void monstro_indent(MonstroContext *ctx, float indent_width)
 {
-   monstro::Layout *layout = ctx ? ctx->getCurrentLayout() : nullptr;
+   monstro::requireWindow(ctx, __func__);
+   monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return;
 
    if (indent_width <= 0.0f)
    {
-      indent_width = ctx->style.tree.indent;
+      indent_width = ctx->style().tree.indent;
    }
 
    layout->myPosX += indent_width;
@@ -172,13 +173,14 @@ void monstro_indent(MonstroContext *ctx, float indent_width)
 
 void monstro_unindent(MonstroContext *ctx, float indent_width)
 {
-   monstro::Layout *layout = ctx ? ctx->getCurrentLayout() : nullptr;
+   monstro::requireWindow(ctx, __func__);
+   monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return;
 
    if (indent_width <= 0.0f)
    {
-      indent_width = ctx->style.tree.indent;
+      indent_width = ctx->style().tree.indent;
    }
 
    layout->myPosX -= indent_width;
@@ -188,7 +190,8 @@ void monstro_unindent(MonstroContext *ctx, float indent_width)
 
 void monstro_spacer(MonstroContext *ctx, float size)
 {
-   monstro::Layout *layout = ctx ? ctx->getCurrentLayout() : nullptr;
+   monstro::requireWindow(ctx, __func__);
+   monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return;
 
@@ -210,7 +213,8 @@ void monstro_dummy(MonstroContext *ctx, float width, float height)
 
 float monstro_percent(MonstroContext *ctx, float percent, MonstroLayoutDirection direction)
 {
-   monstro::Layout *layout = ctx ? ctx->getCurrentLayout() : nullptr;
+   monstro::requireWindow(ctx, __func__);
+   monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return 0.0f;
 
@@ -230,7 +234,7 @@ float monstro_percent(MonstroContext *ctx, float percent, MonstroLayoutDirection
 
 void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count, const float *widths)
 {
-   monstro::requireWindow(ctx, __func__);
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
    MONSTRO_REQUIRE(count >= 1 && count <= MONSTRO_MAX_COLUMNS, "monstro_begin_columns: count %d is outside 1..%d",
                    count, MONSTRO_MAX_COLUMNS);
 
@@ -241,9 +245,9 @@ void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    float avail_w = layout->myAvailableWidth;
    if (avail_w <= 0.0f)
-      avail_w = ctx->current_window->size.x - ctx->style.window.padding[0] * 2.0f;
+      avail_w = ctx->current_window->size.x - ctx->style().window.padding[0] * 2.0f;
 
-   MonstroColumnsState *cs = &ctx->columns_stack.push({});
+   MonstroColumnsState *cs = &ctx->canvas->columns.push({});
    cs->id = ctx->current_window->getChildId(str_id);
    cs->column_count = count;
    cs->current_column = 0;
@@ -298,10 +302,9 @@ void monstro_begin_columns(MonstroContext *ctx, const char *str_id, int count)
 
 void monstro_next_column(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
-   MonstroColumnsState *cs = &ctx->columns_stack.top();
+   MonstroColumnsState *cs = &ctx->canvas->columns.top();
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return;
@@ -327,10 +330,9 @@ void monstro_next_column(MonstroContext *ctx)
 
 void monstro_end_columns(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
-   MonstroColumnsState cs_copy = ctx->columns_stack.pop();
+   MonstroColumnsState cs_copy = ctx->canvas->columns.pop();
    MonstroColumnsState *cs = &cs_copy;
    monstro::Layout *layout = ctx->getCurrentLayout();
 
@@ -353,9 +355,9 @@ void monstro_end_columns(MonstroContext *ctx)
 
 void monstro_draw_disabled_overlay(MonstroContext *ctx, MonstroRect rect)
 {
-   if (!ctx || !ctx->disabled || !ctx->current_window)
+   if (!ctx->disabled)
       return;
-   MonstroColor bg = ctx->style.window.background;
+   MonstroColor bg = ctx->style().window.background;
    bg.a = 0.5f;
-   ctx->current_window->canvas.addRectFilled(rect, monstro_color_to_u32(bg), 0.0f, MONSTRO_CORNER_NONE);
+   ctx->canvas->addRectFilled(rect, monstro_color_to_u32(bg), 0.0f, MONSTRO_CORNER_NONE);
 }

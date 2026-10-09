@@ -12,46 +12,31 @@ static MonstroTabBarState *find_or_create_tab_bar(MonstroContext *ctx, uint64_t 
       }
    }
 
-   MonstroTabBarState *state = &ctx->tab_bars.allocate();
-
+   MonstroTabBarState *state = &ctx->tab_bars.add();
    state->id = bar_id;
-   state->selected_tab = 0;
-   state->last_frame_active = 0;
-   state->header_start_x = 0.0f;
-   state->header_start_y = 0.0f;
-   state->header_height = 0.0f;
-   state->flags = MONSTRO_TAB_BAR_NONE;
-   state->first_tab = 0;
-   state->selected_tab_present = false;
-   state->content_active = false;
    return state;
 }
 
 bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBarFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!str_id)
-      return false;
-
-   monstro::Window *win = ctx->current_window;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
 
    uint64_t bar_id = win->getChildId(str_id);
    MonstroTabBarState *state = find_or_create_tab_bar(ctx, bar_id);
-   if (!state)
-      return false;
 
    state->last_frame_active = ctx->frame;
    state->flags = flags;
    state->first_tab = 0;
    state->selected_tab_present = false;
    state->content_active = false;
-   ctx->current_tab_bar = state;
+   // Tab bars nest: a tab's content may hold another tab bar.
+   ctx->canvas->tab_bars.push(state);
 
-   ctx->id_stack.push(str_id);
+   ctx->ids().push(str_id);
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    float bar_height = style->font ? monstro_font_get_line_height(style->font) : 16.0f;
@@ -62,7 +47,7 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
    state->header_height = bar_height;
 
    MonstroRect bar_rect = {pos.x, pos.y, win->size.x - (pos.x - win->pos.x), bar_height};
-   win->canvas.addRectFilled(bar_rect, monstro_color_to_u32(style->tab.background.data.color), 0, MONSTRO_CORNER_NONE);
+   ctx->canvas->addRectFilled(bar_rect, monstro_color_to_u32(style->tab.background.data.color), 0, MONSTRO_CORNER_NONE);
 
    monstro_add_item(ctx, 0.0f, bar_height);
 
@@ -71,43 +56,34 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
 
 void monstro_end_tab_bar(MonstroContext *ctx)
 {
-   monstro::requireWindow(ctx, __func__);
-
-   monstro::Window *win = ctx->current_window;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__);
    if (win->skip_items)
       return;
 
-   MonstroTabBarState *bar = ctx->current_tab_bar;
-   if (bar && bar->content_active)
-   {
-      bar->content_active = false;
-   }
-   if (bar && (bar->flags & MONSTRO_TAB_BAR_AUTO_SELECT) && !bar->selected_tab_present && bar->first_tab != 0)
+   MONSTRO_REQUIRE(!ctx->canvas->tab_bars.empty(), "monstro_end_tab_bar without monstro_begin_tab_bar (window '%s')",
+                   win->name);
+   MonstroTabBarState *bar = ctx->canvas->tab_bars.pop();
+   bar->content_active = false;
+   if ((bar->flags & MONSTRO_TAB_BAR_AUTO_SELECT) && !bar->selected_tab_present && bar->first_tab != 0)
    {
       bar->selected_tab = bar->first_tab;
    }
 
-   ctx->id_stack.pop();
-   ctx->current_tab_bar = nullptr;
+   ctx->ids().pop();
 }
 
 bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
-
-   monstro::Window *win = ctx->current_window;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    if (win->skip_items)
       return false;
 
-   MonstroTabBarState *bar = ctx->current_tab_bar;
-   if (!bar)
-      return false;
+   MONSTRO_REQUIRE(!ctx->canvas->tab_bars.empty(), "monstro_begin_tab_item outside a tab bar (window '%s')", win->name);
+   MonstroTabBarState *bar = ctx->canvas->tab_bars.top();
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroFont *font = style->font;
-   monstro::Canvas *canvas = &win->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
 
    uint64_t tab_id = win->getChildId(label);
    const char *display = monstro_display_text(label);
@@ -188,7 +164,7 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
    {
       MonstroVec2 p1 = {tab_rect.x, tab_rect.y + tab_rect.h};
       MonstroVec2 p2 = {tab_rect.x + tab_rect.w, tab_rect.y + tab_rect.h};
-      uint32_t accent = monstro_color_to_u32(ctx->style.tab.border_color);
+      uint32_t accent = monstro_color_to_u32(ctx->style().tab.border_color);
       if ((accent & 0xFF000000) == 0)
       {
          accent = monstro_color_to_u32(tab_btn->active.data.color);
@@ -241,11 +217,9 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
 
 void monstro_end_tab_item(MonstroContext *ctx)
 {
-   monstro::requireWindow(ctx, __func__);
-
-   MonstroTabBarState *bar = ctx->current_tab_bar;
-   if (bar && bar->content_active)
-   {
-      bar->content_active = false;
-   }
+   monstro::Window *win = monstro::requireWindow(ctx, __func__);
+   if (win->skip_items)
+      return;
+   MONSTRO_REQUIRE(!ctx->canvas->tab_bars.empty(), "monstro_end_tab_item outside a tab bar (window '%s')", win->name);
+   ctx->canvas->tab_bars.top()->content_active = false;
 }

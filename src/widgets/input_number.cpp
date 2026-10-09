@@ -122,8 +122,8 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleProperty *ps = &style->property;
    MonstroStyleEdit *es = &ps->edit;
@@ -411,9 +411,7 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
 bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, float step, float step_fast,
                          const char *format, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
    double v = *value;
    bool changed = number_impl(ctx, label, NUMBER_FLOAT, &v, step, step_fast, format ? format : "%.3f", tooltip);
@@ -423,9 +421,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
 bool monstro_input_int(MonstroContext *ctx, const char *label, int *value, int step, int step_fast, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
    double v = *value;
    bool changed = number_impl(ctx, label, NUMBER_INT, &v, step, step_fast, "%d", tooltip);
@@ -436,9 +432,7 @@ bool monstro_input_int(MonstroContext *ctx, const char *label, int *value, int s
 bool monstro_input_double(MonstroContext *ctx, const char *label, double *value, double step, double step_fast,
                           const char *format, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
    return number_impl(ctx, label, NUMBER_DOUBLE, value, step, step_fast, format ? format : "%.6f", tooltip);
 }

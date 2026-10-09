@@ -1,10 +1,11 @@
 #ifndef MONSTRO_INTERNAL_CONTEXT_H
 #define MONSTRO_INTERNAL_CONTEXT_H
 
+#include "canvas.h"
 #include "constants.h"
-#include "drawbuffer.h"
 #include "editstate.h"
 #include "fatal.h"
+#include "fixed.h"
 #include "font.h"
 #include "helpers.h"
 #include "idStack.h"
@@ -12,148 +13,51 @@
 #include "monstro.h"
 #include "popup.h"
 #include "tooltip.h"
+#include "uistate.h"
 #include "window.h"
-#include <unordered_map>
-
-enum MonstroStylePushedType
-{
-   MONSTRO_PUSHED_TEXT,
-   MONSTRO_PUSHED_BUTTON,
-   MONSTRO_PUSHED_CONTEXTUAL_BUTTON,
-   MONSTRO_PUSHED_MENU_BUTTON,
-   MONSTRO_PUSHED_OPTION,
-   MONSTRO_PUSHED_CHECKBOX,
-   MONSTRO_PUSHED_SELECTABLE,
-   MONSTRO_PUSHED_SLIDER,
-   MONSTRO_PUSHED_KNOB,
-   MONSTRO_PUSHED_PROGRESS,
-   MONSTRO_PUSHED_PROPERTY,
-   MONSTRO_PUSHED_EDIT,
-   MONSTRO_PUSHED_TREE,
-   MONSTRO_PUSHED_TAB,
-   MONSTRO_PUSHED_TABLE,
-   MONSTRO_PUSHED_COMBO,
-   MONSTRO_PUSHED_MENU,
-   MONSTRO_PUSHED_SEPARATOR,
-   MONSTRO_PUSHED_TOOLTIP,
-   MONSTRO_PUSHED_CHART,
-   MONSTRO_PUSHED_SCROLLH,
-   MONSTRO_PUSHED_SCROLLV,
-   MONSTRO_PUSHED_WINDOW
-};
-
-struct MonstroStyleBackup
-{
-   MonstroStylePushedType type;
-   union
-   {
-      MonstroStyleText text;
-      MonstroStyleButton button;
-      MonstroStyleToggle toggle;
-      MonstroStyleSelectable selectable;
-      MonstroStyleSlider slider;
-      MonstroStyleKnob knob;
-      MonstroStyleProgress progress;
-      MonstroStyleProperty property;
-      MonstroStyleEdit edit;
-      MonstroStyleTree tree;
-      MonstroStyleTab tab;
-      MonstroStyleTable table;
-      MonstroStyleCombo combo;
-      MonstroStyleMenu menu;
-      MonstroStyleSeparator separator;
-      MonstroStyleTooltip tooltip;
-      MonstroStyleChart chart;
-      MonstroStyleScrollbar scrollbar;
-      MonstroStyleWindow window;
-   } data;
-};
-
-struct MonstroTreeNodeState
-{
-   uint64_t id = 0;
-   bool open = false;
-   int last_frame_active = 0;
-};
-
-struct MonstroTableColumn
-{
-   char label[128] = {};
-   MonstroTableColumnFlags flags = MONSTRO_TABLE_COLUMN_NONE;
-   float width = 0.0f;
-   float init_width = 0.0f;
-};
-
-struct MonstroTableState
-{
-   uint64_t id = 0;
-   MonstroTableFlags flags = MONSTRO_TABLE_NONE;
-   int column_count = 0;
-   int setup_column_count = 0;
-   int current_column = -1;
-   int current_row = -1;
-   MonstroTableColumn columns[MONSTRO_MAX_TABLE_COLUMNS] = {};
-
-   float table_x = 0.0f, table_y = 0.0f;
-   float table_w = 0.0f;
-   float row_y = 0.0f;
-   int last_frame_active = 0;
-};
-
-struct MonstroColumnsState
-{
-   uint64_t id = 0;
-   int column_count = 0;
-   int current_column = 0;
-   float columns_x = 0.0f;
-   float start_y = 0.0f;
-   float row_y = 0.0f;
-   float columns_w = 0.0f;
-   float row_max_h = 0.0f;
-   float prev_visible_max_screen_x = 0.0f;
-   float widths[MONSTRO_MAX_COLUMNS] = {};
-   float offsets[MONSTRO_MAX_COLUMNS] = {};
-};
-
-struct MonstroTabBarState
-{
-   uint64_t id;
-   uint64_t selected_tab;
-   int last_frame_active;
-   float header_start_x;
-   float header_start_y;
-   float header_height;
-   MonstroTabBarFlags flags;
-   uint64_t first_tab;
-   bool selected_tab_present;
-   bool content_active;
-};
-
-struct MonstroIconEntry
-{
-   uint64_t texture_id = 0;
-   MonstroVec2 uv_min = {0.0f, 0.0f};
-   MonstroVec2 uv_max = {1.0f, 1.0f};
-   bool is_monochrome = false;
-};
+#include <initializer_list>
 
 namespace monstro
 {
 
+struct Env;
+struct Theme;
+
+// A pointer argument an API function cannot work without; see requireWindow.
+struct RequiredArg
+{
+   const char *name;
+   const void *value;
+};
+
+#define MONSTRO_ARG(x)                                                                                                 \
+   monstro::RequiredArg { #x, (const void *)(x) }
+
+/*
+ * One UI: its input, display size and the interaction state it keeps between
+ * frames (windows, popups, tree, tab bar and table state, hot and active IDs,
+ * text editing). Everything per-frame lives in the canvas it borrows from its
+ * environment between begin_frame and end_frame.
+ */
 struct Context
 {
-
-   explicit Context(const MonstroContextConfig &context_config);
+   Context(Env *environment, const MonstroContextConfig &context_config);
    ~Context();
 
    Context(const Context &) = delete;
    Context &operator=(const Context &) = delete;
 
-   void beginFrame(float deltaTime);
-   void endFrame();
+   bool init();
+   size_t residentBytes() const;
 
-   void setDefaultFont(MonstroFont *font);
-   MonstroFont *getDefaultFont() const { return style.font; }
+   void beginFrame(float deltaTime, const MonstroFrameBuffers *buffers);
+   const MonstroDrawData *endFrame();
+
+   // The frame's working style and ID stack, in the borrowed canvas: only inside a frame.
+   MonstroStyle &style() const;
+   IdStack &ids() const;
+   // The theme's style between frames, the working copy inside one.
+   const MonstroStyle &currentStyle() const;
 
    void setActiveId(uint64_t id);
    void keepAliveId(uint64_t id);
@@ -167,46 +71,29 @@ struct Context
 
    Layout *getCurrentLayout();
 
-   // Every begin/end and push/pop pair is closed; checked at both frame boundaries.
+   // Every begin/end and push/pop pair is closed; checked at the end of the frame.
    void requireBalanced(const char *where) const;
 
+   MonstroTreeNodeState *findOrCreateTreeState(uint64_t id, bool default_open);
+
+   Env *env = nullptr;
    MonstroContextConfig config = {};
+   Theme *theme = nullptr;
+
+   Canvas *canvas = nullptr; // lent for the current frame, null between frames
    bool in_frame = false;
+   uint64_t last_content_hash = 0;
 
-   DrawBuffer draw_buffer;
-
-   MonstroDrawCommand *final_commands = nullptr;
-   uint32_t final_command_count = 0;
-
-   MonstroFontManager *font_manager = nullptr;
-
-   std::unordered_map<uint32_t, MonstroIconEntry> icon_map;
-
-   IdStack id_stack;
-
-   MonstroStyle style = {};
-   FixedStack<MonstroStyleBackup, MONSTRO_MAX_STYLE_VAR_STACK> style_stack{"style stack"};
-
-   SlotTable<Window, MONSTRO_MAX_WINDOWS> windows{"window table"};
+   ConfiguredArray<Window> windows{"window table", "raise MonstroContextConfig.max_windows"};
    Window *root_window = nullptr;
    Window *current_window = nullptr;
    Window *hovered_window = nullptr;
    Window *focused_window = nullptr;
 
-   FixedStack<Window *, MONSTRO_MAX_WINDOWS> window_stack{"window stack"};
-
-   FixedStack<MonstroPopupInternal, MONSTRO_MAX_POPUP_STACK> popup_stack{"popup stack"};
-
-   SlotTable<MonstroTabBarState, MONSTRO_MAX_TAB_BARS> tab_bars{"tab bar table"};
-   MonstroTabBarState *current_tab_bar = nullptr;
-
-   SlotTable<MonstroTreeNodeState, MONSTRO_MAX_TREE_STATES> tree_states{"tree node table"};
-   MonstroTreeNodeState *findOrCreateTreeState(uint64_t id, bool default_open);
-
-   SlotTable<MonstroTableState, MONSTRO_MAX_TABLES> tables{"table state table"};
-   MonstroTableState *current_table = nullptr;
-
-   FixedStack<MonstroColumnsState, MONSTRO_MAX_COLUMN_STACK> columns_stack{"columns stack"};
+   ConfiguredArray<MonstroPopupInternal> popup_stack{"popup stack", "raise MonstroContextConfig.max_popups"};
+   ConfiguredArray<MonstroTabBarState> tab_bars{"tab bar table", "raise MonstroContextConfig.max_tab_bars"};
+   ConfiguredArray<MonstroTreeNodeState> tree_states{"tree node table", "raise MonstroContextConfig.max_tree_nodes"};
+   ConfiguredArray<MonstroTableState> tables{"table state table", "raise MonstroContextConfig.max_tables"};
 
    uint64_t hovered_id = 0;
    uint64_t hovered_id_prev_frame = 0;
@@ -223,7 +110,6 @@ struct Context
    bool last_item_deactivated_after_edit = false;
 
    bool disabled = false;
-   FixedStack<bool, MONSTRO_MAX_DISABLED_STACK> disabled_stack{"disabled stack"};
 
    MouseState mouse;
    KeyboardState keyboard;
@@ -244,16 +130,15 @@ struct Context
    bool next_window_focus = false;
    MonstroCondition next_window_pos_cond = MONSTRO_COND_NONE;
    MonstroCondition next_window_size_cond = MONSTRO_COND_NONE;
-   MonstroCondition next_window_focus_cond = MONSTRO_COND_NONE;
-
-   MonstroFont *default_font = nullptr;
 
    TooltipState tooltip;
    EditState edit_state;
 };
 
-// The window an API function draws into: the context must be valid and inside a frame.
-Window *requireWindow(Context *ctx, const char *function);
+// The context an API function works on: it must not be null, nor any of args.
+Context *requireContext(Context *ctx, const char *function, std::initializer_list<RequiredArg> args = {});
+// The window an API function draws into: the context must be valid and inside a frame, and args not null.
+Window *requireWindow(Context *ctx, const char *function, std::initializer_list<RequiredArg> args = {});
 
 } // namespace monstro
 

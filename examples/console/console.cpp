@@ -180,7 +180,7 @@ void console_draw(Console *con, MonstroContext *ctx, float dt)
       monstro_input_text(ctx, "Filter##con_filter", con->filter, sizeof(con->filter), MONSTRO_INPUT_TEXT_NONE, nullptr);
       monstro_separator(ctx);
 
-      MonstroStyle *style = monstro_get_style(ctx);
+      const MonstroStyle *style = monstro_get_style(ctx);
       MonstroFont *font = style->font;
       float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
       float command_row_h = text_h + style->edit.padding[1] * 3.0f;

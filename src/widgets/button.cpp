@@ -150,16 +150,14 @@ static void maybe_close_button_popup(MonstroContext *ctx, MonstroButtonFlags fla
 bool monstro_button_ex(MonstroContext *ctx, const char *label, float width, float height, MonstroButtonFlags flags,
                        const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
@@ -206,16 +204,14 @@ bool monstro_button_sized(MonstroContext *ctx, const char *label, float width, f
 bool monstro_image_button_ex(MonstroContext *ctx, const char *str_id, uint64_t texture_id, float width, float height,
                              MonstroButtonFlags flags, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!str_id)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
 
    // Add spacing before button (like C#: win.addItem(style.button.padding))
    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
@@ -262,9 +258,7 @@ bool monstro_image_button(MonstroContext *ctx, const char *str_id, uint64_t text
 bool monstro_invisible_button_ex(MonstroContext *ctx, const char *str_id, float width, float height,
                                  MonstroButtonFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!str_id)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)

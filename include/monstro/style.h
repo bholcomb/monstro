@@ -439,20 +439,34 @@ typedef struct MonstroStyle {
 } MonstroStyle;
 
 /* ------------------------------------------------------------------------- */
-/* Whole-style access (themes, serialization)                                */
+/* Themes                                                                    */
 /* ------------------------------------------------------------------------- */
 
-MonstroStyle* monstro_get_style(MonstroContext* ctx);
-void monstro_set_style(MonstroContext* ctx, const MonstroStyle* style);
+/*
+ * A theme is a style registered once in the environment and immutable from
+ * then on; any number of contexts reference it. Each frame starts from a
+ * working copy of the context's theme, and push/pop changes apply to that copy
+ * only. A theme whose font is NULL uses the environment's default font.
+ * monstro_init registers three themes: "default", "dark" and "light"; a new
+ * context uses "default".
+ */
+MonstroTheme* monstro_theme_register(MonstroEnv* env, const char* name, const MonstroStyle* style);
+MonstroTheme* monstro_theme_find(MonstroEnv* env, const char* name);
+const MonstroStyle* monstro_theme_get_style(MonstroTheme* theme);
+const char* monstro_theme_get_name(MonstroTheme* theme);
+
+void monstro_context_set_theme(MonstroContext* ctx, MonstroTheme* theme);
+MonstroTheme* monstro_context_get_theme(MonstroContext* ctx);
 
 void monstro_style_set_default(MonstroStyle* style);
 void monstro_style_set_dark(MonstroStyle* style);
 void monstro_style_set_light(MonstroStyle* style);
 
 /* ------------------------------------------------------------------------- */
-/* Per-widget style get/set                                                  */
+/* Current style: the frame's working copy, or the theme between frames      */
 /* ------------------------------------------------------------------------- */
 
+const MonstroStyle*           monstro_get_style(MonstroContext* ctx);
 const MonstroStyleText*       monstro_get_text_style(MonstroContext* ctx);
 const MonstroStyleButton*     monstro_get_button_style(MonstroContext* ctx);
 const MonstroStyleButton*     monstro_get_contextual_button_style(MonstroContext* ctx);
@@ -477,32 +491,8 @@ const MonstroStyleScrollbar*  monstro_get_scrollh_style(MonstroContext* ctx);
 const MonstroStyleScrollbar*  monstro_get_scrollv_style(MonstroContext* ctx);
 const MonstroStyleWindow*     monstro_get_window_style(MonstroContext* ctx);
 
-void monstro_set_text_style(MonstroContext* ctx, const MonstroStyleText* style);
-void monstro_set_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
-void monstro_set_contextual_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
-void monstro_set_menu_button_style(MonstroContext* ctx, const MonstroStyleButton* style);
-void monstro_set_option_style(MonstroContext* ctx, const MonstroStyleToggle* style);
-void monstro_set_checkbox_style(MonstroContext* ctx, const MonstroStyleToggle* style);
-void monstro_set_selectable_style(MonstroContext* ctx, const MonstroStyleSelectable* style);
-void monstro_set_slider_style(MonstroContext* ctx, const MonstroStyleSlider* style);
-void monstro_set_knob_style(MonstroContext* ctx, const MonstroStyleKnob* style);
-void monstro_set_progress_style(MonstroContext* ctx, const MonstroStyleProgress* style);
-void monstro_set_property_style(MonstroContext* ctx, const MonstroStyleProperty* style);
-void monstro_set_edit_style(MonstroContext* ctx, const MonstroStyleEdit* style);
-void monstro_set_tree_style(MonstroContext* ctx, const MonstroStyleTree* style);
-void monstro_set_tab_style(MonstroContext* ctx, const MonstroStyleTab* style);
-void monstro_set_table_style(MonstroContext* ctx, const MonstroStyleTable* style);
-void monstro_set_combo_style(MonstroContext* ctx, const MonstroStyleCombo* style);
-void monstro_set_menu_style(MonstroContext* ctx, const MonstroStyleMenu* style);
-void monstro_set_separator_style(MonstroContext* ctx, const MonstroStyleSeparator* style);
-void monstro_set_tooltip_style(MonstroContext* ctx, const MonstroStyleTooltip* style);
-void monstro_set_chart_style(MonstroContext* ctx, const MonstroStyleChart* style);
-void monstro_set_scrollh_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
-void monstro_set_scrollv_style(MonstroContext* ctx, const MonstroStyleScrollbar* style);
-void monstro_set_window_style(MonstroContext* ctx, const MonstroStyleWindow* style);
-
 /* ------------------------------------------------------------------------- */
-/* Per-widget style push/pop                                                 */
+/* Per-widget style push/pop (inside a frame, on the working copy)           */
 /* ------------------------------------------------------------------------- */
 
 void monstro_push_text_style(MonstroContext* ctx, const MonstroStyleText* style);

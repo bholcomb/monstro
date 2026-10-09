@@ -1,5 +1,6 @@
 #include "canvas.h"
-#include "drawbuffer.h"
+#include "context.h"
+#include "env.h"
 #include "helpers.h"
 #include <algorithm>
 #include <math.h>
@@ -19,73 +20,272 @@ static const MonstroVec2 CIRCLE_VERTICES[12] = {
     {-1.0f, 0.0f}, {-0.8660254f, -0.5f}, {-0.5f, -0.8660254f}, {0.0f, -1.0f}, {0.5f, -0.8660254f}, {0.8660254f, -0.5f},
 };
 
+static const MonstroRect FULLSCREEN_CLIP = {0, 0, 100000, 100000};
+
+/* ------------------------------------------------------------------------- */
+/* Content hash                                                              */
+/* ------------------------------------------------------------------------- */
+
+static constexpr uint64_t HASH_SEED = 14695981039346656037ULL;
+static constexpr uint64_t HASH_PRIME = 1099511628211ULL;
+
+static inline void hash_word(uint64_t *hash, uint32_t word) { *hash = (*hash ^ word) * HASH_PRIME; }
+
+static inline void hash_float(uint64_t *hash, float value)
+{
+   uint32_t word;
+   memcpy(&word, &value, sizeof(word));
+   hash_word(hash, word);
+}
+
+static inline void hash_u64(uint64_t *hash, uint64_t value)
+{
+   hash_word(hash, (uint32_t)value);
+   hash_word(hash, (uint32_t)(value >> 32));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Reservation                                                               */
+/* ------------------------------------------------------------------------- */
+
+void Reservation::vertex(uint32_t i, float x, float y, float u, float v, uint32_t rgba)
+{
+   size_t n = first_vertex + i;
+   float xy[2] = {x, y};
+   float uv[2] = {u, v};
+   memcpy(position.base + n * position.stride, xy, sizeof(xy));
+   memcpy(texcoord.base + n * texcoord.stride, uv, sizeof(uv));
+   memcpy(color.base + n * color.stride, &rgba, sizeof(rgba));
+   hash_float(hash, x);
+   hash_float(hash, y);
+   hash_float(hash, u);
+   hash_float(hash, v);
+   hash_word(hash, rgba);
+}
+
+void Reservation::index(uint32_t i, uint32_t vertex)
+{
+   uint32_t value = base_index + vertex;
+   indices[i] = value;
+   hash_word(hash, value);
+}
+
 /* ------------------------------------------------------------------------- */
 /* Lifecycle                                                                 */
 /* ------------------------------------------------------------------------- */
 
 Canvas::~Canvas()
 {
-   free(commands.myData);
-   free(path.myData);
+   free(own_vertices);
+   free(own_indices);
+   free(recorded);
+   free(sorted);
+   free(path);
 }
 
-void Canvas::allocate(const char *owner, uint32_t max_draw_commands, uint32_t max_path_points)
+bool Canvas::init(Env *environment, int canvas_index, const MonstroEnvConfig &config)
 {
-   owner_name = owner;
-   commands.myData = (MonstroDrawCommand *)malloc(sizeof(MonstroDrawCommand) * max_draw_commands);
-   path.myData = (MonstroVec2 *)malloc(sizeof(MonstroVec2) * max_path_points);
-   MONSTRO_REQUIRE(commands.myData && path.myData,
-                   "out of memory allocating window '%s' (%u draw commands, %u path points)", owner, max_draw_commands,
-                   max_path_points);
-   commands.myCapacity = max_draw_commands;
-   path.myCapacity = max_path_points;
+   env = environment;
+   index = canvas_index;
+   own_vertices = (MonstroVertex *)malloc(sizeof(MonstroVertex) * config.max_vertices);
+   own_indices = (uint32_t *)malloc(sizeof(uint32_t) * config.max_indices);
+   recorded = (RecordedCommand *)malloc(sizeof(RecordedCommand) * config.max_draw_commands);
+   sorted = (MonstroDrawCommand *)malloc(sizeof(MonstroDrawCommand) * config.max_draw_commands);
+   path = (MonstroVec2 *)malloc(sizeof(MonstroVec2) * config.max_path_points);
+   own_vertex_capacity = config.max_vertices;
+   own_index_capacity = config.max_indices;
+   command_capacity = config.max_draw_commands;
+   path_capacity = config.max_path_points;
+   return own_vertices && own_indices && recorded && sorted && path;
 }
 
-void Canvas::init(DrawBuffer *draw_buffer)
+size_t Canvas::residentBytes() const
 {
-   buffer = draw_buffer;
-   clear();
+   return sizeof(Canvas) + sizeof(MonstroVertex) * own_vertex_capacity + sizeof(uint32_t) * own_index_capacity +
+          (sizeof(RecordedCommand) + sizeof(MonstroDrawCommand)) * command_capacity +
+          sizeof(MonstroVec2) * path_capacity;
 }
 
-void Canvas::clear()
+static AttributeWriter attribute_writer(void *const *buffers, const MonstroVertexLayout &layout,
+                                        MonstroVertexAttribute attribute)
 {
-   commands.myCount = 0;
-   path.myCount = 0;
-   myLastIndexCount = 0;
+   AttributeWriter writer;
+   writer.base = (uint8_t *)buffers[attribute.buffer] + attribute.offset;
+   writer.stride = layout.stride[attribute.buffer];
+   return writer;
+}
+
+void Canvas::lend(Context *ctx, int frame_number, const MonstroFrameBuffers *buffers)
+{
+   borrower = ctx;
+   frame = frame_number;
+   owner = nullptr;
+   owner_name = nullptr;
+
+   host_vertices = buffers && buffers->vertex_buffers[0];
+   if (host_vertices)
+   {
+      const MonstroVertexLayout &layout = env->config.vertex_layout;
+      for (uint32_t b = 0; b < layout.buffer_count; b++)
+         MONSTRO_REQUIRE(buffers->vertex_buffers[b],
+                         "monstro_begin_frame_into: vertex_buffers[%u] is null but the environment's vertex layout "
+                         "has %u buffers",
+                         b, layout.buffer_count);
+      MONSTRO_REQUIRE(buffers->vertex_capacity > 0, "monstro_begin_frame_into: vertex_capacity is 0");
+      position_writer = attribute_writer(buffers->vertex_buffers, layout, layout.position);
+      texcoord_writer = attribute_writer(buffers->vertex_buffers, layout, layout.texcoord);
+      color_writer = attribute_writer(buffers->vertex_buffers, layout, layout.color);
+      vertex_capacity = buffers->vertex_capacity;
+   }
+   else
+   {
+      uint8_t *base = (uint8_t *)own_vertices;
+      position_writer = {base + offsetof(MonstroVertex, position), (uint32_t)sizeof(MonstroVertex)};
+      texcoord_writer = {base + offsetof(MonstroVertex, texcoord), (uint32_t)sizeof(MonstroVertex)};
+      color_writer = {base + offsetof(MonstroVertex, color), (uint32_t)sizeof(MonstroVertex)};
+      vertex_capacity = own_vertex_capacity;
+   }
+
+   host_indices = buffers && buffers->indices;
+   if (host_indices)
+      MONSTRO_REQUIRE(buffers->index_capacity > 0, "monstro_begin_frame_into: index_capacity is 0");
+   indices = host_indices ? buffers->indices : own_indices;
+   index_capacity = host_indices ? buffers->index_capacity : own_index_capacity;
+
+   vertex_count = 0;
+   index_count = 0;
+   command_count = 0;
+   path_count = 0;
+   geometry_hash = HASH_SEED;
+   draw_data = {};
 
    clip_rects.clear();
-   clip_rects.push({0, 0, 100000, 100000});
-   textures.clear();
-   textures.push(default_texture_id);
    layers.clear();
-   layers.push(0);
+   style_stack.clear();
+   ids.clear();
+   disabled_stack.clear();
+   columns.clear();
+   windows.clear();
+   layouts.clear();
+   groups.clear();
+   tab_bars.clear();
+   table.state = nullptr;
+   has_tooltip = false;
+}
+
+const MonstroDrawData *Canvas::finish(uint64_t previous_hash)
+{
+   // Window order first, then layer within a window, then the order things were drawn in.
+   std::sort(recorded, recorded + command_count,
+             [](const RecordedCommand &a, const RecordedCommand &b)
+             {
+                if (a.owner->draw_rank != b.owner->draw_rank)
+                   return a.owner->draw_rank < b.owner->draw_rank;
+                if (a.command.layer != b.command.layer)
+                   return a.command.layer < b.command.layer;
+                return a.sequence < b.sequence;
+             });
+
+   uint64_t hash = geometry_hash;
+   for (uint32_t i = 0; i < command_count; i++)
+   {
+      const MonstroDrawCommand &cmd = recorded[i].command;
+      sorted[i] = cmd;
+      for (float f : cmd.clip_rect)
+         hash_float(&hash, f);
+      hash_u64(&hash, cmd.texture_id);
+      hash_word(&hash, cmd.vertex_offset);
+      hash_word(&hash, cmd.vertex_count);
+      hash_word(&hash, cmd.index_offset);
+      hash_word(&hash, cmd.index_count);
+      hash_word(&hash, (uint32_t)cmd.layer);
+      static_assert(sizeof(cmd.custom_draw) <= sizeof(uint64_t), "a callback pointer fits the hash word");
+      uint64_t callback = 0;
+      memcpy(&callback, &cmd.custom_draw, sizeof(cmd.custom_draw));
+      hash_u64(&hash, callback);
+      hash_u64(&hash, (uint64_t)(uintptr_t)cmd.user_data);
+   }
+
+   draw_data.vertices = host_vertices ? nullptr : own_vertices;
+   draw_data.vertex_count = vertex_count;
+   draw_data.indices = indices;
+   draw_data.index_count = index_count;
+   draw_data.commands = sorted;
+   draw_data.command_count = command_count;
+   draw_data.content_hash = hash;
+   draw_data.changed = hash != previous_hash;
+   draw_data.atlas_version = env->atlas.version;
+   return &draw_data;
+}
+
+void Canvas::release()
+{
+   borrower = nullptr;
+   owner = nullptr;
+   owner_name = nullptr;
+}
+
+void Canvas::setOwner(const Window *window, const char *name)
+{
+   owner = window;
+   owner_name = name;
 }
 
 /* ------------------------------------------------------------------------- */
 /* Private Helpers                                                           */
 /* ------------------------------------------------------------------------- */
 
-Reservation Canvas::reserveGeometry(uint32_t vert_count, uint32_t idx_count)
+Reservation Canvas::reserve(uint64_t texture_id, uint32_t vert_count, uint32_t idx_count)
 {
-   Reservation r = buffer->reserve(vert_count, idx_count, owner_name);
-   myLastIndexCount = buffer->myIndices.myCount;
+   MonstroDrawCommand *cmd = getOrCreateDrawCommand(texture_id);
+
+   uint32_t needed_vertices = vertex_count + vert_count;
+   uint32_t needed_indices = index_count + idx_count;
+   MONSTRO_REQUIRE(needed_vertices <= vertex_capacity,
+                   "%s overflow: capacity %u, needed %u (window '%s', frame %d); simplify that UI or %s",
+                   host_vertices ? "host vertex buffer" : "vertex buffer", vertex_capacity, needed_vertices,
+                   owner_name ? owner_name : "?", frame,
+                   host_vertices ? "pass larger buffers in MonstroFrameBuffers.vertex_capacity"
+                                 : "raise MonstroEnvConfig.max_vertices");
+   MONSTRO_REQUIRE(needed_indices <= index_capacity,
+                   "%s overflow: capacity %u, needed %u (window '%s', frame %d); simplify that UI or %s",
+                   host_indices ? "host index buffer" : "index buffer", index_capacity, needed_indices,
+                   owner_name ? owner_name : "?", frame,
+                   host_indices ? "pass a larger MonstroFrameBuffers.index_capacity"
+                                : "raise MonstroEnvConfig.max_indices");
+
+   Reservation r;
+   r.position = position_writer;
+   r.texcoord = texcoord_writer;
+   r.color = color_writer;
+   r.first_vertex = vertex_count;
+   r.base_index = vertex_count - cmd->vertex_offset;
+   r.indices = indices + index_count;
+   r.hash = &geometry_hash;
+
+   vertex_count = needed_vertices;
+   index_count = needed_indices;
+   cmd->vertex_count += vert_count;
+   cmd->index_count += idx_count;
    return r;
+}
+
+Reservation Canvas::reserveSolid(uint32_t vert_count, uint32_t idx_count)
+{
+   return reserve(env->atlas.texture_id, vert_count, idx_count);
 }
 
 MonstroDrawCommand *Canvas::getOrCreateDrawCommand(uint64_t texture_id)
 {
-   bool buffer_gap = (buffer->myIndices.myCount != myLastIndexCount);
-
-   if (commands.myCount > 0 && !buffer_gap)
+   // Geometry joins the last command when it continues it: same window, texture, clip and layer.
+   if (command_count > 0)
    {
-      MonstroDrawCommand *prev = &commands.myData[commands.myCount - 1];
-
+      RecordedCommand &last = recorded[command_count - 1];
+      MonstroDrawCommand *prev = &last.command;
       MonstroRect clip = clip_rects.top();
-      int layer = layers.top();
-
-      if (prev->texture_id == texture_id && prev->layer == layer && prev->clip_rect[0] == clip.x &&
-          prev->clip_rect[1] == clip.y && prev->clip_rect[2] == clip.w && prev->clip_rect[3] == clip.h &&
-          prev->custom_draw == nullptr)
+      if (last.owner == owner && prev->custom_draw == nullptr && prev->texture_id == texture_id &&
+          prev->layer == layers.top() && prev->clip_rect[0] == clip.x && prev->clip_rect[1] == clip.y &&
+          prev->clip_rect[2] == clip.w && prev->clip_rect[3] == clip.h)
       {
          return prev;
       }
@@ -93,31 +293,40 @@ MonstroDrawCommand *Canvas::getOrCreateDrawCommand(uint64_t texture_id)
 
    MonstroDrawCommand *cmd = newDrawCommand();
    cmd->texture_id = texture_id;
-   cmd->index_offset = buffer->myIndices.myCount;
    return cmd;
 }
 
 MonstroDrawCommand *Canvas::newDrawCommand()
 {
-   uint32_t order = commands.myCount;
-   MonstroDrawCommand *cmd =
-       commands.reserve(1, owner_name, buffer->myFrame, "raise MonstroContextConfig.max_draw_commands");
-   memset(cmd, 0, sizeof(MonstroDrawCommand));
+   MONSTRO_REQUIRE(owner, "drawing outside a window (frame %d)", frame);
+   MONSTRO_REQUIRE(command_count < command_capacity,
+                   "draw command list overflow: capacity %u, needed %u (window '%s', frame %d); simplify that UI or "
+                   "raise MonstroEnvConfig.max_draw_commands",
+                   command_capacity, command_count + 1, owner_name ? owner_name : "?", frame);
+   RecordedCommand *rec = &recorded[command_count];
+   memset(rec, 0, sizeof(*rec));
+   rec->owner = owner;
+   rec->sequence = command_count++;
 
+   MonstroDrawCommand *cmd = &rec->command;
    MonstroRect clip = clip_rects.top();
    cmd->clip_rect[0] = clip.x;
    cmd->clip_rect[1] = clip.y;
    cmd->clip_rect[2] = clip.w;
    cmd->clip_rect[3] = clip.h;
    cmd->layer = layers.top();
-   cmd->order = order;
+   cmd->vertex_offset = vertex_count;
+   cmd->index_offset = index_count;
    return cmd;
 }
 
 void Canvas::pathPush(MonstroVec2 point)
 {
-   *path.reserve(1, owner_name, buffer ? buffer->myFrame : 0,
-                 "draw the path in pieces or raise MonstroContextConfig.max_path_points") = point;
+   MONSTRO_REQUIRE(path_count < path_capacity,
+                   "path overflow: capacity %u, needed %u (window '%s', frame %d); draw the path in pieces or raise "
+                   "MonstroEnvConfig.max_path_points",
+                   path_capacity, path_count + 1, owner_name ? owner_name : "?", frame);
+   path[path_count++] = point;
 }
 
 void Canvas::pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12)
@@ -174,6 +383,17 @@ void Canvas::pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCorne
    }
 }
 
+// The two triangles of quad 0-1-2-3, from index i.
+static void quad_indices(Reservation &r, uint32_t i, uint32_t v0, uint32_t v1, uint32_t v2, uint32_t v3)
+{
+   r.index(i + 0, v0);
+   r.index(i + 1, v1);
+   r.index(i + 2, v2);
+   r.index(i + 3, v0);
+   r.index(i + 4, v2);
+   r.index(i + 5, v3);
+}
+
 /* ------------------------------------------------------------------------- */
 /* Clip Rect Stack                                                           */
 /* ------------------------------------------------------------------------- */
@@ -199,15 +419,13 @@ void Canvas::pushClipRect(MonstroRect rect)
    clip_rects.push(clipped);
 }
 
-void Canvas::pushClipRectFullscreen()
-{
-   MonstroRect rect = {0, 0, 100000, 100000};
-   pushClipRect(rect);
-}
+void Canvas::pushBaseClipRect(MonstroRect rect) { clip_rects.push(rect); }
+
+void Canvas::pushClipRectFullscreen() { pushClipRect(FULLSCREEN_CLIP); }
 
 void Canvas::popClipRect() { clip_rects.pop(); }
 
-MonstroRect Canvas::getClipRect() const { return clip_rects.top(); }
+MonstroRect Canvas::getClipRect() const { return clip_rects.empty() ? FULLSCREEN_CLIP : clip_rects.top(); }
 
 /* ------------------------------------------------------------------------- */
 /* Layer Stack                                                               */
@@ -216,14 +434,6 @@ MonstroRect Canvas::getClipRect() const { return clip_rects.top(); }
 void Canvas::pushLayer(int layer) { layers.push(layer); }
 
 void Canvas::popLayer() { layers.pop(); }
-
-/* ------------------------------------------------------------------------- */
-/* Texture Stack                                                             */
-/* ------------------------------------------------------------------------- */
-
-void Canvas::pushTexture(uint64_t texture_id) { textures.push(texture_id); }
-
-void Canvas::popTexture() { textures.pop(); }
 
 /* ------------------------------------------------------------------------- */
 /* Primitive Drawing                                                         */
@@ -243,25 +453,13 @@ void Canvas::addLine(MonstroVec2 p1, MonstroVec2 p2, uint32_t color, float thick
    float nx = -dy * thickness * 0.5f;
    float ny = dx * thickness * 0.5f;
 
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(4, 6);
-
-   r.vertices[0] = {{p1.x + nx, p1.y + ny}, {0.0f, 0.0f}, color};
-   r.vertices[1] = {{p1.x - nx, p1.y - ny}, {0.0f, 0.0f}, color};
-   r.vertices[2] = {{p2.x - nx, p2.y - ny}, {0.0f, 0.0f}, color};
-   r.vertices[3] = {{p2.x + nx, p2.y + ny}, {0.0f, 0.0f}, color};
-
-   r.indices[0] = r.baseVertex;
-   r.indices[1] = r.baseVertex + 1;
-   r.indices[2] = r.baseVertex + 2;
-   r.indices[3] = r.baseVertex;
-   r.indices[4] = r.baseVertex + 2;
-   r.indices[5] = r.baseVertex + 3;
-   cmd->index_count += 6;
+   MonstroVec2 w = env->atlas.white_uv;
+   Reservation r = reserveSolid(4, 6);
+   r.vertex(0, p1.x + nx, p1.y + ny, w.x, w.y, color);
+   r.vertex(1, p1.x - nx, p1.y - ny, w.x, w.y, color);
+   r.vertex(2, p2.x - nx, p2.y - ny, w.x, w.y, color);
+   r.vertex(3, p2.x + nx, p2.y + ny, w.x, w.y, color);
+   quad_indices(r, 0, 0, 1, 2, 3);
 }
 
 void Canvas::addRect(MonstroRect rect, uint32_t color, float rounding, MonstroCornerFlags corners, float thickness)
@@ -269,87 +467,47 @@ void Canvas::addRect(MonstroRect rect, uint32_t color, float rounding, MonstroCo
    MonstroVec2 a = {rect.x + 0.5f, rect.y + 0.5f};
    MonstroVec2 b = {rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f};
 
-   path.myCount = 0;
+   path_count = 0;
    pathRect(a, b, rounding, corners);
    pathStroke(color, true, thickness);
 }
 
 void Canvas::addRectFilled(MonstroRect rect, uint32_t color, float rounding, MonstroCornerFlags corners)
 {
-   MonstroVec2 a = {rect.x, rect.y};
-   MonstroVec2 b = {rect.x + rect.w, rect.y + rect.h};
-
    if (rounding > 0.0f && corners != MONSTRO_CORNER_NONE)
    {
-      path.myCount = 0;
+      MonstroVec2 a = {rect.x, rect.y};
+      MonstroVec2 b = {rect.x + rect.w, rect.y + rect.h};
+      path_count = 0;
       pathRect(a, b, rounding, corners);
       pathFill(color);
+      return;
    }
-   else
-   {
-      uint64_t tex = textures.top();
-      MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-      if (!cmd)
-         return;
-
-      Reservation r = reserveGeometry(4, 6);
-
-      r.vertices[0] = {{rect.x, rect.y}, {0.0f, 0.0f}, color};
-      r.vertices[1] = {{rect.x + rect.w, rect.y}, {1.0f, 0.0f}, color};
-      r.vertices[2] = {{rect.x + rect.w, rect.y + rect.h}, {1.0f, 1.0f}, color};
-      r.vertices[3] = {{rect.x, rect.y + rect.h}, {0.0f, 1.0f}, color};
-
-      r.indices[0] = r.baseVertex;
-      r.indices[1] = r.baseVertex + 1;
-      r.indices[2] = r.baseVertex + 2;
-      r.indices[3] = r.baseVertex;
-      r.indices[4] = r.baseVertex + 2;
-      r.indices[5] = r.baseVertex + 3;
-      cmd->index_count += 6;
-   }
+   addRectFilledMultiColor(rect, color, color, color, color);
 }
 
 void Canvas::addRectFilledMultiColor(MonstroRect rect, uint32_t col_ul, uint32_t col_ur, uint32_t col_lr,
                                      uint32_t col_ll)
 {
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(4, 6);
-
-   r.vertices[0] = {{rect.x, rect.y}, {0.0f, 0.0f}, col_ul};
-   r.vertices[1] = {{rect.x + rect.w, rect.y}, {1.0f, 0.0f}, col_ur};
-   r.vertices[2] = {{rect.x + rect.w, rect.y + rect.h}, {1.0f, 1.0f}, col_lr};
-   r.vertices[3] = {{rect.x, rect.y + rect.h}, {0.0f, 1.0f}, col_ll};
-
-   r.indices[0] = r.baseVertex;
-   r.indices[1] = r.baseVertex + 1;
-   r.indices[2] = r.baseVertex + 2;
-   r.indices[3] = r.baseVertex;
-   r.indices[4] = r.baseVertex + 2;
-   r.indices[5] = r.baseVertex + 3;
-   cmd->index_count += 6;
+   MonstroVec2 w = env->atlas.white_uv;
+   Reservation r = reserveSolid(4, 6);
+   r.vertex(0, rect.x, rect.y, w.x, w.y, col_ul);
+   r.vertex(1, rect.x + rect.w, rect.y, w.x, w.y, col_ur);
+   r.vertex(2, rect.x + rect.w, rect.y + rect.h, w.x, w.y, col_lr);
+   r.vertex(3, rect.x, rect.y + rect.h, w.x, w.y, col_ll);
+   quad_indices(r, 0, 0, 1, 2, 3);
 }
 
 void Canvas::addTriangleFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint32_t color)
 {
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(3, 3);
-
-   r.vertices[0] = {{p1.x, p1.y}, {0.0f, 0.0f}, color};
-   r.vertices[1] = {{p2.x, p2.y}, {0.0f, 0.0f}, color};
-   r.vertices[2] = {{p3.x, p3.y}, {0.0f, 0.0f}, color};
-
-   r.indices[0] = r.baseVertex;
-   r.indices[1] = r.baseVertex + 1;
-   r.indices[2] = r.baseVertex + 2;
-   cmd->index_count += 3;
+   MonstroVec2 w = env->atlas.white_uv;
+   Reservation r = reserveSolid(3, 3);
+   r.vertex(0, p1.x, p1.y, w.x, w.y, color);
+   r.vertex(1, p2.x, p2.y, w.x, w.y, color);
+   r.vertex(2, p3.x, p3.y, w.x, w.y, color);
+   r.index(0, 0);
+   r.index(1, 1);
+   r.index(2, 2);
 }
 
 void Canvas::addTriangle(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint32_t color, float thickness)
@@ -364,28 +522,20 @@ void Canvas::addCircleFilled(MonstroVec2 center, float radius, uint32_t color, i
    if (num_segments < 3)
       return;
 
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry((uint32_t)(num_segments + 1), (uint32_t)(num_segments * 3));
-
-   r.vertices[0] = {{center.x, center.y}, {0.0f, 0.0f}, color};
-
+   MonstroVec2 w = env->atlas.white_uv;
+   Reservation r = reserveSolid((uint32_t)(num_segments + 1), (uint32_t)(num_segments * 3));
+   r.vertex(0, center.x, center.y, w.x, w.y, color);
    for (int i = 0; i < num_segments; i++)
    {
       float angle = (float)i / (float)num_segments * 6.2831853f;
-      r.vertices[i + 1] = {{center.x + cosf(angle) * radius, center.y + sinf(angle) * radius}, {0.0f, 0.0f}, color};
+      r.vertex(i + 1, center.x + cosf(angle) * radius, center.y + sinf(angle) * radius, w.x, w.y, color);
    }
-
    for (int i = 0; i < num_segments; i++)
    {
-      r.indices[i * 3] = r.baseVertex;
-      r.indices[i * 3 + 1] = r.baseVertex + 1 + i;
-      r.indices[i * 3 + 2] = r.baseVertex + 1 + (i + 1) % num_segments;
+      r.index(i * 3, 0);
+      r.index(i * 3 + 1, 1 + i);
+      r.index(i * 3 + 2, 1 + (i + 1) % num_segments);
    }
-   cmd->index_count += num_segments * 3;
 }
 
 void Canvas::addCircle(MonstroVec2 center, float radius, uint32_t color, int num_segments, float thickness)
@@ -413,25 +563,13 @@ void Canvas::addQuad(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2
 
 void Canvas::addQuadFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color)
 {
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(4, 6);
-
-   r.vertices[0] = {{p1.x, p1.y}, {0.0f, 0.0f}, color};
-   r.vertices[1] = {{p2.x, p2.y}, {1.0f, 0.0f}, color};
-   r.vertices[2] = {{p3.x, p3.y}, {1.0f, 1.0f}, color};
-   r.vertices[3] = {{p4.x, p4.y}, {0.0f, 1.0f}, color};
-
-   r.indices[0] = r.baseVertex;
-   r.indices[1] = r.baseVertex + 1;
-   r.indices[2] = r.baseVertex + 2;
-   r.indices[3] = r.baseVertex;
-   r.indices[4] = r.baseVertex + 2;
-   r.indices[5] = r.baseVertex + 3;
-   cmd->index_count += 6;
+   MonstroVec2 w = env->atlas.white_uv;
+   Reservation r = reserveSolid(4, 6);
+   r.vertex(0, p1.x, p1.y, w.x, w.y, color);
+   r.vertex(1, p2.x, p2.y, w.x, w.y, color);
+   r.vertex(2, p3.x, p3.y, w.x, w.y, color);
+   r.vertex(3, p4.x, p4.y, w.x, w.y, color);
+   quad_indices(r, 0, 0, 1, 2, 3);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -456,27 +594,19 @@ void Canvas::addConvexPolyFilled(const MonstroVec2 *points, int num_points, uint
    if (num_points < 3)
       return;
 
-   uint64_t tex = textures.top();
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
-   if (!cmd)
-      return;
-
+   MonstroVec2 w = env->atlas.white_uv;
    uint32_t idx_count = (uint32_t)((num_points - 2) * 3);
-   Reservation r = reserveGeometry((uint32_t)num_points, idx_count);
-
+   Reservation r = reserveSolid((uint32_t)num_points, idx_count);
    for (int i = 0; i < num_points; i++)
-   {
-      r.vertices[i] = {{points[i].x, points[i].y}, {0.0f, 0.0f}, color};
-   }
+      r.vertex(i, points[i].x, points[i].y, w.x, w.y, color);
 
    uint32_t ii = 0;
    for (int i = 1; i < num_points - 1; i++)
    {
-      r.indices[ii++] = r.baseVertex;
-      r.indices[ii++] = r.baseVertex + i;
-      r.indices[ii++] = r.baseVertex + i + 1;
+      r.index(ii++, 0);
+      r.index(ii++, i);
+      r.index(ii++, i + 1);
    }
-   cmd->index_count += idx_count;
 }
 
 void Canvas::addBezierCubic(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color,
@@ -529,43 +659,39 @@ void Canvas::addBezierQuadratic(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, 
 /* Text Drawing                                                              */
 /* ------------------------------------------------------------------------- */
 
-void Canvas::addText(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text)
+// Text with embedded {icon:ID} tags; it wraps at wrap_width when that is positive.
+void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width)
 {
-   if (!font || !text)
-      return;
-
-   uint64_t texture_id = monstro_font_get_atlas_texture(font);
-   if (texture_id == 0)
-      return;
-
+   uint64_t atlas_texture = env->atlas.texture_id;
    float pen_x = pos.x;
-   float pen_y = pos.y;
    float line_y = 0;
    float line_height = monstro_font_get_line_height(font);
+   float ascent = monstro_font_get_ascent(font);
+   bool wrap = wrap_width > 0.0f;
 
    const char *s = text;
    while (*s)
    {
       uint32_t icon_id;
-      if (icon_lookup && parse_icon_tag(&s, &icon_id))
+      if (parse_icon_tag(&s, &icon_id))
       {
-         uint64_t icon_tex;
-         MonstroVec2 icon_uv_min, icon_uv_max;
-         bool mono = false;
-         if (icon_lookup(icon_lookup_user_data, icon_id, &icon_tex, &icon_uv_min, &icon_uv_max, &mono))
+         const IconEntry *icon = icon_id ? env->icons.find(icon_id) : nullptr;
+         if (!icon)
+            continue;
+         float icon_sz = line_height;
+         if (wrap && pen_x - pos.x + icon_sz > wrap_width && pen_x > pos.x)
          {
-            float icon_sz = line_height;
-            float iy = pen_y + line_y;
-            MonstroRect icon_rect = {pen_x, iy, icon_sz, icon_sz};
-            uint32_t tint = mono ? color : 0xFFFFFFFF;
-            addImage(icon_tex, icon_rect, icon_uv_min, icon_uv_max, tint);
-            pen_x += icon_sz;
+            pen_x = pos.x;
+            line_y += line_height;
          }
+         MonstroRect icon_rect = {pen_x, pos.y + line_y, icon_sz, icon_sz};
+         addImage(icon->in_atlas ? atlas_texture : icon->texture_id, icon_rect, icon->uv_min, icon->uv_max,
+                  icon->is_monochrome ? color : 0xFFFFFFFF);
+         pen_x += icon_sz;
          continue;
       }
 
       uint32_t codepoint = decode_utf8(&s);
-
       if (codepoint == '\n')
       {
          pen_x = pos.x;
@@ -579,97 +705,35 @@ void Canvas::addText(MonstroFont *font, MonstroVec2 pos, uint32_t color, const c
       if (!monstro_font_get_glyph(font, codepoint, &glyph))
          continue;
 
-      float x = pen_x + glyph.offset[0];
-      float y = pen_y + line_y + glyph.offset[1] + monstro_font_get_ascent(font);
+      if (wrap && pen_x - pos.x + glyph.advance[0] > wrap_width && pen_x > pos.x)
+      {
+         pen_x = pos.x;
+         line_y += line_height;
+      }
 
       if (glyph.size[0] > 0 && glyph.size[1] > 0)
       {
-         MonstroRect rect = {x, y, glyph.size[0], glyph.size[1]};
-         MonstroVec2 uv_min = {glyph.min_tex_coord[0], glyph.min_tex_coord[1]};
-         MonstroVec2 uv_max = {glyph.max_tex_coord[0], glyph.max_tex_coord[1]};
-         addImage(texture_id, rect, uv_min, uv_max, color);
+         MonstroRect rect = {pen_x + glyph.offset[0], pos.y + line_y + glyph.offset[1] + ascent, glyph.size[0],
+                             glyph.size[1]};
+         addImage(atlas_texture, rect, {glyph.min_tex_coord[0], glyph.min_tex_coord[1]},
+                  {glyph.max_tex_coord[0], glyph.max_tex_coord[1]}, color);
       }
-
       pen_x += glyph.advance[0];
    }
+}
+
+void Canvas::addText(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text)
+{
+   if (!font || !text)
+      return;
+   addTextRun(font, pos, color, text, 0.0f);
 }
 
 void Canvas::addTextWrapped(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width)
 {
    if (!font || !text || wrap_width <= 0.0f)
       return;
-
-   uint64_t texture_id = monstro_font_get_atlas_texture(font);
-   if (texture_id == 0)
-      return;
-
-   float pen_x = pos.x;
-   float pen_y = pos.y;
-   float line_y = 0;
-   float line_height = monstro_font_get_line_height(font);
-   float start_x = pos.x;
-
-   const char *s = text;
-
-   while (*s)
-   {
-      uint32_t icon_id;
-      if (icon_lookup && parse_icon_tag(&s, &icon_id))
-      {
-         float icon_sz = line_height;
-         if (pen_x - start_x + icon_sz > wrap_width && pen_x > start_x)
-         {
-            pen_x = start_x;
-            line_y += line_height;
-         }
-         uint64_t icon_tex;
-         MonstroVec2 icon_uv_min, icon_uv_max;
-         bool mono = false;
-         if (icon_lookup(icon_lookup_user_data, icon_id, &icon_tex, &icon_uv_min, &icon_uv_max, &mono))
-         {
-            float iy = pen_y + line_y;
-            MonstroRect icon_rect = {pen_x, iy, icon_sz, icon_sz};
-            uint32_t tint = mono ? color : 0xFFFFFFFF;
-            addImage(icon_tex, icon_rect, icon_uv_min, icon_uv_max, tint);
-            pen_x += icon_sz;
-         }
-         continue;
-      }
-
-      uint32_t codepoint = decode_utf8(&s);
-
-      if (codepoint == '\n')
-      {
-         pen_x = start_x;
-         line_y += line_height;
-         continue;
-      }
-      if (codepoint == '\r')
-         continue;
-
-      MonstroGlyph glyph;
-      if (!monstro_font_get_glyph(font, codepoint, &glyph))
-         continue;
-
-      if (pen_x - start_x + glyph.advance[0] > wrap_width && pen_x > start_x)
-      {
-         pen_x = start_x;
-         line_y += line_height;
-      }
-
-      float x = pen_x + glyph.offset[0];
-      float y = pen_y + line_y + glyph.offset[1] + monstro_font_get_ascent(font);
-
-      if (glyph.size[0] > 0 && glyph.size[1] > 0)
-      {
-         MonstroRect rect = {x, y, glyph.size[0], glyph.size[1]};
-         MonstroVec2 uv_min = {glyph.min_tex_coord[0], glyph.min_tex_coord[1]};
-         MonstroVec2 uv_max = {glyph.max_tex_coord[0], glyph.max_tex_coord[1]};
-         addImage(texture_id, rect, uv_min, uv_max, color);
-      }
-
-      pen_x += glyph.advance[0];
-   }
+   addTextRun(font, pos, color, text, wrap_width);
 }
 
 void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, const char *text, MonstroAlign align)
@@ -683,25 +747,16 @@ void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, cons
    float y = rect.y;
 
    if (align & MONSTRO_ALIGN_HCENTER)
-   {
       x = rect.x + (rect.w - text_size.x) * 0.5f;
-   }
    else if (align & MONSTRO_ALIGN_RIGHT)
-   {
       x = rect.x + rect.w - text_size.x;
-   }
 
    if (align & MONSTRO_ALIGN_VCENTER)
-   {
       y = rect.y + (rect.h - text_size.y) * 0.5f;
-   }
    else if (align & MONSTRO_ALIGN_BOTTOM)
-   {
       y = rect.y + rect.h - text_size.y;
-   }
 
-   MonstroVec2 pos = {x, y};
-   addText(font, pos, color, text);
+   addText(font, {x, y}, color, text);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -711,24 +766,12 @@ void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, cons
 void Canvas::addImage(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max,
                       uint32_t tint_color)
 {
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(texture_id);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(4, 6);
-
-   r.vertices[0] = {{rect.x, rect.y}, {uv_min.x, uv_min.y}, tint_color};
-   r.vertices[1] = {{rect.x + rect.w, rect.y}, {uv_max.x, uv_min.y}, tint_color};
-   r.vertices[2] = {{rect.x + rect.w, rect.y + rect.h}, {uv_max.x, uv_max.y}, tint_color};
-   r.vertices[3] = {{rect.x, rect.y + rect.h}, {uv_min.x, uv_max.y}, tint_color};
-
-   r.indices[0] = r.baseVertex;
-   r.indices[1] = r.baseVertex + 1;
-   r.indices[2] = r.baseVertex + 2;
-   r.indices[3] = r.baseVertex;
-   r.indices[4] = r.baseVertex + 2;
-   r.indices[5] = r.baseVertex + 3;
-   cmd->index_count += 6;
+   Reservation r = reserve(texture_id, 4, 6);
+   r.vertex(0, rect.x, rect.y, uv_min.x, uv_min.y, tint_color);
+   r.vertex(1, rect.x + rect.w, rect.y, uv_max.x, uv_min.y, tint_color);
+   r.vertex(2, rect.x + rect.w, rect.y + rect.h, uv_max.x, uv_max.y, tint_color);
+   r.vertex(3, rect.x, rect.y + rect.h, uv_min.x, uv_max.y, tint_color);
+   quad_indices(r, 0, 0, 1, 2, 3);
 }
 
 void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max,
@@ -743,43 +786,34 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
    MonstroVec2 a = {rect.x, rect.y};
    MonstroVec2 b = {rect.x + rect.w, rect.y + rect.h};
 
-   path.myCount = 0;
+   path_count = 0;
    pathRect(a, b, rounding, corners);
-
-   if (path.myCount < 3)
+   if (path_count < 3)
       return;
 
-   int num_points = path.myCount;
-
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(texture_id);
-   if (!cmd)
-      return;
-
+   int num_points = (int)path_count;
    uint32_t idx_count = (uint32_t)((num_points - 2) * 3);
-   Reservation r = reserveGeometry((uint32_t)num_points, idx_count);
+   Reservation r = reserve(texture_id, (uint32_t)num_points, idx_count);
 
    float inv_w = (rect.w > 0.0f) ? 1.0f / rect.w : 0.0f;
    float inv_h = (rect.h > 0.0f) ? 1.0f / rect.h : 0.0f;
-
    for (int i = 0; i < num_points; i++)
    {
-      float t_x = (path.myData[i].x - rect.x) * inv_w;
-      float t_y = (path.myData[i].y - rect.y) * inv_h;
+      float t_x = (path[i].x - rect.x) * inv_w;
+      float t_y = (path[i].y - rect.y) * inv_h;
       float u = uv_min.x + (uv_max.x - uv_min.x) * t_x;
-      float uv = uv_min.y + (uv_max.y - uv_min.y) * t_y;
-      r.vertices[i] = {{path.myData[i].x, path.myData[i].y}, {u, uv}, tint_color};
+      float v = uv_min.y + (uv_max.y - uv_min.y) * t_y;
+      r.vertex(i, path[i].x, path[i].y, u, v, tint_color);
    }
 
    uint32_t ii = 0;
    for (int i = 1; i < num_points - 1; i++)
    {
-      r.indices[ii++] = r.baseVertex;
-      r.indices[ii++] = r.baseVertex + i;
-      r.indices[ii++] = r.baseVertex + i + 1;
+      r.index(ii++, 0);
+      r.index(ii++, i);
+      r.index(ii++, i + 1);
    }
-   cmd->index_count += idx_count;
-
-   path.myCount = 0;
+   path_count = 0;
 }
 
 void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint32_t tint_color)
@@ -787,11 +821,7 @@ void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint3
    if (!patch)
       return;
 
-   MonstroDrawCommand *cmd = getOrCreateDrawCommand(patch->texture_id);
-   if (!cmd)
-      return;
-
-   Reservation r = reserveGeometry(16, 54);
+   Reservation r = reserve(patch->texture_id, 16, 54);
 
    float rp_x = rect.x;
    float rp_y = rect.y;
@@ -813,38 +843,20 @@ void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint3
 
    uint32_t vi = 0;
    for (int i = 0; i < 4; i++)
-   {
       for (int j = 0; j < 4; j++)
+         r.vertex(vi++, xp[j], yp[i], uv_xp[j], uv_yp[i], tint_color);
+
+   // Nine quads over the 4 x 4 grid of vertices, row by row.
+   uint32_t ii = 0;
+   for (uint32_t row = 0; row < 3; row++)
+   {
+      for (uint32_t col = 0; col < 3; col++)
       {
-         r.vertices[vi++] = {{xp[j], yp[i]}, {uv_xp[j], uv_yp[i]}, tint_color};
+         uint32_t v0 = row * 4 + col;
+         quad_indices(r, ii, v0, v0 + 4, v0 + 5, v0 + 1);
+         ii += 6;
       }
    }
-
-   uint32_t ii = 0;
-
-#define NINE_PATCH_QUAD(v0, v1, v2, v3)                                                                                \
-   r.indices[ii++] = r.baseVertex + v0;                                                                                \
-   r.indices[ii++] = r.baseVertex + v1;                                                                                \
-   r.indices[ii++] = r.baseVertex + v2;                                                                                \
-   r.indices[ii++] = r.baseVertex + v0;                                                                                \
-   r.indices[ii++] = r.baseVertex + v2;                                                                                \
-   r.indices[ii++] = r.baseVertex + v3;
-
-   NINE_PATCH_QUAD(0, 4, 5, 1);
-   NINE_PATCH_QUAD(1, 5, 6, 2);
-   NINE_PATCH_QUAD(2, 6, 7, 3);
-
-   NINE_PATCH_QUAD(4, 8, 9, 5);
-   NINE_PATCH_QUAD(5, 9, 10, 6);
-   NINE_PATCH_QUAD(6, 10, 11, 7);
-
-   NINE_PATCH_QUAD(8, 12, 13, 9);
-   NINE_PATCH_QUAD(9, 13, 14, 10);
-   NINE_PATCH_QUAD(10, 14, 15, 11);
-
-#undef NINE_PATCH_QUAD
-
-   cmd->index_count += 54;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -857,17 +869,6 @@ void Canvas::addCustomDraw(MonstroCustomDrawCallback callback, void *user_data)
       return;
 
    MonstroDrawCommand *cmd = newDrawCommand();
-
-   MonstroRect clip = clip_rects.top();
-   cmd->clip_rect[0] = clip.x;
-   cmd->clip_rect[1] = clip.y;
-   cmd->clip_rect[2] = clip.w;
-   cmd->clip_rect[3] = clip.h;
-   cmd->layer = layers.top();
-   cmd->order = commands.myCount;
-   cmd->texture_id = 0;
-   cmd->index_offset = 0;
-   cmd->index_count = 0;
    cmd->custom_draw = callback;
    cmd->user_data = user_data;
 }
@@ -876,11 +877,11 @@ void Canvas::addCustomDraw(MonstroCustomDrawCallback callback, void *user_data)
 /* Path API                                                                  */
 /* ------------------------------------------------------------------------- */
 
-void Canvas::pathClear() { path.myCount = 0; }
+void Canvas::pathClear() { path_count = 0; }
 
 void Canvas::pathMoveTo(MonstroVec2 pos)
 {
-   path.myCount = 0;
+   path_count = 0;
    pathPush(pos);
 }
 
@@ -895,18 +896,16 @@ void Canvas::pathArcTo(MonstroVec2 center, float radius, float a_min, float a_ma
    {
       float t = (float)i / (float)num_segments;
       float angle = a_min + (a_max - a_min) * t;
-      MonstroVec2 pt = {center.x + cosf(angle) * radius, center.y + sinf(angle) * radius};
-      pathPush(pt);
+      pathPush({center.x + cosf(angle) * radius, center.y + sinf(angle) * radius});
    }
 }
 
 void Canvas::pathBezierCubicTo(MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, int num_segments)
 {
-   if (path.myCount < 1 || num_segments < 1)
+   if (path_count < 1 || num_segments < 1)
       return;
 
-   MonstroVec2 p1 = path.myData[path.myCount - 1];
-
+   MonstroVec2 p1 = path[path_count - 1];
    for (int i = 1; i <= num_segments; i++)
    {
       float t = (float)i / (float)num_segments;
@@ -920,11 +919,10 @@ void Canvas::pathBezierCubicTo(MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, i
 
 void Canvas::pathBezierQuadraticTo(MonstroVec2 p2, MonstroVec2 p3, int num_segments)
 {
-   if (path.myCount < 1 || num_segments < 1)
+   if (path_count < 1 || num_segments < 1)
       return;
 
-   MonstroVec2 p1 = path.myData[path.myCount - 1];
-
+   MonstroVec2 p1 = path[path_count - 1];
    for (int i = 1; i <= num_segments; i++)
    {
       float t = (float)i / (float)num_segments;
@@ -938,18 +936,18 @@ void Canvas::pathBezierQuadraticTo(MonstroVec2 p2, MonstroVec2 p3, int num_segme
 
 void Canvas::pathFill(uint32_t color)
 {
-   if (path.myCount < 3)
+   if (path_count < 3)
       return;
-   addConvexPolyFilled(path.myData, path.myCount, color);
-   path.myCount = 0;
+   addConvexPolyFilled(path, (int)path_count, color);
+   path_count = 0;
 }
 
 void Canvas::pathStroke(uint32_t color, bool closed, float thickness)
 {
-   if (path.myCount < 2)
+   if (path_count < 2)
       return;
-   addPolyline(path.myData, path.myCount, color, closed, thickness);
-   path.myCount = 0;
+   addPolyline(path, (int)path_count, color, closed, thickness);
+   path_count = 0;
 }
 
 } // namespace monstro

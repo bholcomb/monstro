@@ -10,13 +10,10 @@ TEST(rounded_rect_corners_lie_on_their_arcs)
    MonstroRect rect = {100.0f, 100.0f, 80.0f, 60.0f};
    float radius = 10.0f;
    monstro_draw_rect_filled(monstro_get_window_canvas(ui.ctx), rect, 0xffffffff, radius, MONSTRO_CORNER_ALL);
-   ui.end();
+   const MonstroDrawData *data = ui.end();
 
-   const MonstroVertex *vertices = nullptr;
-   size_t bytes = 0;
-   monstro_draw_buffer_get_vertex_buffer(monstro_context_get_draw_buffer(ui.ctx), &vertices, &bytes);
-   uint32_t count = (uint32_t)(bytes / sizeof(MonstroVertex));
-   CHECK(count - before == 16);
+   const MonstroVertex *vertices = data->vertices;
+   CHECK(data->vertex_count - before == 16);
 
    // The first arc is the upper-left corner, centred radius in from the corner.
    float cx = rect.x + radius;

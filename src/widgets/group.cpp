@@ -8,15 +8,15 @@ void monstro_begin_group(MonstroContext *ctx, MonstroLayoutDirection layout, Mon
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    float pad_x = style->window.group_padding[0];
    float pad_y = style->window.group_padding[1];
 
    monstro_add_item(ctx, pad_x, pad_y);
 
-   win->groups.push(flags);
+   ctx->canvas->groups.push(flags);
 
-   win->canvas.pushLayer(win->canvas.layers.top() + 1);
+   ctx->canvas->pushLayer(ctx->canvas->layers.top() + 1);
 
    win->beginLayout(layout);
 
@@ -36,9 +36,11 @@ void monstro_end_group(MonstroContext *ctx)
    if (win->skip_items)
       return;
 
-   MonstroGroupFlags flags = win->groups.pop();
+   MONSTRO_REQUIRE(win->groupDepth() > 0,
+                   "group stack underflow: monstro_end_group without monstro_begin_group in window '%s'", win->name);
+   MonstroGroupFlags flags = ctx->canvas->groups.pop();
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    float pad_x = style->window.group_padding[0];
    float pad_y = style->window.group_padding[1];
 
@@ -55,23 +57,23 @@ void monstro_end_group(MonstroContext *ctx)
    layout->mySizeX += pad_x * 2.0f;
    layout->mySizeY += pad_y * 2.0f;
 
-   win->canvas.popLayer();
+   ctx->canvas->popLayer();
 
    if (flags & MONSTRO_GROUP_BACKGROUND)
    {
       MonstroStyleItem *bg = &style->window.group_background;
       if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
       {
-         win->canvas.addRectFilled(group_rect, monstro_color_to_u32(bg->data.color), style->window.rounding,
-                                   MONSTRO_CORNER_ALL);
+         ctx->canvas->addRectFilled(group_rect, monstro_color_to_u32(bg->data.color), style->window.rounding,
+                                    MONSTRO_CORNER_ALL);
       }
       else if (bg->type == MONSTRO_STYLE_ITEM_IMAGE)
       {
-         win->canvas.addImage(bg->data.texture_id, group_rect, {0, 0}, {1, 1}, 0xFFFFFFFF);
+         ctx->canvas->addImage(bg->data.texture_id, group_rect, {0, 0}, {1, 1}, 0xFFFFFFFF);
       }
       else if (bg->type == MONSTRO_STYLE_ITEM_NINEPATCH)
       {
-         win->canvas.addNinePatch(&bg->data.ninepatch, group_rect, 0xFFFFFFFF);
+         ctx->canvas->addNinePatch(&bg->data.ninepatch, group_rect, 0xFFFFFFFF);
       }
    }
 
@@ -80,8 +82,8 @@ void monstro_end_group(MonstroContext *ctx)
       float border = style->window.group_border;
       if (border > 0.0f)
       {
-         win->canvas.addRect(group_rect, monstro_color_to_u32(style->window.group_border_color), style->window.rounding,
-                             MONSTRO_CORNER_ALL, border);
+         ctx->canvas->addRect(group_rect, monstro_color_to_u32(style->window.group_border_color),
+                              style->window.rounding, MONSTRO_CORNER_ALL, border);
       }
    }
 

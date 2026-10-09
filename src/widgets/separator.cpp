@@ -15,10 +15,10 @@ void monstro_separator(MonstroContext *ctx)
       return;
    float avail_w = layout->myAvailableWidth;
    if (avail_w <= 0.0f)
-      avail_w = win->size.x - ctx->style.window.padding[0] * 2.0f;
+      avail_w = win->size.x - ctx->style().window.padding[0] * 2.0f;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
 
    float pad_y = style->separator.padding[1];
@@ -34,9 +34,7 @@ void monstro_separator(MonstroContext *ctx)
 
 void monstro_separator_text(MonstroContext *ctx, const char *text)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!text)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(text)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -47,10 +45,10 @@ void monstro_separator_text(MonstroContext *ctx, const char *text)
       return;
    float avail_w = layout->myAvailableWidth;
    if (avail_w <= 0.0f)
-      avail_w = win->size.x - ctx->style.window.padding[0] * 2.0f;
+      avail_w = win->size.x - ctx->style().window.padding[0] * 2.0f;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
 

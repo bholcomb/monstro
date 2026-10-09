@@ -8,7 +8,7 @@ void monstro_image(MonstroContext *ctx, uint64_t texture_id, float width, float 
    if (win->skip_items)
       return;
 
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
 
    MonstroRect rect = {pos.x, pos.y, width, height};

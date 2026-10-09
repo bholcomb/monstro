@@ -59,8 +59,8 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleSlider *ss = &style->slider;
 
@@ -184,9 +184,7 @@ bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *valu
                              const char *format, float width, float height, MonstroSliderFlags flags,
                              const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
    (void)flags;
 
    double v = *value;
@@ -205,9 +203,7 @@ bool monstro_slider_float(MonstroContext *ctx, const char *label, float *value, 
 bool monstro_slider_int_ex(MonstroContext *ctx, const char *label, int *value, int min_val, int max_val,
                            const char *format, float width, float height, MonstroSliderFlags flags, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
    (void)flags;
 
    double v = *value;

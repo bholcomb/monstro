@@ -144,8 +144,8 @@ TEST(long_table_column_labels_are_cut_between_code_points)
    if (monstro_begin_table(ui.ctx, "t", 1, MONSTRO_TABLE_NONE, 0, 0))
    {
       monstro_table_setup_column(ui.ctx, label.c_str(), MONSTRO_TABLE_COLUMN_NONE, 0.0f);
-      CHECK(is_whole_utf8(ui.ctx->current_table->columns[0].label));
-      CHECK(std::strlen(ui.ctx->current_table->columns[0].label) == 127);
+      CHECK(is_whole_utf8(ui.ctx->canvas->table.columns[0].label));
+      CHECK(std::strlen(ui.ctx->canvas->table.columns[0].label) == 127);
       monstro_end_table(ui.ctx);
    }
    ui.end();

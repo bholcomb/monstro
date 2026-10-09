@@ -26,10 +26,10 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
 {
    monstro::Window *win = ctx->current_window;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTree *ts = &style->tree;
    MonstroFont *font = style->font;
-   monstro::Canvas *canvas = &win->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
 
    const char *display = monstro_display_text(label);
    bool default_open = (flags & MONSTRO_TREE_DEFAULT_OPEN) != 0;
@@ -134,15 +134,10 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
    monstro_add_item(ctx, row_w, row_h);
    monstro_set_last_item(ctx, id, row_rect, hovered, false, clicked, false);
 
-   if (hovered)
-   {
-      monstro_tooltip(ctx, nullptr);
-   }
-
    if (is_open && !is_leaf)
    {
       monstro_indent(ctx, ts->indent);
-      ctx->id_stack.push(label);
+      ctx->ids().push(label);
       return true;
    }
 
@@ -151,9 +146,7 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
 
 bool monstro_begin_tree_node_id(MonstroContext *ctx, uint64_t id, const char *label, MonstroTreeFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    if (ctx->current_window->skip_items)
       return false;
    return tree_item_internal(ctx, id, label, flags, false, nullptr);
@@ -161,9 +154,7 @@ bool monstro_begin_tree_node_id(MonstroContext *ctx, uint64_t id, const char *la
 
 bool monstro_begin_tree_node(MonstroContext *ctx, const char *label, MonstroTreeFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    uint64_t id = ctx->current_window->getChildId(label);
    return monstro_begin_tree_node_id(ctx, id, label, flags);
 }
@@ -171,15 +162,13 @@ bool monstro_begin_tree_node(MonstroContext *ctx, const char *label, MonstroTree
 void monstro_end_tree_node(MonstroContext *ctx)
 {
    monstro::requireWindow(ctx, __func__);
-   ctx->id_stack.pop();
+   ctx->ids().pop();
    monstro_unindent(ctx, 0.0f);
 }
 
 bool monstro_tree_leaf(MonstroContext *ctx, const char *label, MonstroTreeFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    if (ctx->current_window->skip_items)
       return false;
    uint64_t id = ctx->current_window->getChildId(label);
@@ -190,18 +179,16 @@ bool monstro_tree_leaf(MonstroContext *ctx, const char *label, MonstroTreeFlags 
 
 bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_visible)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTree *ts = &style->tree;
    MonstroFont *font = style->font;
-   monstro::Canvas *canvas = &win->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
 
    uint64_t id = win->getChildId(label);
    const char *display = monstro_display_text(label);
@@ -332,14 +319,11 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
 
 float monstro_get_tree_indent(MonstroContext *ctx)
 {
-   if (!ctx)
-      return 0.0f;
-   return ctx->style.tree.indent;
+   return monstro::requireContext(ctx, __func__)->currentStyle().tree.indent;
 }
 
 void monstro_set_tree_indent(MonstroContext *ctx, float indent)
 {
-   if (!ctx)
-      return;
-   ctx->style.tree.indent = indent;
+   monstro::requireWindow(ctx, __func__);
+   ctx->style().tree.indent = indent;
 }

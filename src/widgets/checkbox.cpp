@@ -52,16 +52,14 @@ static bool checkbox_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, b
 
 bool monstro_checkbox(MonstroContext *ctx, const char *label, bool *value, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    monstro_add_item(ctx, style->checkbox.padding[0], style->checkbox.padding[1]);

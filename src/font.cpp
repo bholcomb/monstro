@@ -1,4 +1,5 @@
 #include "context.h"
+#include "env.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,265 +23,175 @@
 #pragma GCC diagnostic pop
 #endif
 
-/* ------------------------------------------------------------------------- */
-/* Font Manager                                                              */
-/* ------------------------------------------------------------------------- */
-
-MonstroFontManager *monstro_font_manager_create(void)
-{
-   MonstroFontManager *manager = (MonstroFontManager *)calloc(1, sizeof(MonstroFontManager));
-   return manager;
-}
-
-void monstro_font_manager_destroy(MonstroFontManager *manager)
-{
-   if (!manager)
-      return;
-
-   for (int i = 0; i < manager->font_count; i++)
-   {
-      if (manager->fonts[i])
-      {
-         monstro_font_destroy(manager->fonts[i]);
-      }
-   }
-   free(manager);
-}
-
-MonstroFontManager *monstro_context_get_font_manager(MonstroContext *ctx)
-{
-   if (!ctx)
-      return nullptr;
-   return ctx->font_manager;
-}
+using monstro::Env;
+using monstro::requireEnv;
 
 /* ------------------------------------------------------------------------- */
-/* TTF Font Loading                                                          */
+/* Loading into the atlas                                                    */
 /* ------------------------------------------------------------------------- */
 
-MonstroFont *monstro_font_load_ttf(MonstroFontManager *manager, const void *ttf_data, size_t ttf_data_size,
-                                   float pixel_size, uint32_t first_code_point, uint32_t code_point_count,
-                                   MonstroTextureData *out_atlas_data)
+static void require_font_args(const char *function, const char *name, const void *data, float size)
 {
-   if (!manager || !ttf_data || ttf_data_size == 0 || code_point_count == 0)
-      return nullptr;
-
-   uint32_t atlas_width = MONSTRO_FONT_ATLAS_DEFAULT_SIZE;
-   uint32_t atlas_height = MONSTRO_FONT_ATLAS_DEFAULT_SIZE;
-
-   uint8_t *atlas_bitmap = (uint8_t *)calloc(atlas_width * atlas_height, 1);
-   if (!atlas_bitmap)
-      return nullptr;
-
-   stbtt_packedchar *packed_chars = (stbtt_packedchar *)calloc(code_point_count, sizeof(stbtt_packedchar));
-   if (!packed_chars)
-   {
-      free(atlas_bitmap);
-      return nullptr;
-   }
-
-   stbtt_pack_context pack_ctx;
-   if (!stbtt_PackBegin(&pack_ctx, atlas_bitmap, atlas_width, atlas_height, 0, 1, nullptr))
-   {
-      free(atlas_bitmap);
-      free(packed_chars);
-      return nullptr;
-   }
-
-   stbtt_PackSetOversampling(&pack_ctx, 1, 1);
-
-   if (!stbtt_PackFontRange(&pack_ctx, (const unsigned char *)ttf_data, 0, pixel_size, first_code_point,
-                            code_point_count, packed_chars))
-   {
-      stbtt_PackEnd(&pack_ctx);
-      free(atlas_bitmap);
-      free(packed_chars);
-      return nullptr;
-   }
-
-   stbtt_PackEnd(&pack_ctx);
-
-   stbtt_fontinfo font_info;
-   if (!stbtt_InitFont(&font_info, (const unsigned char *)ttf_data, 0))
-   {
-      free(atlas_bitmap);
-      free(packed_chars);
-      return nullptr;
-   }
-
-   float scale = stbtt_ScaleForPixelHeight(&font_info, pixel_size);
-
-   int ascent_i, descent_i, line_gap_i;
-   stbtt_GetFontVMetrics(&font_info, &ascent_i, &descent_i, &line_gap_i);
-
-   float ascent = (float)ascent_i * scale;
-   float descent = (float)descent_i * scale;
-   float line_height = (float)(ascent_i - descent_i + line_gap_i) * scale;
-
-   MonstroGlyph *glyphs = (MonstroGlyph *)calloc(code_point_count, sizeof(MonstroGlyph));
-   if (!glyphs)
-   {
-      free(atlas_bitmap);
-      free(packed_chars);
-      return nullptr;
-   }
-
-   for (uint32_t i = 0; i < code_point_count; i++)
-   {
-      stbtt_packedchar *pc = &packed_chars[i];
-
-      glyphs[i].min_tex_coord[0] = (float)pc->x0 / (float)atlas_width;
-      glyphs[i].min_tex_coord[1] = (float)pc->y0 / (float)atlas_height;
-      glyphs[i].max_tex_coord[0] = (float)pc->x1 / (float)atlas_width;
-      glyphs[i].max_tex_coord[1] = (float)pc->y1 / (float)atlas_height;
-
-      glyphs[i].size[0] = (float)(pc->x1 - pc->x0);
-      glyphs[i].size[1] = (float)(pc->y1 - pc->y0);
-      glyphs[i].offset[0] = pc->xoff;
-      glyphs[i].offset[1] = pc->yoff;
-      glyphs[i].advance[0] = pc->xadvance;
-      glyphs[i].advance[1] = 0.0f;
-   }
-
-   free(packed_chars);
-
-   MonstroFont *font = (MonstroFont *)calloc(1, sizeof(MonstroFont));
-   if (!font)
-   {
-      free(atlas_bitmap);
-      free(glyphs);
-      return nullptr;
-   }
-
-   font->size = pixel_size;
-   font->line_height = line_height;
-   font->ascent = ascent;
-   font->descent = descent;
-   font->glyphs = glyphs;
-   font->glyph_count = code_point_count;
-   font->first_code_point = first_code_point;
-   font->atlas_width = atlas_width;
-   font->atlas_height = atlas_height;
-   font->atlas_data = atlas_bitmap;
-   font->atlas_data_size = atlas_width * atlas_height;
-   font->atlas_format = MONSTRO_TEXTURE_FORMAT_R8;
-   font->atlas_texture_id = 0;
-
-   if (out_atlas_data)
-   {
-      out_atlas_data->width = atlas_width;
-      out_atlas_data->height = atlas_height;
-      out_atlas_data->format = MONSTRO_TEXTURE_FORMAT_R8;
-      out_atlas_data->data_size = font->atlas_data_size;
-      out_atlas_data->data = font->atlas_data;
-   }
-
-   return font;
+   MONSTRO_REQUIRE(name, "%s: the font name must not be null", function);
+   MONSTRO_REQUIRE(data, "%s: the font data or path must not be null", function);
+   MONSTRO_REQUIRE(size > 0.0f, "%s: the font size must be positive (got %g)", function, (double)size);
 }
 
-MonstroFont *monstro_font_load_ttf_from_file(MonstroFontManager *manager, const char *path, float pixel_size,
-                                             uint32_t first_code_point, uint32_t code_point_count,
-                                             MonstroTextureData *out_atlas_data)
+static uint8_t *read_file(const char *path, size_t *out_size)
 {
-   if (!manager || !path)
-      return nullptr;
-
    FILE *f = fopen(path, "rb");
    if (!f)
       return nullptr;
-
-   fseek(f, 0, SEEK_END);
-   long file_size = ftell(f);
-   fseek(f, 0, SEEK_SET);
-
-   if (file_size <= 0)
+   uint8_t *data = nullptr;
+   long size = (fseek(f, 0, SEEK_END) == 0) ? ftell(f) : -1;
+   if (size > 0 && fseek(f, 0, SEEK_SET) == 0)
    {
-      fclose(f);
-      return nullptr;
+      data = (uint8_t *)malloc((size_t)size);
+      if (data && fread(data, 1, (size_t)size, f) != (size_t)size)
+      {
+         free(data);
+         data = nullptr;
+      }
    }
-
-   uint8_t *ttf_data = (uint8_t *)malloc(file_size);
-   if (!ttf_data)
-   {
-      fclose(f);
-      return nullptr;
-   }
-
-   size_t bytes_read = fread(ttf_data, 1, file_size, f);
    fclose(f);
+   *out_size = data ? (size_t)size : 0;
+   return data;
+}
 
-   if (bytes_read != (size_t)file_size)
-   {
-      free(ttf_data);
+MonstroFont *monstro_font_load_ttf(MonstroEnv *env, const char *name, const void *ttf_data, size_t ttf_data_size,
+                                   float pixel_size, uint32_t first_code_point, uint32_t code_point_count)
+{
+   requireEnv(env, __func__)->requireIdle(__func__);
+   require_font_args(__func__, name, ttf_data, pixel_size);
+   MONSTRO_REQUIRE(code_point_count > 0, "%s: code_point_count must be positive", __func__);
+
+   const unsigned char *data = (const unsigned char *)ttf_data;
+   stbtt_fontinfo info;
+   if (ttf_data_size < 12 || stbtt_GetFontOffsetForIndex(data, 0) < 0 ||
+       !stbtt_InitFont(&info, data, stbtt_GetFontOffsetForIndex(data, 0)))
       return nullptr;
+
+   MonstroGlyph *glyphs = (MonstroGlyph *)calloc(code_point_count, sizeof(MonstroGlyph));
+   if (!glyphs)
+      return nullptr;
+
+   float scale = stbtt_ScaleForPixelHeight(&info, pixel_size);
+   int ascent_i, descent_i, line_gap_i;
+   stbtt_GetFontVMetrics(&info, &ascent_i, &descent_i, &line_gap_i);
+
+   // Each glyph is rasterized into scratch coverage, then stored as white with that coverage as alpha.
+   monstro::Atlas *atlas = &env->atlas;
+   uint8_t *coverage = nullptr;
+   size_t coverage_size = 0;
+   for (uint32_t i = 0; i < code_point_count; i++)
+   {
+      int glyph_index = stbtt_FindGlyphIndex(&info, (int)(first_code_point + i));
+      int advance, left_bearing, x0, y0, x1, y1;
+      stbtt_GetGlyphHMetrics(&info, glyph_index, &advance, &left_bearing);
+      stbtt_GetGlyphBitmapBox(&info, glyph_index, scale, scale, &x0, &y0, &x1, &y1);
+
+      MonstroGlyph *g = &glyphs[i];
+      int w = x1 - x0;
+      int h = y1 - y0;
+      g->size[0] = (float)(w > 0 ? w : 0);
+      g->size[1] = (float)(h > 0 ? h : 0);
+      g->offset[0] = (float)x0;
+      g->offset[1] = (float)y0;
+      g->advance[0] = (float)advance * scale;
+      if (w <= 0 || h <= 0)
+         continue;
+
+      if ((size_t)(w * h) > coverage_size)
+      {
+         free(coverage);
+         coverage_size = (size_t)(w * h);
+         coverage = (uint8_t *)malloc(coverage_size);
+         if (!coverage)
+         {
+            free(glyphs);
+            return nullptr;
+         }
+      }
+      stbtt_MakeGlyphBitmap(&info, coverage, w, h, w, scale, scale, glyph_index);
+
+      uint32_t x, y;
+      atlas->allocate((uint32_t)w, (uint32_t)h, name, &x, &y);
+      for (int row = 0; row < h; row++)
+         for (int col = 0; col < w; col++)
+            atlas->pixel(x + (uint32_t)col, y + (uint32_t)row)[3] = coverage[row * w + col];
+
+      g->min_tex_coord[0] = (float)x / (float)atlas->width;
+      g->min_tex_coord[1] = (float)y / (float)atlas->height;
+      g->max_tex_coord[0] = (float)(x + (uint32_t)w) / (float)atlas->width;
+      g->max_tex_coord[1] = (float)(y + (uint32_t)h) / (float)atlas->height;
    }
+   free(coverage);
 
-   MonstroFont *font = monstro_font_load_ttf(manager, ttf_data, file_size, pixel_size, first_code_point,
-                                             code_point_count, out_atlas_data);
-
-   free(ttf_data);
+   MonstroFont *font = env->addFont(name, __func__);
+   font->size = pixel_size;
+   font->ascent = (float)ascent_i * scale;
+   font->descent = (float)descent_i * scale;
+   font->line_height = (float)(ascent_i - descent_i + line_gap_i) * scale;
+   font->glyphs = glyphs;
+   font->glyph_count = code_point_count;
+   font->first_code_point = first_code_point;
+   atlas->version++;
    return font;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Bitmap Font Loading                                                       */
-/* ------------------------------------------------------------------------- */
-
-MonstroFont *monstro_font_load_bitmap(MonstroFontManager *manager, const void *image_data, uint32_t image_width,
-                                      uint32_t image_height, uint32_t grid_cols, uint32_t grid_rows,
-                                      uint32_t /*cell_width*/, uint32_t /*cell_height*/, uint32_t first_code_point,
-                                      float font_size_px, MonstroTextureData *out_atlas_data)
+MonstroFont *monstro_font_load_ttf_from_file(MonstroEnv *env, const char *name, const char *path, float pixel_size,
+                                             uint32_t first_code_point, uint32_t code_point_count)
 {
-   if (!manager || !image_data || grid_cols == 0 || grid_rows == 0)
+   requireEnv(env, __func__)->requireIdle(__func__);
+   require_font_args(__func__, name, path, pixel_size);
+
+   size_t size = 0;
+   uint8_t *data = read_file(path, &size);
+   if (!data)
       return nullptr;
+   MonstroFont *font = monstro_font_load_ttf(env, name, data, size, pixel_size, first_code_point, code_point_count);
+   free(data);
+   return font;
+}
+
+MonstroFont *monstro_font_load_bitmap(MonstroEnv *env, const char *name, const void *image_data, uint32_t image_width,
+                                      uint32_t image_height, uint32_t grid_cols, uint32_t grid_rows,
+                                      uint32_t first_code_point, float font_size_px)
+{
+   requireEnv(env, __func__)->requireIdle(__func__);
+   require_font_args(__func__, name, image_data, font_size_px);
+   MONSTRO_REQUIRE(grid_cols > 0 && grid_rows > 0 && image_width >= grid_cols && image_height >= grid_rows,
+                   "%s: a %u x %u image cannot hold a %u x %u grid", __func__, image_width, image_height, grid_cols,
+                   grid_rows);
 
    uint32_t glyph_count = grid_cols * grid_rows;
-
    MonstroGlyph *glyphs = (MonstroGlyph *)calloc(glyph_count, sizeof(MonstroGlyph));
    if (!glyphs)
       return nullptr;
 
-   float step_u = 1.0f / (float)grid_cols;
-   float step_v = 1.0f / (float)grid_rows;
+   monstro::Atlas *atlas = &env->atlas;
+   uint32_t x, y;
+   atlas->allocate(image_width, image_height, name, &x, &y);
+   const uint8_t *source = (const uint8_t *)image_data;
+   for (uint32_t row = 0; row < image_height; row++)
+      memcpy(atlas->pixel(x, y + row), source + (size_t)row * image_width * 4, (size_t)image_width * 4);
 
+   float cell_w = (float)image_width / (float)grid_cols;
+   float cell_h = (float)image_height / (float)grid_rows;
    for (uint32_t i = 0; i < glyph_count; i++)
    {
-      uint32_t col = i % grid_cols;
-      uint32_t row = i / grid_cols;
-
-      float cx = (float)col / (float)grid_cols;
-      float cy = (float)row / (float)grid_rows;
-
-      glyphs[i].min_tex_coord[0] = cx;
-      glyphs[i].min_tex_coord[1] = cy;
-      glyphs[i].max_tex_coord[0] = cx + step_u;
-      glyphs[i].max_tex_coord[1] = cy + step_v;
-
+      float cx = (float)x + cell_w * (float)(i % grid_cols);
+      float cy = (float)y + cell_h * (float)(i / grid_cols);
+      glyphs[i].min_tex_coord[0] = cx / (float)atlas->width;
+      glyphs[i].min_tex_coord[1] = cy / (float)atlas->height;
+      glyphs[i].max_tex_coord[0] = (cx + cell_w) / (float)atlas->width;
+      glyphs[i].max_tex_coord[1] = (cy + cell_h) / (float)atlas->height;
       glyphs[i].size[0] = font_size_px;
       glyphs[i].size[1] = font_size_px;
-      glyphs[i].offset[0] = 0.0f;
-      glyphs[i].offset[1] = 0.0f;
       glyphs[i].advance[0] = font_size_px * 0.6f;
-      glyphs[i].advance[1] = 0.0f;
    }
 
-   size_t data_size = image_width * image_height * 4;
-   uint8_t *atlas_copy = (uint8_t *)malloc(data_size);
-   if (!atlas_copy)
-   {
-      free(glyphs);
-      return nullptr;
-   }
-   memcpy(atlas_copy, image_data, data_size);
-
-   MonstroFont *font = (MonstroFont *)calloc(1, sizeof(MonstroFont));
-   if (!font)
-   {
-      free(atlas_copy);
-      free(glyphs);
-      return nullptr;
-   }
-
+   MonstroFont *font = env->addFont(name, __func__);
    font->size = font_size_px;
    font->line_height = font_size_px;
    font->ascent = font_size_px;
@@ -288,127 +199,67 @@ MonstroFont *monstro_font_load_bitmap(MonstroFontManager *manager, const void *i
    font->glyphs = glyphs;
    font->glyph_count = glyph_count;
    font->first_code_point = first_code_point;
-   font->atlas_width = image_width;
-   font->atlas_height = image_height;
-   font->atlas_data = atlas_copy;
-   font->atlas_data_size = data_size;
-   font->atlas_format = MONSTRO_TEXTURE_FORMAT_RGBA8;
-   font->atlas_texture_id = 0;
-
-   if (out_atlas_data)
-   {
-      out_atlas_data->width = image_width;
-      out_atlas_data->height = image_height;
-      out_atlas_data->format = MONSTRO_TEXTURE_FORMAT_RGBA8;
-      out_atlas_data->data_size = data_size;
-      out_atlas_data->data = font->atlas_data;
-   }
-
+   atlas->version++;
    return font;
 }
 
-MonstroFont *monstro_font_load_bitmap_from_file(MonstroFontManager *manager, const char *path, uint32_t grid_cols,
-                                                uint32_t grid_rows, uint32_t first_code_point, float font_size_px,
-                                                MonstroTextureData *out_atlas_data)
+MonstroFont *monstro_font_load_bitmap_from_file(MonstroEnv *env, const char *name, const char *path, uint32_t grid_cols,
+                                                uint32_t grid_rows, uint32_t first_code_point, float font_size_px)
 {
-   if (!manager || !path)
-      return nullptr;
+   requireEnv(env, __func__)->requireIdle(__func__);
+   require_font_args(__func__, name, path, font_size_px);
 
    int width, height, channels;
    uint8_t *image_data = stbi_load(path, &width, &height, &channels, 4);
    if (!image_data)
       return nullptr;
-
-   uint32_t cell_width = width / grid_cols;
-   uint32_t cell_height = height / grid_rows;
-
-   MonstroFont *font = monstro_font_load_bitmap(manager, image_data, width, height, grid_cols, grid_rows, cell_width,
-                                                cell_height, first_code_point, font_size_px, out_atlas_data);
-
+   MonstroFont *font = monstro_font_load_bitmap(env, name, image_data, (uint32_t)width, (uint32_t)height, grid_cols,
+                                                grid_rows, first_code_point, font_size_px);
    stbi_image_free(image_data);
-
-   if (font && font->atlas_data != image_data)
-   {
-      return font;
-   }
-
    return font;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Font Destruction                                                          */
-/* ------------------------------------------------------------------------- */
-
-void monstro_font_destroy(MonstroFont *font)
+MonstroFont *monstro_font_find(MonstroEnv *env, const char *name, float size)
 {
-   if (!font)
-      return;
-
-   if (font->glyphs)
+   requireEnv(env, __func__);
+   MONSTRO_REQUIRE(name, "%s: the name must not be null", __func__);
+   for (MonstroFont &font : env->fonts)
    {
-      free(font->glyphs);
+      if (strcmp(font.name, name) == 0 && (size <= 0 || fabsf(font.size - size) < 0.5f))
+         return &font;
    }
-   if (font->atlas_data)
-   {
-      free(font->atlas_data);
-   }
-   free(font);
-}
-
-/* ------------------------------------------------------------------------- */
-/* Font Atlas Texture                                                        */
-/* ------------------------------------------------------------------------- */
-
-void monstro_font_set_atlas_texture(MonstroFont *font, uint64_t texture_id)
-{
-   if (!font)
-      return;
-   font->atlas_texture_id = texture_id;
-}
-
-uint64_t monstro_font_get_atlas_texture(MonstroFont *font)
-{
-   if (!font)
-      return 0;
-   return font->atlas_texture_id;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Font Manager Registry                                                     */
-/* ------------------------------------------------------------------------- */
-
-void monstro_font_add(MonstroFontManager *manager, MonstroFont *font, const char *name, float size)
-{
-   if (!manager || !font)
-      return;
-   MONSTRO_REQUIRE(manager->font_count < MONSTRO_MAX_FONTS, "font table full: all %d slots are in use",
-                   MONSTRO_MAX_FONTS);
-
-   monstro_utf8_copy(font->name, sizeof(font->name), name);
-   font->size = size;
-
-   manager->fonts[manager->font_count++] = font;
-}
-
-MonstroFont *monstro_font_find(MonstroFontManager *manager, const char *name, float size)
-{
-   if (!manager || !name)
-      return nullptr;
-
-   for (int i = 0; i < manager->font_count; i++)
-   {
-      MonstroFont *font = manager->fonts[i];
-      if (font && strcmp(font->name, name) == 0)
-      {
-         if (size <= 0 || fabsf(font->size - size) < 0.5f)
-         {
-            return font;
-         }
-      }
-   }
-
    return nullptr;
 }
+
+void monstro_env_set_default_font(MonstroEnv *env, MonstroFont *font)
+{
+   requireEnv(env, __func__)->requireIdle(__func__);
+   MONSTRO_REQUIRE(font, "%s: the font must not be null", __func__);
+   env->default_font = font;
+}
+
+MonstroFont *monstro_env_get_default_font(MonstroEnv *env) { return requireEnv(env, __func__)->default_font; }
+
+MonstroTextureData monstro_env_get_atlas(MonstroEnv *env)
+{
+   requireEnv(env, __func__);
+   MonstroTextureData data = {};
+   data.width = env->atlas.width;
+   data.height = env->atlas.height;
+   data.format = MONSTRO_TEXTURE_FORMAT_RGBA8;
+   data.data_size = (size_t)env->atlas.width * env->atlas.height * 4;
+   data.data = env->atlas.pixels;
+   data.version = env->atlas.version;
+   return data;
+}
+
+void monstro_env_set_atlas_texture(MonstroEnv *env, uint64_t texture_id)
+{
+   requireEnv(env, __func__)->requireIdle(__func__);
+   env->atlas.texture_id = texture_id;
+}
+
+uint64_t monstro_env_get_atlas_texture(MonstroEnv *env) { return requireEnv(env, __func__)->atlas.texture_id; }
 
 /* ------------------------------------------------------------------------- */
 /* Font Measurement                                                          */
@@ -573,6 +424,12 @@ bool monstro_font_get_glyph(MonstroFont *font, uint32_t code_point, MonstroGlyph
    return true;
 }
 
+const char *monstro_font_get_name(MonstroFont *font)
+{
+   MONSTRO_REQUIRE(font, "%s: the font must not be null", __func__);
+   return font->name;
+}
+
 uint32_t monstro_font_get_glyph_count(MonstroFont *font)
 {
    if (!font)
@@ -610,21 +467,4 @@ float monstro_font_get_descent(MonstroFont *font)
    if (!font)
       return 0;
    return font->descent;
-}
-
-void monstro_font_get_atlas_size(MonstroFont *font, uint32_t *out_width, uint32_t *out_height)
-{
-   if (!font)
-   {
-      if (out_width)
-         *out_width = 0;
-      if (out_height)
-         *out_height = 0;
-      return;
-   }
-
-   if (out_width)
-      *out_width = font->atlas_width;
-   if (out_height)
-      *out_height = font->atlas_height;
 }

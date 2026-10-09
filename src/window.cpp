@@ -1,29 +1,8 @@
 #include "context.h"
-#include "drawbuffer.h"
+#include "env.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-
-static bool icon_lookup_from_context(void *user_data, uint32_t icon_id, uint64_t *out_texture_id,
-                                     MonstroVec2 *out_uv_min, MonstroVec2 *out_uv_max, bool *out_monochrome)
-{
-   auto *ctx = (monstro::Context *)user_data;
-   if (!ctx || icon_id == 0)
-      return false;
-   auto it = ctx->icon_map.find(icon_id);
-   if (it == ctx->icon_map.end())
-      return false;
-   const MonstroIconEntry &e = it->second;
-   if (out_texture_id)
-      *out_texture_id = e.texture_id;
-   if (out_uv_min)
-      *out_uv_min = e.uv_min;
-   if (out_uv_max)
-      *out_uv_max = e.uv_max;
-   if (out_monochrome)
-      *out_monochrome = e.is_monochrome;
-   return true;
-}
 
 namespace monstro
 {
@@ -51,7 +30,7 @@ void Window::init(Context *context, const char *windowName, MonstroWindowFlags w
 
    set_window_name_and_title(this, windowName);
 
-   id = ctx->id_stack.getId(name);
+   id = ctx->ids().getId(name);
    move_id = getChildId("MOVE");
    flags = windowFlags;
 
@@ -63,7 +42,7 @@ void Window::init(Context *context, const char *windowName, MonstroWindowFlags w
 
 uint64_t Window::getChildId(const char *childName)
 {
-   uint64_t childId = ctx->id_stack.getId(childName);
+   uint64_t childId = ctx->ids().getId(childName);
    ctx->keepAliveId(childId);
    return childId;
 }
@@ -79,7 +58,7 @@ bool Window::begin(bool *p_open)
 
    bool appearing = (last_frame_active != ctx->frame - 1);
    p_open_ref = p_open;
-   ctx->id_stack.push(id);
+   ctx->ids().push(id);
 
    if (flags & MONSTRO_WINDOW_MODAL)
    {
@@ -112,26 +91,24 @@ bool Window::begin(bool *p_open)
       }
    }
 
-   layouts.clear();
+   // This window's per-frame stacks start above those of the windows it is nested in.
+   Canvas &c = canvas();
+   layout_base = c.layouts.size();
+   group_base = c.groups.size();
+   clip_base = c.clip_rects.size();
+   layer_base = c.layers.size();
 
-   MonstroStyle *pad_style = &ctx->style;
+   MonstroStyle *pad_style = &ctx->style();
    beginLayout(pad_style->window.padding[0], pad_style->window.padding[1], MONSTRO_LAYOUT_VERTICAL);
 
    last_frame_active = ctx->frame;
    active = true;
 
-   groups.clear();
+   // A child region is clipped by its parent's current clip; any other window starts unclipped.
+   bool clipped_by_parent = (flags & MONSTRO_WINDOW_CHILD) && parent;
+   c.pushBaseClipRect(clipped_by_parent ? c.getClipRect() : MonstroRect{0, 0, 100000, 100000});
+   c.pushLayer(0);
    ctx->pushWindow(this);
-
-   canvas.init(&ctx->draw_buffer);
-   canvas.icon_lookup = icon_lookup_from_context;
-   canvas.icon_lookup_user_data = ctx;
-
-   if ((flags & MONSTRO_WINDOW_CHILD) && parent)
-   {
-      MonstroRect parent_clip = parent->canvas.getClipRect();
-      canvas.clip_rects[0] = parent_clip;
-   }
 
    if (ctx->next_window_focus || (appearing && (flags & MONSTRO_WINDOW_FOCUS_ON_APPEARING)))
    {
@@ -195,16 +172,14 @@ bool Window::begin(bool *p_open)
       pushContentClipRect();
 
       beginLayout(MONSTRO_LAYOUT_VERTICAL);
-      if (!layouts.empty())
-      {
-         layouts.top().myScrollOffsetX = -scroll_x;
-         layouts.top().myScrollOffsetY = -scroll_y;
-         layouts.top().myAvailableWidth = content_view_width;
-         layouts.top().myAvailableHeight = content_view_height;
-         MonstroVec2 cursor = getCursorScreenPos();
-         layouts.top().myVisibleMaxScreenX = cursor.x + content_view_width;
-         layouts.top().myVisibleMaxScreenY = cursor.y + content_view_height;
-      }
+      Layout *content = getCurrentLayout();
+      content->myScrollOffsetX = -scroll_x;
+      content->myScrollOffsetY = -scroll_y;
+      content->myAvailableWidth = content_view_width;
+      content->myAvailableHeight = content_view_height;
+      MonstroVec2 cursor = getCursorScreenPos();
+      content->myVisibleMaxScreenX = cursor.x + content_view_width;
+      content->myVisibleMaxScreenY = cursor.y + content_view_height;
    }
 
    if (!collapsed && ctx->hovered_window == this)
@@ -228,19 +203,19 @@ bool Window::begin(bool *p_open)
       ctx->want_capture_mouse = true;
    }
 
-   layout_depth_at_begin = layouts.size();
+   layout_depth_at_begin = layoutDepth();
    return true;
 }
 
 bool Window::end()
 {
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    float header_h = getTitleBarHeight() + getMenuBarHeight();
 
-   MONSTRO_REQUIRE(layouts.size() == layout_depth_at_begin && groups.empty(),
+   MONSTRO_REQUIRE(layoutDepth() == layout_depth_at_begin && groupDepth() == 0,
                    "window '%s' ends with %d layouts open (expected %d) and %d groups open: a monstro_end_layout or "
                    "monstro_end_group is missing or doubled",
-                   name, layouts.size(), layout_depth_at_begin, groups.size());
+                   name, layoutDepth(), layout_depth_at_begin, groupDepth());
 
    if (!collapsed)
    {
@@ -257,7 +232,7 @@ bool Window::end()
 
    if (content_clip_pushed)
    {
-      canvas.popClipRect();
+      canvas().popClipRect();
    }
 
    if (flags & MONSTRO_WINDOW_AUTO_RESIZE)
@@ -336,18 +311,22 @@ bool Window::end()
       MonstroVec2 t1 = {pos.x + size.x, pos.y + size.y - grip_sz};
       MonstroVec2 t2 = {pos.x + size.x - grip_sz, pos.y + size.y};
       MonstroVec2 t3 = {pos.x + size.x, pos.y + size.y};
-      canvas.addTriangleFilled(t1, t2, t3, grip_col);
+      canvas().addTriangleFilled(t1, t2, t3, grip_col);
    }
 
-   canvas.popClipRect();
-   MONSTRO_REQUIRE(canvas.clip_rects.size() == 1 && canvas.layers.size() == 1 && canvas.textures.size() == 1,
-                   "window '%s' ends with unbalanced canvas stacks: %d clip rects, %d layers and %d textures open "
-                   "(expected 1 each); a monstro_push_clip_rect or monstro_pop_clip_rect is unpaired",
-                   name, canvas.clip_rects.size(), canvas.layers.size(), canvas.textures.size());
-
-   layouts.clear();
+   Canvas &c = canvas();
+   c.popClipRect();
+   int clips_open = c.clip_rects.size() - clip_base;
+   int layers_open = c.layers.size() - layer_base;
+   MONSTRO_REQUIRE(clips_open == 1 && layers_open == 1,
+                   "window '%s' ends with unbalanced canvas stacks: %d clip rects and %d layers open (expected 1 "
+                   "each); a monstro_push_clip_rect or monstro_pop_clip_rect is unpaired",
+                   name, clips_open, layers_open);
+   c.clip_rects.truncate(clip_base);
+   c.layers.truncate(layer_base);
+   c.layouts.truncate(layout_base);
    p_open_ref = nullptr;
-   ctx->id_stack.pop();
+   ctx->ids().pop();
    return true;
 }
 
@@ -357,7 +336,7 @@ bool Window::end()
 
 void Window::updateScrollState(float header_h)
 {
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    const float scroll_epsilon = 1.0f;
    float scroll_content_w = getScrollableContentWidth();
    float scroll_content_h = getScrollableContentHeight();
@@ -425,14 +404,14 @@ float Window::getMaxScrollY() const
 
 float Window::getScrollableContentWidth() const
 {
-   float padding = ctx ? ctx->style.window.padding[0] * 2.0f : 0.0f;
+   float padding = ctx->style().window.padding[0] * 2.0f;
    float scroll_content_w = content_width - padding;
    return scroll_content_w > 0.0f ? scroll_content_w : 0.0f;
 }
 
 float Window::getScrollableContentHeight() const
 {
-   float padding = ctx ? ctx->style.window.padding[1] * 2.0f : 0.0f;
+   float padding = ctx->style().window.padding[1] * 2.0f;
    float scroll_content_h = content_height - padding;
    return scroll_content_h > 0.0f ? scroll_content_h : 0.0f;
 }
@@ -460,7 +439,7 @@ void Window::drawVerticalScrollbar(float header_h)
    if (!show_scrollbar_y || collapsed)
       return;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleScrollbar *ss = &style->scrollv;
    float bar_w = style->window.scrollbar_size[0];
    if (bar_w <= 0.0f)
@@ -472,7 +451,7 @@ void Window::drawVerticalScrollbar(float header_h)
 
    if (ss->normal.type == MONSTRO_STYLE_ITEM_COLOR)
    {
-      canvas.addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
+      canvas().addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
    }
 
    float scroll_content_h = getScrollableContentHeight();
@@ -489,7 +468,7 @@ void Window::drawVerticalScrollbar(float header_h)
 
    bool thumb_hovered = false;
    bool thumb_held = false;
-   uint64_t sb_id = ctx->id_stack.getId("##vscroll");
+   uint64_t sb_id = ctx->ids().getId("##vscroll");
    ctx->keepAliveId(sb_id);
 
    if (ctx->hovered_window == this)
@@ -529,17 +508,18 @@ void Window::drawVerticalScrollbar(float header_h)
 
    if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
    {
-      canvas.addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
-                           MONSTRO_CORNER_ALL);
+      canvas().addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
+                             MONSTRO_CORNER_ALL);
    }
    if (ss->border > 0.0f)
    {
-      canvas.addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL, ss->border);
+      canvas().addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL,
+                       ss->border);
    }
    if (ss->border_cursor > 0.0f)
    {
-      canvas.addRect(thumb_rect, monstro_color_to_u32(ss->cursor_border_color), ss->rounding_cursor, MONSTRO_CORNER_ALL,
-                     ss->border_cursor);
+      canvas().addRect(thumb_rect, monstro_color_to_u32(ss->cursor_border_color), ss->rounding_cursor,
+                       MONSTRO_CORNER_ALL, ss->border_cursor);
    }
 }
 
@@ -548,7 +528,7 @@ void Window::drawHorizontalScrollbar(float header_h)
    if (!show_scrollbar_x || collapsed)
       return;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleScrollbar *ss = &style->scrollh;
    float bar_h = style->window.scrollbar_size[1];
    if (bar_h <= 0.0f)
@@ -560,7 +540,7 @@ void Window::drawHorizontalScrollbar(float header_h)
 
    if (ss->normal.type == MONSTRO_STYLE_ITEM_COLOR)
    {
-      canvas.addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
+      canvas().addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
    }
 
    float scroll_content_w = getScrollableContentWidth();
@@ -577,7 +557,7 @@ void Window::drawHorizontalScrollbar(float header_h)
 
    bool thumb_hovered = false;
    bool thumb_held = false;
-   uint64_t sb_id = ctx->id_stack.getId("##hscroll");
+   uint64_t sb_id = ctx->ids().getId("##hscroll");
    ctx->keepAliveId(sb_id);
 
    if (ctx->hovered_window == this)
@@ -617,17 +597,18 @@ void Window::drawHorizontalScrollbar(float header_h)
 
    if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
    {
-      canvas.addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
-                           MONSTRO_CORNER_ALL);
+      canvas().addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
+                             MONSTRO_CORNER_ALL);
    }
    if (ss->border > 0.0f)
    {
-      canvas.addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL, ss->border);
+      canvas().addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL,
+                       ss->border);
    }
    if (ss->border_cursor > 0.0f)
    {
-      canvas.addRect(thumb_rect, monstro_color_to_u32(ss->cursor_border_color), ss->rounding_cursor, MONSTRO_CORNER_ALL,
-                     ss->border_cursor);
+      canvas().addRect(thumb_rect, monstro_color_to_u32(ss->cursor_border_color), ss->rounding_cursor,
+                       MONSTRO_CORNER_ALL, ss->border_cursor);
    }
 }
 
@@ -638,36 +619,43 @@ void Window::pushContentClipRect()
    MonstroRect content_rect = getContentRect();
    if (content_rect.w <= 0.0f || content_rect.h <= 0.0f)
    {
-      canvas.pushClipRectFullscreen();
+      canvas().pushClipRectFullscreen();
    }
    else
    {
-      canvas.pushClipRect(content_rect);
+      canvas().pushClipRect(content_rect);
    }
    content_clip_pushed = true;
 }
 
 void Window::drawBackground()
 {
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
+
+   // A modal dims everything drawn below it.
+   if (flags & MONSTRO_WINDOW_MODAL)
+   {
+      MonstroRect screen = {0.0f, 0.0f, ctx->display_width, ctx->display_height};
+      canvas().addRectFilled(screen, monstro_color_to_u32(style->window.modal_dim_color), 0.0f, MONSTRO_CORNER_NONE);
+   }
 
    float saved_rounding = style->window.rounding;
 
    if (flags & MONSTRO_WINDOW_ROOT)
    {
-      canvas.pushClipRectFullscreen();
+      canvas().pushClipRectFullscreen();
       style->window.rounding = 0.0f;
    }
    else if (size.y <= 0.0f)
    {
-      canvas.pushClipRectFullscreen();
+      canvas().pushClipRectFullscreen();
    }
    else
    {
       MonstroRect clip_rect = getRect();
       clip_rect.w += 1;
       clip_rect.h += 1;
-      canvas.pushClipRect(clip_rect);
+      canvas().pushClipRect(clip_rect);
    }
 
    if (!collapsed && (flags & MONSTRO_WINDOW_BACKGROUND))
@@ -677,16 +665,16 @@ void Window::drawBackground()
       switch (bg->type)
       {
       case MONSTRO_STYLE_ITEM_COLOR:
-         canvas.addRectFilled(r, monstro_color_to_u32(bg->data.color), style->window.rounding, MONSTRO_CORNER_ALL);
+         canvas().addRectFilled(r, monstro_color_to_u32(bg->data.color), style->window.rounding, MONSTRO_CORNER_ALL);
          break;
       case MONSTRO_STYLE_ITEM_IMAGE:
-         canvas.addImage(bg->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
+         canvas().addImage(bg->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
          break;
       case MONSTRO_STYLE_ITEM_SPRITE:
-         canvas.addImage(bg->data.sprite.texture_id, r, bg->data.sprite.uv_min, bg->data.sprite.uv_max, 0xFFFFFFFF);
+         canvas().addImage(bg->data.sprite.texture_id, r, bg->data.sprite.uv_min, bg->data.sprite.uv_max, 0xFFFFFFFF);
          break;
       case MONSTRO_STYLE_ITEM_NINEPATCH:
-         canvas.addNinePatch(&bg->data.ninepatch, r, 0xFFFFFFFF);
+         canvas().addNinePatch(&bg->data.ninepatch, r, 0xFFFFFFFF);
          break;
       }
    }
@@ -718,7 +706,7 @@ static void draw_collapse_arrow(Canvas &canvas, float cx, float cy, float sz, bo
 
 void Window::drawForeground()
 {
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
 
    float saved_rounding = style->window.rounding;
    if (flags & MONSTRO_WINDOW_ROOT)
@@ -729,8 +717,8 @@ void Window::drawForeground()
    if (collapsed)
    {
       MonstroRect title_rect = getTitleBarRect();
-      canvas.addRectFilled(title_rect, monstro_color_to_u32(style->window.header.active.data.color),
-                           style->window.rounding, MONSTRO_CORNER_ALL);
+      canvas().addRectFilled(title_rect, monstro_color_to_u32(style->window.header.active.data.color),
+                             style->window.rounding, MONSTRO_CORNER_ALL);
 
       float btn_sz = title_rect.h * 0.6f;
       float arrow_x = title_rect.x + style->window.header.padding[0] + btn_sz * 0.5f;
@@ -752,14 +740,14 @@ void Window::drawForeground()
       }
 
       uint32_t arrow_col = monstro_color_to_u32(style->window.header.label_normal);
-      draw_collapse_arrow(canvas, arrow_x, arrow_y, btn_sz, true, arrow_col);
+      draw_collapse_arrow(canvas(), arrow_x, arrow_y, btn_sz, true, arrow_col);
 
       float text_left = arrow_x + btn_sz * 0.5f + 4.0f;
       MonstroRect text_rect = {text_left, title_rect.y, title_rect.w - (text_left - title_rect.x), title_rect.h};
       if (style->font)
       {
-         canvas.addTextEx(style->font, text_rect, monstro_color_to_u32(style->window.header.label_normal), title,
-                          MONSTRO_ALIGN_LEFT);
+         canvas().addTextEx(style->font, text_rect, monstro_color_to_u32(style->window.header.label_normal), title,
+                            MONSTRO_ALIGN_LEFT);
       }
    }
    else
@@ -768,7 +756,7 @@ void Window::drawForeground()
       {
          MonstroRect title_rect = getTitleBarRect();
          uint32_t header_color = monstro_color_to_u32(style->window.header.active.data.color);
-         canvas.addRectFilled(title_rect, header_color, style->window.rounding, MONSTRO_CORNER_TOP);
+         canvas().addRectFilled(title_rect, header_color, style->window.rounding, MONSTRO_CORNER_TOP);
 
          float btn_sz = title_rect.h * 0.6f;
          float content_left = title_rect.x + style->window.header.padding[0];
@@ -794,7 +782,7 @@ void Window::drawForeground()
             }
 
             uint32_t arrow_col = monstro_color_to_u32(style->window.header.label_normal);
-            draw_collapse_arrow(canvas, arrow_x, arrow_y, btn_sz, false, arrow_col);
+            draw_collapse_arrow(canvas(), arrow_x, arrow_y, btn_sz, false, arrow_col);
 
             content_left += btn_sz + 4.0f;
          }
@@ -813,8 +801,8 @@ void Window::drawForeground()
             if (close_hovered)
             {
                ctx->hovered_id = close_id;
-               canvas.addRectFilled(close_rect, monstro_color_to_u32(style->window.header.hover.data.color),
-                                    style->window.rounding, MONSTRO_CORNER_ALL);
+               canvas().addRectFilled(close_rect, monstro_color_to_u32(style->window.header.hover.data.color),
+                                      style->window.rounding, MONSTRO_CORNER_ALL);
                if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
                {
                   *p_open_ref = false;
@@ -826,8 +814,8 @@ void Window::drawForeground()
             MonstroVec2 x1b = {close_rect.x + btn_sz - pad, close_rect.y + btn_sz - pad};
             MonstroVec2 x2a = {close_rect.x + btn_sz - pad, close_rect.y + pad};
             MonstroVec2 x2b = {close_rect.x + pad, close_rect.y + btn_sz - pad};
-            canvas.addLine(x1a, x1b, close_col, 2.0f);
-            canvas.addLine(x2a, x2b, close_col, 2.0f);
+            canvas().addLine(x1a, x1b, close_col, 2.0f);
+            canvas().addLine(x2a, x2b, close_col, 2.0f);
 
             content_right -= btn_sz + 4.0f;
          }
@@ -836,14 +824,15 @@ void Window::drawForeground()
          uint32_t label_color = monstro_color_to_u32(style->window.header.label_normal);
          if (style->font)
          {
-            canvas.addTextEx(style->font, text_rect, label_color, title, MONSTRO_ALIGN_CENTER);
+            canvas().addTextEx(style->font, text_rect, label_color, title, MONSTRO_ALIGN_CENTER);
          }
       }
 
       if (flags & MONSTRO_WINDOW_MENU_BAR)
       {
          MonstroRect menu_rect = getMenuBarRect();
-         canvas.addRectFilled(menu_rect, monstro_color_to_u32(style->window.menu_border_color), 0, MONSTRO_CORNER_NONE);
+         canvas().addRectFilled(menu_rect, monstro_color_to_u32(style->window.menu_border_color), 0,
+                                MONSTRO_CORNER_NONE);
       }
 
       if (flags & MONSTRO_WINDOW_BORDERS)
@@ -853,18 +842,18 @@ void Window::drawForeground()
          switch (border->type)
          {
          case MONSTRO_STYLE_ITEM_COLOR:
-            canvas.addRect(r, monstro_color_to_u32(border->data.color), style->window.rounding, MONSTRO_CORNER_ALL,
-                           style->window.border);
+            canvas().addRect(r, monstro_color_to_u32(border->data.color), style->window.rounding, MONSTRO_CORNER_ALL,
+                             style->window.border);
             break;
          case MONSTRO_STYLE_ITEM_IMAGE:
-            canvas.addImage(border->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
+            canvas().addImage(border->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
             break;
          case MONSTRO_STYLE_ITEM_SPRITE:
-            canvas.addImage(border->data.sprite.texture_id, r, border->data.sprite.uv_min, border->data.sprite.uv_max,
-                            0xFFFFFFFF);
+            canvas().addImage(border->data.sprite.texture_id, r, border->data.sprite.uv_min, border->data.sprite.uv_max,
+                              0xFFFFFFFF);
             break;
          case MONSTRO_STYLE_ITEM_NINEPATCH:
-            canvas.addNinePatch(&border->data.ninepatch, r, 0xFFFFFFFF);
+            canvas().addNinePatch(&border->data.ninepatch, r, 0xFFFFFFFF);
             break;
          }
 
@@ -873,7 +862,7 @@ void Window::drawForeground()
             MonstroRect title_rect = getTitleBarRect();
             MonstroVec2 p1 = {title_rect.x + 1.0f, title_rect.y};
             MonstroVec2 p2 = {title_rect.x + title_rect.w - 1.0f, title_rect.y};
-            canvas.addLine(p1, p2, monstro_color_to_u32(style->window.border_color), style->window.border);
+            canvas().addLine(p1, p2, monstro_color_to_u32(style->window.border_color), style->window.border);
          }
       }
    }
@@ -890,35 +879,35 @@ void Window::drawForeground()
 
 MonstroVec2 Window::getCursorPos() const
 {
-   if (layouts.empty())
+   const Layout *l = const_cast<Window *>(this)->getCurrentLayout();
+   if (!l)
       return {0.0f, 0.0f};
-   const Layout *l = &layouts.top();
    return {l->myPosX + l->myCursorX, l->myPosY + l->myCursorY};
 }
 
 void Window::setCursorPos(float x, float y)
 {
-   if (layouts.empty())
+   Layout *l = getCurrentLayout();
+   if (!l)
       return;
-   Layout *l = &layouts.top();
    l->myCursorX = x - l->myPosX;
    l->myCursorY = y - l->myPosY;
 }
 
 MonstroVec2 Window::getCursorScreenPos() const
 {
-   if (layouts.empty())
+   const Layout *l = const_cast<Window *>(this)->getCurrentLayout();
+   if (!l)
       return {pos.x, pos.y};
-   const Layout *l = &layouts.top();
    return {pos.x + l->myPosX + l->myCursorX + l->myScrollOffsetX,
            pos.y + l->myPosY + l->myCursorY + l->myScrollOffsetY};
 }
 
 void Window::setCursorScreenPos(float x, float y)
 {
-   if (layouts.empty())
+   const Layout *l = getCurrentLayout();
+   if (!l)
       return;
-   const Layout *l = &layouts.top();
    setCursorPos(x - pos.x - l->myScrollOffsetX, y - pos.y - l->myScrollOffsetY);
 }
 
@@ -944,7 +933,7 @@ float Window::getTitleBarHeight() const
 {
    if (flags & MONSTRO_WINDOW_TITLE_BAR)
    {
-      const MonstroStyle *style = &ctx->style;
+      const MonstroStyle *style = &ctx->style();
       float font_height = style->font ? monstro_font_get_line_height(style->font) : 16.0f;
       return font_height + style->window.group_padding[1];
    }
@@ -955,7 +944,7 @@ float Window::getMenuBarHeight() const
 {
    if (flags & MONSTRO_WINDOW_MENU_BAR)
    {
-      const MonstroStyle *style = &ctx->style;
+      const MonstroStyle *style = &ctx->style();
       float font_height = style->font ? monstro_font_get_line_height(style->font) : 16.0f;
       return font_height + style->window.menu_padding[1];
    }
@@ -1006,18 +995,30 @@ void Window::setSize(float w, float h, MonstroCondition cond)
 /* Layout                                                                    */
 /* ------------------------------------------------------------------------- */
 
+Canvas &Window::canvas() const { return *ctx->canvas; }
+
+int Window::layoutDepth() const { return canvas().layouts.size() - layout_base; }
+
+int Window::groupDepth() const { return canvas().groups.size() - group_base; }
+
 Layout *Window::getCurrentLayout()
 {
-   if (layouts.empty())
+   // The window's layouts end where the next window up the window stack begins its own.
+   Canvas &c = canvas();
+   int end = c.layouts.size();
+   int i = c.windows.size() - 1;
+   for (; i >= 0 && c.windows[i] != this; i--)
+      end = c.windows[i]->layout_base;
+   if (i < 0 && ctx->current_window != this)
       return nullptr;
-   return &layouts.top();
+   return end > layout_base ? &c.layouts[end - 1] : nullptr;
 }
 
 void Window::setLayoutDirection(MonstroLayoutDirection direction)
 {
-   if (layouts.empty())
-      return;
-   layouts.top().myDirection = direction;
+   Layout *l = getCurrentLayout();
+   if (l)
+      l->myDirection = direction;
 }
 
 void Window::addItem(float width, float height)
@@ -1040,9 +1041,9 @@ void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
    layout.init(direction, x, y);
 
    // A nested layout inherits its parent's scroll offset and visible area.
-   if (!layouts.empty())
+   if (layoutDepth() > 0)
    {
-      const Layout &outer = layouts.top();
+      const Layout &outer = canvas().layouts.top();
       layout.myScrollOffsetX = outer.myScrollOffsetX;
       layout.myScrollOffsetY = outer.myScrollOffsetY;
       layout.myAvailableWidth = outer.myAvailableWidth;
@@ -1050,12 +1051,14 @@ void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
       layout.myVisibleMaxScreenX = outer.myVisibleMaxScreenX;
       layout.myVisibleMaxScreenY = outer.myVisibleMaxScreenY;
    }
-   layouts.push(layout);
+   canvas().layouts.push(layout);
 }
 
 void Window::endLayout()
 {
-   Layout finished = layouts.pop();
+   MONSTRO_REQUIRE(layoutDepth() > 0,
+                   "layout stack underflow: monstro_end_layout without monstro_begin_layout in window '%s'", name);
+   Layout finished = canvas().layouts.pop();
    addItem(finished.mySizeX, finished.mySizeY);
 }
 
@@ -1116,33 +1119,15 @@ void Window::makeLastSibling()
    }
 }
 
-void Window::collectDrawCommands(Context *context) const
+int Window::rankForDrawing(int rank)
 {
-   if (active && canvas.commands.myCount > 0)
-   {
-      uint32_t start = context->final_command_count;
-      if (context->final_command_count + canvas.commands.myCount > context->config.max_draw_commands)
-      {
-         MONSTRO_FATAL("draw command overflow at frame %d: merging window '%s' needs %u draw commands for the frame "
-                       "but the frame holds %u. Simplify the UI or raise MonstroContextConfig.max_draw_commands.",
-                       context->frame, name, context->final_command_count + canvas.commands.myCount,
-                       context->config.max_draw_commands);
-      }
-      for (uint32_t i = 0; i < canvas.commands.myCount; i++)
-      {
-         context->final_commands[context->final_command_count++] = canvas.commands.myData[i];
-      }
-      uint32_t end = context->final_command_count;
-      if (end - start > 1)
-      {
-         std::stable_sort(context->final_commands + start, context->final_commands + end,
-                          [](const MonstroDrawCommand &a, const MonstroDrawCommand &b) { return a.layer < b.layer; });
-      }
-   }
-   if (sibling)
-      sibling->collectDrawCommands(context);
+   // Drawn in the order hovering is tested in reverse: a window, its children, then its later siblings.
+   draw_rank = rank++;
    if (child)
-      child->collectDrawCommands(context);
+      rank = child->rankForDrawing(rank);
+   if (sibling)
+      rank = sibling->rankForDrawing(rank);
+   return rank;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1169,10 +1154,9 @@ Window *Context::findWindow(const char *name)
 
 Window *Context::createWindow(const char *name, MonstroWindowFlags flags)
 {
-   Window *win = &windows.allocate();
+   Window *win = &windows.add();
 
    win->init(this, name, flags);
-   win->canvas.allocate(win->name, config.max_draw_commands, config.max_path_points);
 
    if (current_window)
    {
@@ -1259,18 +1243,25 @@ void Context::focusWindow(Window *win)
 
 void Context::pushWindow(Window *win)
 {
-   for (int i = 0; i < window_stack.size(); i++)
+   FixedStack<Window *, MONSTRO_MAX_WINDOW_DEPTH> &stack = canvas->windows;
+   for (int i = 0; i < stack.size(); i++)
    {
-      MONSTRO_REQUIRE(window_stack[i] != win, "window '%s' is begun again while it is still open (frame %d)", win->name,
+      MONSTRO_REQUIRE(stack[i] != win, "window '%s' is begun again while it is still open (frame %d)", win->name,
                       frame);
    }
-   current_window = window_stack.push(win);
+   current_window = stack.push(win);
+   canvas->setOwner(win, win->name);
 }
 
 void Context::popWindow()
 {
-   window_stack.pop();
-   current_window = window_stack.empty() ? nullptr : window_stack.top();
+   FixedStack<Window *, MONSTRO_MAX_WINDOW_DEPTH> &stack = canvas->windows;
+   stack.pop();
+   current_window = stack.empty() ? nullptr : stack.top();
+   if (current_window)
+      canvas->setOwner(current_window, current_window->name);
+   else
+      canvas->setOwner(nullptr, nullptr);
 }
 
 } // namespace monstro

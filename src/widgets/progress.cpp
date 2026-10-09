@@ -11,8 +11,8 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleProgress *ps = &style->progress;
 

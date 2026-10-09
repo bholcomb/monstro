@@ -3,16 +3,14 @@
 
 void monstro_label(MonstroContext *ctx, const char *text)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!text)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(text)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    MonstroVec2 text_size = monstro_font_measure_text(font, text, 0.0f);
@@ -41,16 +39,14 @@ void monstro_label(MonstroContext *ctx, const char *text)
 
 void monstro_label_sized(MonstroContext *ctx, const char *text, float width, float height)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!text)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(text)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
@@ -66,16 +62,14 @@ void monstro_label_sized(MonstroContext *ctx, const char *text, float width, flo
 
 void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_width)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!text)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(text)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    if (wrap_width <= 0.0f)
@@ -115,16 +109,14 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
 
 void monstro_label_colored(MonstroContext *ctx, const char *text, MonstroColor color)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!text)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(text)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    MonstroVec2 text_size = monstro_font_measure_text(font, text, 0.0f);

@@ -20,15 +20,15 @@ bool monstro_begin_menu_bar(MonstroContext *ctx)
 
    if (win->content_clip_pushed)
    {
-      win->canvas.popClipRect();
-      win->canvas.pushClipRect(menu_bar_rect);
+      ctx->canvas->popClipRect();
+      ctx->canvas->pushClipRect(menu_bar_rect);
    }
 
    float rel_x = menu_bar_rect.x - win->pos.x;
    float rel_y = menu_bar_rect.y - win->pos.y;
    win->beginLayout(rel_x, rel_y, MONSTRO_LAYOUT_HORIZONTAL);
 
-   ctx->id_stack.push("menuBar");
+   ctx->ids().push("menuBar");
 
    return true;
 }
@@ -41,13 +41,16 @@ void monstro_end_menu_bar(MonstroContext *ctx)
    if (win->skip_items)
       return;
 
-   ctx->id_stack.pop();
+   ctx->ids().pop();
 
-   win->layouts.pop();
+   // The menu bar's layout is set apart from the window's content, so it adds no item.
+   MONSTRO_REQUIRE(win->layoutDepth() > 0, "monstro_end_menu_bar without monstro_begin_menu_bar in window '%s'",
+                   win->name);
+   ctx->canvas->layouts.pop();
 
    if (win->content_clip_pushed)
    {
-      win->canvas.popClipRect();
+      ctx->canvas->popClipRect();
       win->content_clip_pushed = false;
       win->pushContentClipRect();
    }
@@ -55,15 +58,13 @@ void monstro_end_menu_bar(MonstroContext *ctx)
 
 bool monstro_begin_menu(MonstroContext *ctx, const char *label, bool enabled)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroFont *font = style->font;
 
    (void)enabled; // TODO: use for disabled styling
@@ -162,15 +163,13 @@ void monstro_end_menu(MonstroContext *ctx) { monstro_end_popup(ctx); }
 
 bool monstro_menu_item(MonstroContext *ctx, const char *label, bool *selected, bool enabled)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroFont *font = style->font;
 
    const char *display = monstro_display_text(label);

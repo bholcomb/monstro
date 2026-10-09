@@ -7,19 +7,7 @@
 extern "C" {
 #endif
 
-/*
- * Input Configuration
- */
-
-void monstro_set_double_click_distance(MonstroContext* ctx, float distance);
-void monstro_set_mouse_drag_threshold(MonstroContext* ctx, float threshold);
-void monstro_set_key_repeat_delay(MonstroContext* ctx, float delay);
-void monstro_set_key_repeat_rate(MonstroContext* ctx, float rate);
-
-float monstro_get_double_click_distance(MonstroContext* ctx);
-float monstro_get_mouse_drag_threshold(MonstroContext* ctx);
-float monstro_get_key_repeat_delay(MonstroContext* ctx);
-float monstro_get_key_repeat_rate(MonstroContext* ctx);
+/* Double-click, drag and key repeat timing are environment settings: see MonstroSettings. */
 
 /*
  * Input State Setters (call from app input callbacks)

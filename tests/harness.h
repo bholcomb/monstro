@@ -36,19 +36,28 @@ void test_failed(const char *file, int line, const char *expression);
          test_failed(__FILE__, __LINE__, #expression);                                                                 \
    } while (0)
 
-// A context with an 800x600 display and, unless disabled, the example font.
+// The example font, loaded into env as "test" at 16 px; aborts when it cannot be read.
+MonstroFont *load_test_font(MonstroEnv *env);
+
+// A context with an 800x600 display on its own environment (or on a shared one,
+// which it does not own) and, unless disabled, the example font.
 struct Ui
 {
+   MonstroEnv *env = nullptr;
    MonstroContext *ctx = nullptr;
    MonstroFont *font = nullptr;
+   const MonstroDrawData *data = nullptr;
+   bool owns_env = false;
 
-   explicit Ui(bool with_font = true, const MonstroContextConfig *config = nullptr);
+   explicit Ui(bool with_font = true, const MonstroContextConfig *config = nullptr,
+               const MonstroEnvConfig *env_config = nullptr);
+   explicit Ui(MonstroEnv *shared_env, const MonstroContextConfig *config = nullptr);
    ~Ui();
    Ui(const Ui &) = delete;
    Ui &operator=(const Ui &) = delete;
 
    void begin(float delta_time = 1.0f / 60.0f);
-   void end();
+   const MonstroDrawData *end();
 
    // One whole frame with the left button pressed (then released) at x, y.
    void moveMouse(float x, float y);
@@ -56,6 +65,7 @@ struct Ui
    void pressKey(MonstroKey key, bool down);
    void type(const char *utf8);
 
+   // Geometry so far in the open frame, or in the last frame's draw data.
    uint32_t vertexCount() const;
    uint32_t indexCount() const;
 };

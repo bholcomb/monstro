@@ -2,19 +2,21 @@
 #define MONSTRO_INTERNAL_FIXED_H
 
 #include "fatal.h"
+#include <new>
 #include <stddef.h>
 #include <stdint.h>
 
 /*
  * Fixed-capacity containers. Monstro never grows its storage to hide a UI that
  * outgrew it: these are the few places where capacity is checked, and running
- * out stops the process with the container's name and the numbers involved.
+ * out stops the process with the container's name, its capacity and what was
+ * needed.
  */
 
 namespace monstro
 {
 
-// A stack of at most Capacity entries.
+// A stack of at most Capacity entries, for nesting depths that are not configurable.
 template <typename T, int Capacity> struct FixedStack
 {
    const char *myName;
@@ -26,9 +28,9 @@ template <typename T, int Capacity> struct FixedStack
    T &push(const T &value)
    {
       MONSTRO_REQUIRE(myCount < Capacity,
-                      "%s overflow: capacity %d (a pop or end call is missing, or the nesting is "
+                      "%s overflow: capacity %d, needed %d (a pop or end call is missing, or the nesting is "
                       "too deep)",
-                      myName, Capacity);
+                      myName, Capacity, myCount + 1);
       myItems[myCount] = value;
       return myItems[myCount++];
    }
@@ -59,49 +61,64 @@ template <typename T, int Capacity> struct FixedStack
    const T &operator[](int index) const { return myItems[index]; }
 };
 
-// Persistent per-ID state records (windows, tree nodes, tab bars, tables): slots are handed out once and kept.
-template <typename T, int Capacity> struct SlotTable
+// Records with a capacity taken from a config, allocated once when their owner is created.
+template <typename T> struct ConfiguredArray
 {
    const char *myName;
-   T myItems[Capacity] = {};
+   const char *myRemedy;
+   T *myItems = nullptr;
    int myCount = 0;
+   int myCapacity = 0;
 
-   explicit SlotTable(const char *name) : myName(name) {}
+   // remedy says which config field to revisit when the capacity runs out.
+   ConfiguredArray(const char *name, const char *remedy) : myName(name), myRemedy(remedy) {}
+   ~ConfiguredArray() { delete[] myItems; }
+   ConfiguredArray(const ConfiguredArray &) = delete;
+   ConfiguredArray &operator=(const ConfiguredArray &) = delete;
 
-   T &allocate()
+   bool init(uint32_t capacity)
    {
-      MONSTRO_REQUIRE(myCount < Capacity, "%s full: all %d slots are in use", myName, Capacity);
+      myItems = new (std::nothrow) T[capacity];
+      myCapacity = myItems ? (int)capacity : 0;
+      return myItems != nullptr;
+   }
+
+   T &add()
+   {
+      MONSTRO_REQUIRE(myCount < myCapacity, "%s full: capacity %d, needed %d; %s", myName, myCapacity, myCount + 1,
+                      myRemedy);
+      myItems[myCount] = T{};
       return myItems[myCount++];
    }
 
+   T pop()
+   {
+      MONSTRO_REQUIRE(myCount > 0, "%s underflow", myName);
+      return myItems[--myCount];
+   }
+
+   T &top()
+   {
+      MONSTRO_REQUIRE(myCount > 0, "%s is empty", myName);
+      return myItems[myCount - 1];
+   }
+
+   void removeAt(int index)
+   {
+      for (int i = index; i + 1 < myCount; i++)
+         myItems[i] = myItems[i + 1];
+      myCount--;
+   }
+
    int size() const { return myCount; }
+   bool empty() const { return myCount == 0; }
+   void clear() { myCount = 0; }
+   void truncate(int count) { myCount = count < myCount ? count : myCount; }
+   size_t bytes() const { return sizeof(T) * (size_t)myCapacity; }
    T *begin() { return myItems; }
    T *end() { return myItems + myCount; }
    T &operator[](int index) { return myItems[index]; }
-};
-
-// Per-frame output storage with a capacity fixed when the context is created (or by the caller).
-template <typename T> struct CapacityBuffer
-{
-   const char *myName;
-   T *myData = nullptr;
-   uint32_t myCount = 0;
-   size_t myCapacity = 0;
-
-   explicit CapacityBuffer(const char *name) : myName(name) {}
-
-   // owner and frame say where the overflow happened; remedy says which capacity to revisit.
-   T *reserve(uint32_t count, const char *owner, int frame, const char *remedy)
-   {
-      size_t needed = (size_t)myCount + count;
-      MONSTRO_REQUIRE(needed <= myCapacity,
-                      "%s overflow: capacity %zu, needed %zu (window '%s', frame %d); simplify "
-                      "that UI or %s",
-                      myName, myCapacity, needed, owner ? owner : "?", frame, remedy);
-      T *slots = myData + myCount;
-      myCount += count;
-      return slots;
-   }
+   const T &operator[](int index) const { return myItems[index]; }
 };
 
 } // namespace monstro

@@ -79,16 +79,14 @@ static void draw_style_item_circle(monstro::Canvas *canvas, MonstroStyleItem *it
 bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
                         const char *format, float diameter, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !value)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleKnob *ks = &style->knob;
 

@@ -4,16 +4,14 @@
 
 bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *preview_value, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    uint64_t id = win->getChildId(label);
@@ -174,8 +172,7 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
 
 void monstro_end_combo(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro_end_layout(ctx);
    monstro_end_popup(ctx);
@@ -184,8 +181,8 @@ void monstro_end_combo(MonstroContext *ctx)
 bool monstro_combo(MonstroContext *ctx, const char *label, int *current_item, const char *const items[],
                    int items_count, const char *tooltip)
 {
-   if (!ctx || !label || !current_item || !items || items_count <= 0)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(current_item), MONSTRO_ARG(items)});
+   MONSTRO_REQUIRE(items_count > 0, "monstro_combo: items_count is %d; a combo needs at least one item", items_count);
 
    int selected = *current_item;
    if (selected < 0 || selected >= items_count)

@@ -97,9 +97,9 @@ static float resolve_selectable_width(MonstroContext *ctx, monstro::Window *win,
 {
    float resolved = base_outer_width;
 
-   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->columns_stack.empty())
+   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->canvas->columns.empty())
    {
-      MonstroColumnsState *columns = &ctx->columns_stack.top();
+      MonstroColumnsState *columns = &ctx->canvas->columns.top();
       if (columns->columns_w > 0.0f)
       {
          resolved = columns->columns_w;
@@ -119,9 +119,9 @@ static float resolve_selectable_width(MonstroContext *ctx, monstro::Window *win,
 
 static float resolve_selectable_x(MonstroContext *ctx, float default_x, MonstroSelectableFlags flags)
 {
-   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->columns_stack.empty())
+   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->canvas->columns.empty())
    {
-      MonstroColumnsState *columns = &ctx->columns_stack.top();
+      MonstroColumnsState *columns = &ctx->canvas->columns.top();
       return columns->columns_x;
    }
    return default_x;
@@ -160,17 +160,15 @@ static void draw_selectable_toggle(monstro::Canvas *canvas, MonstroRect outer, M
 static bool selectable_impl(MonstroContext *ctx, const char *label, bool *selected, float width, float height,
                             MonstroSelectableFlags flags, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleSelectable *ss = &style->selectable;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    uint64_t id = win->getChildId(label);

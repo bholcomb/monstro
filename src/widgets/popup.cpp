@@ -37,11 +37,7 @@ void monstro_open_popup(MonstroContext *ctx, const char *label) { monstro_open_p
 
 void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return;
-
-   monstro::Window *win = ctx->current_window;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    uint64_t popup_id = win->getChildId(label);
 
    if (is_popup_open_internal(ctx, popup_id))
@@ -55,7 +51,7 @@ void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
       }
    }
 
-   MonstroPopupInternal *popup = &ctx->popup_stack.push({});
+   MonstroPopupInternal *popup = &ctx->popup_stack.add();
    popup->popup_id = popup_id;
    popup->parent_window = win;
    popup->parent_id = win->getChildId("popups");
@@ -67,18 +63,33 @@ void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
 
 void monstro_close_current_popup(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
-   ctx->popup_stack.pop();
+   monstro::requireWindow(ctx, __func__);
+
+   // The innermost popup being built, which may be drawing inside a child region of its own.
+   monstro::FixedStack<monstro::Window *, MONSTRO_MAX_WINDOW_DEPTH> &windows = ctx->canvas->windows;
+   monstro::Window *popup = nullptr;
+   for (int i = windows.size() - 1; i >= 0 && !popup; i--)
+   {
+      if (windows[i]->flags & MONSTRO_WINDOW_POPUP)
+         popup = windows[i];
+   }
+   MONSTRO_REQUIRE(popup, "monstro_close_current_popup called outside a popup (window '%s', frame %d)",
+                   ctx->current_window->name, ctx->frame);
+
+   // Closing a popup closes the popups opened from it, which sit above it.
+   for (int i = 0; i < ctx->popup_stack.size(); i++)
+   {
+      if (ctx->popup_stack[i].popup_id == popup->popup_id)
+      {
+         ctx->popup_stack.truncate(i);
+         return;
+      }
+   }
 }
 
 bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFlags extra_flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
-
-   monstro::Window *parent_win = ctx->current_window;
+   monstro::Window *parent_win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    uint64_t popup_id = parent_win->getChildId(label);
 
    if (!is_popup_open_internal(ctx, popup_id))
@@ -107,6 +118,7 @@ bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFl
    // Without a p_open the window always begins; monstro_end_popup ends it.
    monstro_begin_window(ctx, popup_name, nullptr, flags);
    monstro::Window *popup = ctx->current_window;
+   popup->popup_id = popup_id;
    popup->makeLastSibling();
 
    if (!(parent_win->flags & MONSTRO_WINDOW_BORDERS))
@@ -119,28 +131,16 @@ bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFl
 
 bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_open, MonstroWindowFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
-
+   monstro::Window *parent_win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
    if (p_open && !*p_open)
       return false;
 
-   monstro::Window *parent_win = ctx->current_window;
    uint64_t popup_id = parent_win->getChildId(label);
 
    if (!is_popup_open_internal(ctx, popup_id))
    {
       return false;
    }
-
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *root_canvas = &ctx->root_window->canvas;
-   MonstroRect fullscreen = {0.0f, 0.0f, ctx->display_width, ctx->display_height};
-   root_canvas->pushLayer(1000);
-   root_canvas->addRectFilled(fullscreen, monstro_color_to_u32(style->window.modal_dim_color), 0.0f,
-                              MONSTRO_CORNER_NONE);
-   root_canvas->popLayer();
 
    MonstroWindowFlags modal_flags =
        (MonstroWindowFlags)((flags & ~MONSTRO_WINDOW_SCROLL_WITH_MOUSE) | MONSTRO_WINDOW_MODAL | MONSTRO_WINDOW_POPUP |
@@ -160,6 +160,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
 
    // p_open was checked above, so the window always begins here.
    monstro_begin_window(ctx, popup_name, p_open, modal_flags);
+   ctx->current_window->popup_id = popup_id;
    ctx->current_window->makeLastSibling();
 
    if (p_open && ctx->keyboard.isPressed(MONSTRO_KEY_ESCAPE))
@@ -180,8 +181,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
 
 bool monstro_begin_popup_context_item(MonstroContext *ctx, const char *label, MonstroMouseButton mouse_button)
 {
-   if (!ctx || !label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    if (ctx->hovered_id != 0 && monstro_is_mouse_clicked(ctx, mouse_button, false))
    {
@@ -194,8 +194,7 @@ bool monstro_begin_popup_context_item(MonstroContext *ctx, const char *label, Mo
 bool monstro_begin_popup_context_window(MonstroContext *ctx, const char *label, MonstroMouseButton mouse_button,
                                         bool also_over_items)
 {
-   if (!ctx || !label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    if (ctx->hovered_window != nullptr && monstro_is_mouse_clicked(ctx, mouse_button, false))
    {
@@ -210,8 +209,7 @@ bool monstro_begin_popup_context_window(MonstroContext *ctx, const char *label, 
 
 bool monstro_begin_popup_context_void(MonstroContext *ctx, const char *label, MonstroMouseButton mouse_button)
 {
-   if (!ctx || !label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    if (ctx->hovered_window == nullptr && monstro_is_mouse_clicked(ctx, mouse_button, false))
    {
@@ -229,9 +227,7 @@ void monstro_end_popup(MonstroContext *ctx)
 
 bool monstro_is_popup_open(MonstroContext *ctx, const char *str_id)
 {
-   monstro::Window *win = monstro::requireWindow(ctx, __func__);
-   if (!str_id)
-      return false;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
 
    uint64_t popup_id = win->getChildId(str_id);
    return is_popup_open_internal(ctx, popup_id);

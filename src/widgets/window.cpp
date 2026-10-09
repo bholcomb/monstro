@@ -9,8 +9,7 @@
 
 void monstro_set_next_window_pos(MonstroContext *ctx, float x, float y, MonstroCondition cond)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__);
    ctx->next_window_pos_x = x;
    ctx->next_window_pos_y = y;
    ctx->next_window_pos_cond = cond;
@@ -18,8 +17,7 @@ void monstro_set_next_window_pos(MonstroContext *ctx, float x, float y, MonstroC
 
 void monstro_set_next_window_size(MonstroContext *ctx, float width, float height, MonstroCondition cond)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__);
    ctx->next_window_size_x = width;
    ctx->next_window_size_y = height;
    ctx->next_window_size_cond = cond;
@@ -27,8 +25,7 @@ void monstro_set_next_window_size(MonstroContext *ctx, float width, float height
 
 void monstro_set_next_window_focus(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__);
    ctx->next_window_focus = true;
 }
 
@@ -38,17 +35,13 @@ void monstro_set_next_window_focus(MonstroContext *ctx)
 
 bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, MonstroWindowFlags flags)
 {
-   if (!ctx || !name)
-      return false;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
+   MONSTRO_REQUIRE(ctx->in_frame, "monstro_begin_window called outside a frame: window and widget calls belong "
+                                  "between monstro_begin_frame and monstro_end_frame");
 
    monstro::Window *win = ctx->findWindow(name);
-
    if (!win)
-   {
       win = ctx->createWindow(name, flags);
-      if (!win)
-         return false;
-   }
    else
    {
       if (!win->title_overridden)
@@ -61,6 +54,7 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
    }
 
    win->flags = flags;
+   win->child_region = false;
 
    return win->begin(p_open);
 }
@@ -70,6 +64,8 @@ void monstro_end_window(MonstroContext *ctx)
    monstro::Window *win = monstro::requireWindow(ctx, __func__);
    MONSTRO_REQUIRE(win != ctx->root_window, "monstro_end_window without a matching monstro_begin_window (frame %d)",
                    ctx->frame);
+   MONSTRO_REQUIRE(!win->child_region, "monstro_end_window on child region '%s': end it with monstro_end_child",
+                   win->name);
    win->end();
    ctx->popWindow();
 }
@@ -104,9 +100,7 @@ void monstro_set_window_layout(MonstroContext *ctx, MonstroLayoutDirection direc
 
 void monstro_set_window_title(MonstroContext *ctx, const char *title)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!title)
-      return;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(title)});
    monstro_utf8_copy(ctx->current_window->title, sizeof(ctx->current_window->title), title);
    ctx->current_window->title_overridden = true;
 }
@@ -117,8 +111,7 @@ void monstro_set_window_title(MonstroContext *ctx, const char *title)
 
 void monstro_set_window_pos_named(MonstroContext *ctx, const char *name, float x, float y, MonstroCondition cond)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
    monstro::Window *win = ctx->findWindow(name);
    if (win)
       win->setPosition(x, y, cond);
@@ -127,8 +120,7 @@ void monstro_set_window_pos_named(MonstroContext *ctx, const char *name, float x
 void monstro_set_window_size_named(MonstroContext *ctx, const char *name, float width, float height,
                                    MonstroCondition cond)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
    monstro::Window *win = ctx->findWindow(name);
    if (win)
       win->setSize(width, height, cond);
@@ -136,8 +128,7 @@ void monstro_set_window_size_named(MonstroContext *ctx, const char *name, float 
 
 void monstro_set_window_focus_named(MonstroContext *ctx, const char *name)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
    monstro::Window *win = ctx->findWindow(name);
    if (win)
       ctx->focusWindow(win);
@@ -145,8 +136,7 @@ void monstro_set_window_focus_named(MonstroContext *ctx, const char *name)
 
 void monstro_set_window_layout_named(MonstroContext *ctx, const char *name, MonstroLayoutDirection direction)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
    monstro::Window *win = ctx->findWindow(name);
    if (win)
       win->setLayoutDirection(direction);
@@ -154,8 +144,7 @@ void monstro_set_window_layout_named(MonstroContext *ctx, const char *name, Mons
 
 void monstro_set_window_title_named(MonstroContext *ctx, const char *name, const char *title)
 {
-   if (!ctx || !title)
-      return;
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name), MONSTRO_ARG(title)});
    monstro::Window *win = ctx->findWindow(name);
    if (!win)
       return;
@@ -242,7 +231,7 @@ bool monstro_is_window_hovered(MonstroContext *ctx)
 MonstroCanvas *monstro_get_window_canvas(MonstroContext *ctx)
 {
    monstro::requireWindow(ctx, __func__);
-   return reinterpret_cast<MonstroCanvas *>(&ctx->current_window->canvas);
+   return ctx->canvas;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -251,11 +240,7 @@ MonstroCanvas *monstro_get_window_canvas(MonstroContext *ctx)
 
 bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, float height, MonstroWindowFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!str_id)
-      return false;
-
-   monstro::Window *parent = ctx->current_window;
+   monstro::Window *parent = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
    if (parent->skip_items)
       return false;
 
@@ -305,20 +290,18 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);
    monstro_set_next_window_size(ctx, width, height, MONSTRO_COND_ALWAYS);
 
-   bool opened = monstro_begin_window(ctx, child_name, nullptr, child_flags);
-
-   if (opened)
-   {
-      parent->addItem(width, height);
-   }
-
-   return opened;
+   // Without a p_open the window always begins; monstro_end_child ends it.
+   monstro_begin_window(ctx, child_name, nullptr, child_flags);
+   ctx->current_window->child_region = true;
+   parent->addItem(width, height);
+   return true;
 }
 
 void monstro_end_child(MonstroContext *ctx)
 {
    monstro::Window *win = monstro::requireWindow(ctx, __func__);
-   MONSTRO_REQUIRE(win->flags & MONSTRO_WINDOW_CHILD,
-                   "monstro_end_child: the current window '%s' is not a child window", win->name);
+   MONSTRO_REQUIRE(win->child_region, "monstro_end_child: the current window '%s' was not begun by monstro_begin_child",
+                   win->name);
+   win->child_region = false;
    monstro_end_window(ctx);
 }

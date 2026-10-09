@@ -1,4 +1,5 @@
 #include "harness.h"
+#include "context.h"
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -89,37 +90,59 @@ void test_failed(const char *file, int line, const char *expression)
    g_failures++;
 }
 
-Ui::Ui(bool with_font, const MonstroContextConfig *config)
+MonstroFont *load_test_font(MonstroEnv *env)
 {
-   ctx = config ? monstro_context_create_ex(config) : monstro_context_create();
+   MonstroFont *font = monstro_font_load_ttf_from_file(env, "test", g_font_path, 16.0f, 32, 480);
+   if (!font)
+   {
+      std::fprintf(stderr, "cannot load %s (run the tests from the repository root or pass --font)\n", g_font_path);
+      std::abort();
+   }
+   return font;
+}
+
+Ui::Ui(bool with_font, const MonstroContextConfig *config, const MonstroEnvConfig *env_config)
+{
+   env = monstro_init(env_config);
+   owns_env = true;
+   if (!env)
+   {
+      std::fprintf(stderr, "monstro_init failed\n");
+      std::abort();
+   }
+   if (with_font)
+      font = load_test_font(env);
+   ctx = monstro_context_create(env, config);
    if (!ctx)
    {
       std::fprintf(stderr, "monstro_context_create failed\n");
       std::abort();
    }
    monstro_set_display_size(ctx, 800.0f, 600.0f);
-   if (with_font)
-   {
-      MonstroTextureData atlas = {};
-      font =
-          monstro_font_load_ttf_from_file(monstro_context_get_font_manager(ctx), g_font_path, 16.0f, 32, 480, &atlas);
-      if (!font)
-      {
-         std::fprintf(stderr, "cannot load %s (run the tests from the repository root or pass --font)\n", g_font_path);
-         std::abort();
-      }
-      monstro_font_add(monstro_context_get_font_manager(ctx), font, "test", 16.0f);
-      monstro_font_set_atlas_texture(font, 1);
-
-      monstro_context_set_default_font(ctx, font);
-   }
 }
 
-Ui::~Ui() { monstro_context_destroy(ctx); }
+Ui::Ui(MonstroEnv *shared_env, const MonstroContextConfig *config) : env(shared_env)
+{
+   font = monstro_env_get_default_font(env);
+   ctx = monstro_context_create(env, config);
+   if (!ctx)
+   {
+      std::fprintf(stderr, "monstro_context_create failed\n");
+      std::abort();
+   }
+   monstro_set_display_size(ctx, 800.0f, 600.0f);
+}
+
+Ui::~Ui()
+{
+   monstro_context_destroy(ctx);
+   if (owns_env)
+      monstro_shutdown(env);
+}
 
 void Ui::begin(float delta_time) { monstro_begin_frame(ctx, delta_time); }
 
-void Ui::end() { monstro_end_frame(ctx); }
+const MonstroDrawData *Ui::end() { return data = monstro_end_frame(ctx); }
 
 void Ui::moveMouse(float x, float y) { monstro_set_mouse_pos(ctx, x, y); }
 
@@ -131,16 +154,16 @@ void Ui::type(const char *utf8) { monstro_add_input_text(ctx, utf8); }
 
 uint32_t Ui::vertexCount() const
 {
-   size_t bytes = 0;
-   monstro_draw_buffer_get_vertex_buffer(monstro_context_get_draw_buffer(ctx), nullptr, &bytes);
-   return (uint32_t)(bytes / sizeof(MonstroVertex));
+   if (ctx->canvas)
+      return ctx->canvas->vertex_count;
+   return data ? data->vertex_count : 0;
 }
 
 uint32_t Ui::indexCount() const
 {
-   uint32_t count = 0;
-   monstro_draw_buffer_get_index_buffer(monstro_context_get_draw_buffer(ctx), nullptr, &count);
-   return count;
+   if (ctx->canvas)
+      return ctx->canvas->index_count;
+   return data ? data->index_count : 0;
 }
 
 int main(int argc, char **argv)

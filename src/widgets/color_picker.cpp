@@ -162,15 +162,13 @@ static void draw_checkerboard(monstro::Canvas *canvas, MonstroRect r, float cell
 
 bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *color, MonstroColorPickerFlags flags)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!color)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(color)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   monstro::Canvas *canvas = &win->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
    bool changed = false;
    float h, s, v;
    rgb_to_hsv(color->r, color->g, color->b, &h, &s, &v);
@@ -386,16 +384,14 @@ bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *
 
 bool monstro_color_button(MonstroContext *ctx, const char *label, MonstroColor color, float width, float height)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   monstro::Canvas *canvas = &win->canvas;
-   MonstroStyle *style = &ctx->style;
+   monstro::Canvas *canvas = ctx->canvas;
+   MonstroStyle *style = &ctx->style();
 
    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
 

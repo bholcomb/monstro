@@ -6,22 +6,23 @@
 #include <stddef.h>
 
 #ifdef __cplusplus
-namespace monstro { struct Context; struct DrawBuffer; struct Canvas; }
+namespace monstro { struct Env; struct Context; struct Canvas; struct Theme; }
+typedef monstro::Env MonstroEnv;
 typedef monstro::Context MonstroContext;
-typedef monstro::DrawBuffer MonstroDrawBuffer;
 typedef monstro::Canvas MonstroCanvas;
+typedef monstro::Theme MonstroTheme;
 extern "C" {
 #else
+typedef struct MonstroEnv MonstroEnv;
 typedef struct MonstroContext MonstroContext;
-typedef struct MonstroDrawBuffer MonstroDrawBuffer;
 typedef struct MonstroCanvas MonstroCanvas;
+typedef struct MonstroTheme MonstroTheme;
 #endif
 
 /* ------------------------------------------------------------------------- */
 /* Forward Declarations                                                      */
 /* ------------------------------------------------------------------------- */
 typedef struct MonstroFont MonstroFont;
-typedef struct MonstroFontManager MonstroFontManager;
 
 /* ------------------------------------------------------------------------- */
 /* Core Types                                                                */
@@ -156,7 +157,7 @@ typedef enum MonstroWindowFlags {
                              MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_VERTICAL_SCROLLBAR |
                              MONSTRO_WINDOW_MOVABLE | MONSTRO_WINDOW_COLLAPSABLE |
                              MONSTRO_WINDOW_RESIZABLE | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_BRING_TO_FRONT |
-                             MONSTRO_WINDOW_SCROLL_WITH_MOUSE | MONSTRO_WINDOW_CHILD,
+                             MONSTRO_WINDOW_SCROLL_WITH_MOUSE,
 
     MONSTRO_WINDOW_ROOT_DEFAULT = MONSTRO_WINDOW_MENU_BAR | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_ROOT
 } MonstroWindowFlags;
@@ -292,16 +293,85 @@ typedef struct MonstroVertex {
     uint32_t color;
 } MonstroVertex;
 
+/*
+ * One draw call. Its indices are index_count entries starting at index_offset,
+ * and each index counts from vertex_offset: a renderer binds the command's
+ * vertex_count vertices from vertex_offset (base vertex) and draws its index
+ * range as is. A command with custom_draw set carries no geometry; the renderer
+ * calls custom_draw(user_data, clip_rect, layer) in its place.
+ */
 typedef struct MonstroDrawCommand {
     float clip_rect[4];
-    int layer;
-    uint32_t order;
     uint64_t texture_id;
+    uint32_t vertex_offset;
+    uint32_t vertex_count;
     uint32_t index_offset;
     uint32_t index_count;
+    int layer;
     MonstroCustomDrawCallback custom_draw;
     void* user_data;
 } MonstroDrawCommand;
+
+/*
+ * A finished frame, in draw order. It lives in the canvas that built it and
+ * stays valid until that canvas is lent for another frame; copy it with
+ * monstro_draw_data_copy to keep it longer. vertices is null when the frame
+ * was drawn into host vertex buffers (MonstroFrameBuffers). content_hash covers
+ * the commands and every vertex and index written, so an equal hash means an
+ * identical frame; changed compares it with the context's previous frame.
+ */
+typedef struct MonstroDrawData {
+    const MonstroVertex* vertices;
+    uint32_t vertex_count;
+    const uint32_t* indices;
+    uint32_t index_count;
+    const MonstroDrawCommand* commands;
+    uint32_t command_count;
+    float display_size[2];
+    uint64_t content_hash;
+    bool changed;
+    uint64_t atlas_version;
+} MonstroDrawData;
+
+/*
+ * Where vertex attributes go when a frame is built into host buffers. Formats
+ * are fixed: position is two floats, texcoord two floats, color one packed
+ * 0xAABBGGRR uint32. Each attribute names a buffer and its byte offset within
+ * that buffer's stride, so one layout describes Monstro's own interleaved
+ * vertex (one buffer, stride sizeof(MonstroVertex), offsets 0, 8 and 16) or
+ * split streams such as positions in one buffer and texcoord and color in
+ * another. The layout is set once, in MonstroEnvConfig.
+ */
+#define MONSTRO_MAX_VERTEX_BUFFERS 4
+
+typedef struct MonstroVertexAttribute {
+    uint32_t buffer;
+    uint32_t offset;
+} MonstroVertexAttribute;
+
+typedef struct MonstroVertexLayout {
+    uint32_t buffer_count;
+    uint32_t stride[MONSTRO_MAX_VERTEX_BUFFERS];
+    MonstroVertexAttribute position;
+    MonstroVertexAttribute texcoord;
+    MonstroVertexAttribute color;
+} MonstroVertexLayout;
+
+/*
+ * Host storage for one frame, for example persistently mapped GPU buffers that
+ * the host rotates while the GPU reads an earlier frame. vertex_buffers holds
+ * one pointer per buffer of the environment's vertex layout and
+ * vertex_capacity counts vertices; leave vertex_buffers[0] null to use the
+ * canvas's own vertex buffer, and indices null to use its own index buffer.
+ * Monstro only writes this memory, never reads it, and forgets it when the
+ * frame ends.
+ */
+typedef struct MonstroFrameBuffers {
+    void* vertex_buffers[MONSTRO_MAX_VERTEX_BUFFERS];
+    uint32_t vertex_capacity;
+    uint32_t* indices;
+    uint32_t index_capacity;
+} MonstroFrameBuffers;
 
 typedef struct MonstroNinePatch {
     uint64_t texture_id;
@@ -359,12 +429,14 @@ typedef struct MonstroGlyph {
     float advance[2];
 } MonstroGlyph;
 
+/* Pixels owned by Monstro. version changes whenever the pixels do. */
 typedef struct MonstroTextureData {
     uint32_t width;
     uint32_t height;
     MonstroTextureFormat format;
     size_t data_size;
     const void* data;
+    uint64_t version;
 } MonstroTextureData;
 
 /* ------------------------------------------------------------------------- */

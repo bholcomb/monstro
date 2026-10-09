@@ -84,16 +84,14 @@ static void clamp_edit_state_to_buffer(monstro::EditState *edit, const char *buf
 bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, MonstroInputTextFlags flags,
                         const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !buf)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(buf)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleEdit *es = &style->edit;
    monstro::EditState *edit = &ctx->edit_state;
@@ -478,16 +476,14 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, float width,
                                   float height, MonstroInputTextFlags flags, const char *tooltip)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!label || !buf)
-      return false;
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(buf)});
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
    MonstroStyleEdit *es = &style->edit;
    monstro::EditState *edit = &ctx->edit_state;

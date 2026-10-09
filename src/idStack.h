@@ -19,6 +19,7 @@ class IdStack
 
    int depth() const { return seeds.size(); }
    bool isBalanced() const { return seeds.empty(); }
+   void clear() { seeds.clear(); }
 
  private:
    FixedStack<uint64_t, MONSTRO_MAX_ID_STACK_DEPTH> seeds{"ID stack"};

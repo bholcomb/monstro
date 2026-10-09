@@ -1,4 +1,5 @@
 #include "context.h"
+#include "env.h"
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -7,44 +8,92 @@
 namespace monstro
 {
 
-Context::Context(const MonstroContextConfig &context_config) : config(context_config)
+Context::Context(Env *environment, const MonstroContextConfig &context_config)
+    : env(environment), config(context_config)
 {
-   font_manager = monstro_font_manager_create();
-   final_commands = (MonstroDrawCommand *)std::malloc(sizeof(MonstroDrawCommand) * config.max_draw_commands);
-   monstro_style_set_default(&style);
+   theme = &env->themes[0];
 }
 
-Context::~Context()
+Context::~Context() {}
+
+bool Context::init()
 {
-   if (font_manager)
-   {
-      monstro_font_manager_destroy(font_manager);
-   }
-   std::free(final_commands);
+   return windows.init(config.max_windows) && popup_stack.init(config.max_popups) &&
+          tab_bars.init(config.max_tab_bars) && tree_states.init(config.max_tree_nodes) &&
+          tables.init(config.max_tables);
 }
 
-Window *requireWindow(Context *ctx, const char *function)
+size_t Context::residentBytes() const
+{
+   return sizeof(Context) + windows.bytes() + popup_stack.bytes() + tab_bars.bytes() + tree_states.bytes() +
+          tables.bytes();
+}
+
+static void require_args(const char *function, std::initializer_list<RequiredArg> args)
+{
+   for (const RequiredArg &arg : args)
+      MONSTRO_REQUIRE(arg.value, "%s: %s must not be null", function, arg.name);
+}
+
+Context *requireContext(Context *ctx, const char *function, std::initializer_list<RequiredArg> args)
+{
+   MONSTRO_REQUIRE(ctx, "%s: the context must not be null", function);
+   require_args(function, args);
+   return ctx;
+}
+
+Window *requireWindow(Context *ctx, const char *function, std::initializer_list<RequiredArg> args)
 {
    MONSTRO_REQUIRE(ctx, "%s: the context must not be null", function);
    MONSTRO_REQUIRE(ctx->current_window,
                    "%s called outside a frame: window and widget calls belong between "
                    "monstro_begin_frame and monstro_end_frame",
                    function);
+   require_args(function, args);
    return ctx->current_window;
 }
 
-void Context::beginFrame(float dt)
+MonstroStyle &Context::style() const
+{
+   MONSTRO_REQUIRE(canvas, "the working style exists only inside a frame (between monstro_begin_frame and "
+                           "monstro_end_frame)");
+   return canvas->style;
+}
+
+IdStack &Context::ids() const
+{
+   MONSTRO_REQUIRE(canvas, "the ID stack exists only inside a frame (between monstro_begin_frame and "
+                           "monstro_end_frame)");
+   return canvas->ids;
+}
+
+const MonstroStyle &Context::currentStyle() const { return canvas ? canvas->style : theme->style; }
+
+void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
 {
    MONSTRO_REQUIRE(!in_frame,
                    "monstro_begin_frame called during frame %d: the previous frame is missing "
                    "monstro_end_frame",
                    frame);
-   requireBalanced("monstro_begin_frame");
+   frame++;
+   canvas = env->lendCanvas(this, frame, buffers);
    in_frame = true;
+
+   // The frame works on a copy of the shared theme, so pushes never reach the theme or other contexts.
+   canvas->style = theme->style;
+   if (!canvas->style.font)
+      canvas->style.font = env->default_font;
+
+   const MonstroSettings &settings = env->settings;
+   mouse.double_click_time = settings.double_click_time;
+   mouse.double_click_distance = settings.double_click_distance;
+   mouse.drag_threshold = settings.drag_threshold;
+   keyboard.repeat_delay = settings.key_repeat_delay;
+   keyboard.repeat_rate = settings.key_repeat_rate;
+   tooltip.myHoverDelay = settings.tooltip_delay;
 
    delta_time = dt;
    time += dt;
-   frame++;
 
    hovered_id_prev_frame = hovered_id;
    hovered_id = 0;
@@ -66,17 +115,6 @@ void Context::beginFrame(float dt)
       window.active = false;
    }
 
-   draw_buffer.beginFrame(frame);
-   final_command_count = 0;
-
-   next_window_pos_cond = MONSTRO_COND_NONE;
-   next_window_size_cond = MONSTRO_COND_NONE;
-   next_window_focus_cond = MONSTRO_COND_NONE;
-   next_window_pos_x = -INFINITY;
-   next_window_pos_y = -INFINITY;
-   next_window_size_x = -INFINITY;
-   next_window_size_y = -INFINITY;
-
    want_capture_mouse = false;
    want_capture_keyboard = false;
    want_text_input = false;
@@ -88,8 +126,7 @@ void Context::beginFrame(float dt)
    last_item_clicked = false;
    last_item_edited = false;
    last_item_deactivated_after_edit = false;
-
-   tooltip.beginFrame();
+   disabled = false;
 
    next_window_size_x = display_width;
    next_window_size_y = display_height;
@@ -113,14 +150,14 @@ MonstroTreeNodeState *Context::findOrCreateTreeState(uint64_t id, bool default_o
       }
    }
 
-   MonstroTreeNodeState *state = &tree_states.allocate();
+   MonstroTreeNodeState *state = &tree_states.add();
    state->id = id;
    state->open = default_open;
    state->last_frame_active = frame;
    return state;
 }
 
-void Context::endFrame()
+const MonstroDrawData *Context::endFrame()
 {
    MONSTRO_REQUIRE(in_frame, "monstro_end_frame called without monstro_begin_frame");
    MONSTRO_REQUIRE(current_window == root_window,
@@ -133,7 +170,12 @@ void Context::endFrame()
    root_window->end();
    popWindow();
    requireBalanced("monstro_end_frame");
-   root_window->collectDrawCommands(this);
+
+   root_window->rankForDrawing(0);
+   const MonstroDrawData *data = canvas->finish(last_content_hash);
+   last_content_hash = data->content_hash;
+   canvas->draw_data.display_size[0] = display_width;
+   canvas->draw_data.display_size[1] = display_height;
 
    if (!popup_stack.empty() && mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
    {
@@ -165,23 +207,21 @@ void Context::endFrame()
 
    mouse.endFrame();
    keyboard.endFrame();
+   env->returnCanvas(canvas);
+   canvas = nullptr;
    in_frame = false;
+   return data;
 }
 
 void Context::requireBalanced(const char *where) const
 {
-   MONSTRO_REQUIRE(window_stack.empty() && id_stack.isBalanced() && style_stack.empty() && disabled_stack.empty() &&
-                       columns_stack.empty() && !current_table && !current_tab_bar,
+   const Canvas &c = *canvas;
+   MONSTRO_REQUIRE(c.windows.empty() && c.ids.isBalanced() && c.style_stack.empty() && c.disabled_stack.empty() &&
+                       c.columns.empty() && !c.table.state && c.tab_bars.empty(),
                    "unbalanced begin/end or push/pop pairs at %s (frame %d): %d windows, %d IDs, %d styles, %d "
-                   "disabled scopes and %d column sets still open; table open: %s; tab bar open: %s",
-                   where, frame, window_stack.size(), id_stack.depth(), style_stack.size(), disabled_stack.size(),
-                   columns_stack.size(), current_table ? "yes" : "no", current_tab_bar ? "yes" : "no");
-}
-
-void Context::setDefaultFont(MonstroFont *font)
-{
-   default_font = font;
-   style.font = font;
+                   "disabled scopes, %d column sets and %d tab bars still open; table open: %s",
+                   where, frame, c.windows.size(), c.ids.depth(), c.style_stack.size(), c.disabled_stack.size(),
+                   c.columns.size(), c.tab_bars.size(), c.table.state ? "yes" : "no");
 }
 
 void Context::setActiveId(uint64_t id) { active_id = id; }
@@ -207,75 +247,76 @@ Layout *Context::getCurrentLayout()
 /* C API Implementation                                                      */
 /* ------------------------------------------------------------------------- */
 
+using monstro::requireContext;
+using monstro::requireWindow;
+
 extern "C"
 {
-
-// Contexts own their resources; the C API needs no process-wide setup or teardown.
-void monstro_init(void) {}
-void monstro_shutdown(void) {}
 
 MonstroContextConfig monstro_context_config_default(void)
 {
    MonstroContextConfig config;
-   config.max_vertices = MONSTRO_DEFAULT_MAX_VERTICES;
-   config.max_indices = MONSTRO_DEFAULT_MAX_INDICES;
-   config.max_draw_commands = MONSTRO_DEFAULT_MAX_DRAW_COMMANDS;
-   config.max_path_points = MONSTRO_DEFAULT_MAX_PATH_POINTS;
+   config.max_windows = MONSTRO_DEFAULT_MAX_WINDOWS;
+   config.max_tree_nodes = MONSTRO_DEFAULT_MAX_TREE_NODES;
+   config.max_tab_bars = MONSTRO_DEFAULT_MAX_TAB_BARS;
+   config.max_tables = MONSTRO_DEFAULT_MAX_TABLES;
+   config.max_popups = MONSTRO_DEFAULT_MAX_POPUPS;
    return config;
 }
 
-MonstroContext *monstro_context_create(void)
+MonstroContext *monstro_context_create(MonstroEnv *env, const MonstroContextConfig *config)
 {
-   MonstroContextConfig config = monstro_context_config_default();
-   return monstro_context_create_ex(&config);
-}
+   monstro::requireEnv(env, __func__)->requireIdle(__func__);
+   MonstroContextConfig defaults = monstro_context_config_default();
+   const MonstroContextConfig &c = config ? *config : defaults;
+   MONSTRO_REQUIRE(c.max_windows >= 2 && c.max_tree_nodes >= 1 && c.max_tab_bars >= 1 && c.max_tables >= 1 &&
+                       c.max_popups >= 1,
+                   "MonstroContextConfig capacities too small (max_windows %u, at least 2 with the root; "
+                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, at least 1 each)",
+                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups);
 
-MonstroContext *monstro_context_create_ex(const MonstroContextConfig *config)
-{
-   MONSTRO_REQUIRE(config, "monstro_context_create_ex needs a config; start from monstro_context_config_default()");
-   MONSTRO_REQUIRE(config->max_vertices >= 4 && config->max_indices >= 6 && config->max_draw_commands >= 1 &&
-                       config->max_path_points >= 4,
-                   "MonstroContextConfig capacities too small to draw anything (max_vertices %u, max_indices %u, "
-                   "max_draw_commands %u, max_path_points %u)",
-                   config->max_vertices, config->max_indices, config->max_draw_commands, config->max_path_points);
-
-   MonstroContext *ctx = new (std::nothrow) MonstroContext(*config);
+   MonstroContext *ctx = new (std::nothrow) MonstroContext(env, c);
    if (!ctx)
       return nullptr;
-
-   if (!ctx->font_manager || !ctx->final_commands || !ctx->draw_buffer.init(config->max_vertices, config->max_indices))
+   if (!ctx->init())
    {
       delete ctx;
       return nullptr;
    }
-
+   env->context_count++;
    return ctx;
 }
 
-void monstro_context_destroy(MonstroContext *ctx) { delete ctx; }
-
-MonstroDrawBuffer *monstro_context_get_draw_buffer(MonstroContext *ctx) { return ctx ? &ctx->draw_buffer : nullptr; }
-
-void monstro_context_set_default_font(MonstroContext *ctx, MonstroFont *font)
+void monstro_context_destroy(MonstroContext *ctx)
 {
-   if (ctx)
-      ctx->setDefaultFont(font);
+   requireContext(ctx, __func__);
+   MONSTRO_REQUIRE(!ctx->in_frame, "%s: frame %d is still open; end it first", __func__, ctx->frame);
+   ctx->env->requireIdle(__func__);
+   ctx->env->context_count--;
+   delete ctx;
 }
 
-MonstroFont *monstro_context_get_default_font(MonstroContext *ctx) { return ctx ? ctx->getDefaultFont() : nullptr; }
+MonstroEnv *monstro_context_get_env(MonstroContext *ctx) { return requireContext(ctx, __func__)->env; }
+
+void monstro_context_set_theme(MonstroContext *ctx, MonstroTheme *theme)
+{
+   requireContext(ctx, __func__, {MONSTRO_ARG(theme)});
+   MONSTRO_REQUIRE(!ctx->in_frame, "%s: change the theme between frames", __func__);
+   ctx->theme = theme;
+}
+
+MonstroTheme *monstro_context_get_theme(MonstroContext *ctx) { return requireContext(ctx, __func__)->theme; }
 
 void monstro_set_display_size(MonstroContext *ctx, float width, float height)
 {
-   if (!ctx)
-      return;
+   requireContext(ctx, __func__);
    ctx->display_width = width;
    ctx->display_height = height;
 }
 
 void monstro_get_display_size(MonstroContext *ctx, float *out_width, float *out_height)
 {
-   if (!ctx)
-      return;
+   requireContext(ctx, __func__);
    if (out_width)
       *out_width = ctx->display_width;
    if (out_height)
@@ -284,205 +325,91 @@ void monstro_get_display_size(MonstroContext *ctx, float *out_width, float *out_
 
 void monstro_begin_frame(MonstroContext *ctx, float delta_time)
 {
-   if (ctx)
-      ctx->beginFrame(delta_time);
+   requireContext(ctx, __func__)->beginFrame(delta_time, nullptr);
 }
 
-void monstro_end_frame(MonstroContext *ctx)
+void monstro_begin_frame_into(MonstroContext *ctx, float delta_time, const MonstroFrameBuffers *buffers)
 {
-   if (ctx)
-      ctx->endFrame();
+   requireContext(ctx, __func__, {MONSTRO_ARG(buffers)})->beginFrame(delta_time, buffers);
 }
 
-float monstro_get_delta_time(MonstroContext *ctx) { return ctx ? ctx->delta_time : 0.0f; }
+const MonstroDrawData *monstro_end_frame(MonstroContext *ctx) { return requireContext(ctx, __func__)->endFrame(); }
 
-float monstro_get_time(MonstroContext *ctx) { return ctx ? ctx->time : 0.0f; }
+MonstroDrawData *monstro_draw_data_copy(const MonstroDrawData *data)
+{
+   MONSTRO_REQUIRE(data, "%s: the draw data must not be null", __func__);
+   MONSTRO_REQUIRE(data->vertices || data->vertex_count == 0,
+                   "%s: the frame was drawn into host vertex buffers; its vertices are there", __func__);
 
-MonstroStyle *monstro_get_style(MonstroContext *ctx) { return ctx ? &ctx->style : nullptr; }
+   // One block: the header, then commands, vertices and indices, each suitably aligned.
+   size_t commands_at = sizeof(MonstroDrawData);
+   size_t vertices_at = commands_at + sizeof(MonstroDrawCommand) * data->command_count;
+   size_t indices_at = vertices_at + sizeof(MonstroVertex) * data->vertex_count;
+   size_t total = indices_at + sizeof(uint32_t) * data->index_count;
+   uint8_t *block = (uint8_t *)std::malloc(total);
+   if (!block)
+      return nullptr;
 
-void monstro_set_style(MonstroContext *ctx, const MonstroStyle *style)
-{
-   if (ctx && style)
-      ctx->style = *style;
+   MonstroDrawData *copy = (MonstroDrawData *)block;
+   *copy = *data;
+   MonstroDrawCommand *commands = (MonstroDrawCommand *)(block + commands_at);
+   MonstroVertex *vertices = (MonstroVertex *)(block + vertices_at);
+   uint32_t *indices = (uint32_t *)(block + indices_at);
+   if (data->command_count)
+      std::memcpy(commands, data->commands, sizeof(MonstroDrawCommand) * data->command_count);
+   if (data->vertex_count)
+      std::memcpy(vertices, data->vertices, sizeof(MonstroVertex) * data->vertex_count);
+   if (data->index_count)
+      std::memcpy(indices, data->indices, sizeof(uint32_t) * data->index_count);
+   copy->commands = commands;
+   copy->vertices = vertices;
+   copy->indices = indices;
+   return copy;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Per-widget style get                                                      */
-/* ------------------------------------------------------------------------- */
+void monstro_draw_data_free(MonstroDrawData *copy) { std::free(copy); }
 
-const MonstroStyleText *monstro_get_text_style(MonstroContext *ctx) { return ctx ? &ctx->style.text : nullptr; }
-const MonstroStyleButton *monstro_get_button_style(MonstroContext *ctx) { return ctx ? &ctx->style.button : nullptr; }
-const MonstroStyleButton *monstro_get_contextual_button_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.contextual_button : nullptr;
-}
-const MonstroStyleButton *monstro_get_menu_button_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.menu_button : nullptr;
-}
-const MonstroStyleToggle *monstro_get_option_style(MonstroContext *ctx) { return ctx ? &ctx->style.option : nullptr; }
-const MonstroStyleToggle *monstro_get_checkbox_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.checkbox : nullptr;
-}
-const MonstroStyleSelectable *monstro_get_selectable_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.selectable : nullptr;
-}
-const MonstroStyleSlider *monstro_get_slider_style(MonstroContext *ctx) { return ctx ? &ctx->style.slider : nullptr; }
-const MonstroStyleKnob *monstro_get_knob_style(MonstroContext *ctx) { return ctx ? &ctx->style.knob : nullptr; }
-const MonstroStyleProgress *monstro_get_progress_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.progress : nullptr;
-}
-const MonstroStyleProperty *monstro_get_property_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.property : nullptr;
-}
-const MonstroStyleEdit *monstro_get_edit_style(MonstroContext *ctx) { return ctx ? &ctx->style.edit : nullptr; }
-const MonstroStyleTree *monstro_get_tree_style(MonstroContext *ctx) { return ctx ? &ctx->style.tree : nullptr; }
-const MonstroStyleTab *monstro_get_tab_style(MonstroContext *ctx) { return ctx ? &ctx->style.tab : nullptr; }
-const MonstroStyleTable *monstro_get_table_style(MonstroContext *ctx) { return ctx ? &ctx->style.table : nullptr; }
-const MonstroStyleCombo *monstro_get_combo_style(MonstroContext *ctx) { return ctx ? &ctx->style.combo : nullptr; }
-const MonstroStyleMenu *monstro_get_menu_style(MonstroContext *ctx) { return ctx ? &ctx->style.menu : nullptr; }
-const MonstroStyleSeparator *monstro_get_separator_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.separator : nullptr;
-}
-const MonstroStyleTooltip *monstro_get_tooltip_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.tooltip : nullptr;
-}
-const MonstroStyleChart *monstro_get_chart_style(MonstroContext *ctx) { return ctx ? &ctx->style.chart : nullptr; }
-const MonstroStyleScrollbar *monstro_get_scrollh_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.scrollh : nullptr;
-}
-const MonstroStyleScrollbar *monstro_get_scrollv_style(MonstroContext *ctx)
-{
-   return ctx ? &ctx->style.scrollv : nullptr;
-}
-const MonstroStyleWindow *monstro_get_window_style(MonstroContext *ctx) { return ctx ? &ctx->style.window : nullptr; }
+float monstro_get_delta_time(MonstroContext *ctx) { return requireContext(ctx, __func__)->delta_time; }
+
+float monstro_get_time(MonstroContext *ctx) { return requireContext(ctx, __func__)->time; }
 
 /* ------------------------------------------------------------------------- */
-/* Per-widget style set                                                      */
+/* Current style                                                             */
 /* ------------------------------------------------------------------------- */
 
-void monstro_set_text_style(MonstroContext *ctx, const MonstroStyleText *s)
-{
-   if (ctx && s)
-      ctx->style.text = *s;
-}
-void monstro_set_button_style(MonstroContext *ctx, const MonstroStyleButton *s)
-{
-   if (ctx && s)
-      ctx->style.button = *s;
-}
-void monstro_set_contextual_button_style(MonstroContext *ctx, const MonstroStyleButton *s)
-{
-   if (ctx && s)
-      ctx->style.contextual_button = *s;
-}
-void monstro_set_menu_button_style(MonstroContext *ctx, const MonstroStyleButton *s)
-{
-   if (ctx && s)
-      ctx->style.menu_button = *s;
-}
-void monstro_set_option_style(MonstroContext *ctx, const MonstroStyleToggle *s)
-{
-   if (ctx && s)
-      ctx->style.option = *s;
-}
-void monstro_set_checkbox_style(MonstroContext *ctx, const MonstroStyleToggle *s)
-{
-   if (ctx && s)
-      ctx->style.checkbox = *s;
-}
-void monstro_set_selectable_style(MonstroContext *ctx, const MonstroStyleSelectable *s)
-{
-   if (ctx && s)
-      ctx->style.selectable = *s;
-}
-void monstro_set_slider_style(MonstroContext *ctx, const MonstroStyleSlider *s)
-{
-   if (ctx && s)
-      ctx->style.slider = *s;
-}
-void monstro_set_knob_style(MonstroContext *ctx, const MonstroStyleKnob *s)
-{
-   if (ctx && s)
-      ctx->style.knob = *s;
-}
-void monstro_set_progress_style(MonstroContext *ctx, const MonstroStyleProgress *s)
-{
-   if (ctx && s)
-      ctx->style.progress = *s;
-}
-void monstro_set_property_style(MonstroContext *ctx, const MonstroStyleProperty *s)
-{
-   if (ctx && s)
-      ctx->style.property = *s;
-}
-void monstro_set_edit_style(MonstroContext *ctx, const MonstroStyleEdit *s)
-{
-   if (ctx && s)
-      ctx->style.edit = *s;
-}
-void monstro_set_tree_style(MonstroContext *ctx, const MonstroStyleTree *s)
-{
-   if (ctx && s)
-      ctx->style.tree = *s;
-}
-void monstro_set_tab_style(MonstroContext *ctx, const MonstroStyleTab *s)
-{
-   if (ctx && s)
-      ctx->style.tab = *s;
-}
-void monstro_set_table_style(MonstroContext *ctx, const MonstroStyleTable *s)
-{
-   if (ctx && s)
-      ctx->style.table = *s;
-}
-void monstro_set_combo_style(MonstroContext *ctx, const MonstroStyleCombo *s)
-{
-   if (ctx && s)
-      ctx->style.combo = *s;
-}
-void monstro_set_menu_style(MonstroContext *ctx, const MonstroStyleMenu *s)
-{
-   if (ctx && s)
-      ctx->style.menu = *s;
-}
-void monstro_set_separator_style(MonstroContext *ctx, const MonstroStyleSeparator *s)
-{
-   if (ctx && s)
-      ctx->style.separator = *s;
-}
-void monstro_set_tooltip_style(MonstroContext *ctx, const MonstroStyleTooltip *s)
-{
-   if (ctx && s)
-      ctx->style.tooltip = *s;
-}
-void monstro_set_chart_style(MonstroContext *ctx, const MonstroStyleChart *s)
-{
-   if (ctx && s)
-      ctx->style.chart = *s;
-}
-void monstro_set_scrollh_style(MonstroContext *ctx, const MonstroStyleScrollbar *s)
-{
-   if (ctx && s)
-      ctx->style.scrollh = *s;
-}
-void monstro_set_scrollv_style(MonstroContext *ctx, const MonstroStyleScrollbar *s)
-{
-   if (ctx && s)
-      ctx->style.scrollv = *s;
-}
-void monstro_set_window_style(MonstroContext *ctx, const MonstroStyleWindow *s)
-{
-   if (ctx && s)
-      ctx->style.window = *s;
-}
+const MonstroStyle *monstro_get_style(MonstroContext *ctx) { return &requireContext(ctx, __func__)->currentStyle(); }
+
+#define MONSTRO_STYLE_GETTER(TYPE, NAME, FIELD)                                                                        \
+   const TYPE *monstro_get_##NAME##_style(MonstroContext *ctx)                                                         \
+   {                                                                                                                   \
+      return &requireContext(ctx, __func__)->currentStyle().FIELD;                                                     \
+   }
+
+MONSTRO_STYLE_GETTER(MonstroStyleText, text, text)
+MONSTRO_STYLE_GETTER(MonstroStyleButton, button, button)
+MONSTRO_STYLE_GETTER(MonstroStyleButton, contextual_button, contextual_button)
+MONSTRO_STYLE_GETTER(MonstroStyleButton, menu_button, menu_button)
+MONSTRO_STYLE_GETTER(MonstroStyleToggle, option, option)
+MONSTRO_STYLE_GETTER(MonstroStyleToggle, checkbox, checkbox)
+MONSTRO_STYLE_GETTER(MonstroStyleSelectable, selectable, selectable)
+MONSTRO_STYLE_GETTER(MonstroStyleSlider, slider, slider)
+MONSTRO_STYLE_GETTER(MonstroStyleKnob, knob, knob)
+MONSTRO_STYLE_GETTER(MonstroStyleProgress, progress, progress)
+MONSTRO_STYLE_GETTER(MonstroStyleProperty, property, property)
+MONSTRO_STYLE_GETTER(MonstroStyleEdit, edit, edit)
+MONSTRO_STYLE_GETTER(MonstroStyleTree, tree, tree)
+MONSTRO_STYLE_GETTER(MonstroStyleTab, tab, tab)
+MONSTRO_STYLE_GETTER(MonstroStyleTable, table, table)
+MONSTRO_STYLE_GETTER(MonstroStyleCombo, combo, combo)
+MONSTRO_STYLE_GETTER(MonstroStyleMenu, menu, menu)
+MONSTRO_STYLE_GETTER(MonstroStyleSeparator, separator, separator)
+MONSTRO_STYLE_GETTER(MonstroStyleTooltip, tooltip, tooltip)
+MONSTRO_STYLE_GETTER(MonstroStyleChart, chart, chart)
+MONSTRO_STYLE_GETTER(MonstroStyleScrollbar, scrollh, scrollh)
+MONSTRO_STYLE_GETTER(MonstroStyleScrollbar, scrollv, scrollv)
+MONSTRO_STYLE_GETTER(MonstroStyleWindow, window, window)
+
+#undef MONSTRO_STYLE_GETTER
 
 /* ------------------------------------------------------------------------- */
 /* Per-widget style push (backup + apply)                                    */
@@ -491,13 +418,12 @@ void monstro_set_window_style(MonstroContext *ctx, const MonstroStyleWindow *s)
 #define MONSTRO_PUSH_STYLE(CTX, ENUM_TAG, UNION_FIELD, STYLE_FIELD, SRC)                                               \
    do                                                                                                                  \
    {                                                                                                                   \
-      if (!(CTX) || !(SRC))                                                                                            \
-         return;                                                                                                       \
+      monstro::requireWindow((CTX), __func__, {MONSTRO_ARG(SRC)});                                                     \
       MonstroStyleBackup _b = {};                                                                                      \
       _b.type = (ENUM_TAG);                                                                                            \
-      _b.data.UNION_FIELD = (CTX)->style.STYLE_FIELD;                                                                  \
-      (CTX)->style_stack.push(_b);                                                                                     \
-      (CTX)->style.STYLE_FIELD = *(SRC);                                                                               \
+      _b.data.UNION_FIELD = (CTX)->style().STYLE_FIELD;                                                                \
+      (CTX)->canvas->style_stack.push(_b);                                                                             \
+      (CTX)->style().STYLE_FIELD = *(SRC);                                                                             \
    } while (0)
 
 void monstro_push_text_style(MonstroContext *ctx, const MonstroStyleText *s)
@@ -601,150 +527,85 @@ void monstro_push_window_style(MonstroContext *ctx, const MonstroStyleWindow *s)
 
 void monstro_pop_style(MonstroContext *ctx, int count)
 {
-   if (!ctx)
-      return;
+   monstro::requireWindow(ctx, __func__);
+   MonstroStyle &style = ctx->style();
    for (int i = 0; i < count; i++)
    {
-      MonstroStyleBackup backup = ctx->style_stack.pop();
+      MonstroStyleBackup backup = ctx->canvas->style_stack.pop();
       MonstroStyleBackup *b = &backup;
       switch (b->type)
       {
       case MONSTRO_PUSHED_TEXT:
-         ctx->style.text = b->data.text;
+         style.text = b->data.text;
          break;
       case MONSTRO_PUSHED_BUTTON:
-         ctx->style.button = b->data.button;
+         style.button = b->data.button;
          break;
       case MONSTRO_PUSHED_CONTEXTUAL_BUTTON:
-         ctx->style.contextual_button = b->data.button;
+         style.contextual_button = b->data.button;
          break;
       case MONSTRO_PUSHED_MENU_BUTTON:
-         ctx->style.menu_button = b->data.button;
+         style.menu_button = b->data.button;
          break;
       case MONSTRO_PUSHED_OPTION:
-         ctx->style.option = b->data.toggle;
+         style.option = b->data.toggle;
          break;
       case MONSTRO_PUSHED_CHECKBOX:
-         ctx->style.checkbox = b->data.toggle;
+         style.checkbox = b->data.toggle;
          break;
       case MONSTRO_PUSHED_SELECTABLE:
-         ctx->style.selectable = b->data.selectable;
+         style.selectable = b->data.selectable;
          break;
       case MONSTRO_PUSHED_SLIDER:
-         ctx->style.slider = b->data.slider;
+         style.slider = b->data.slider;
          break;
       case MONSTRO_PUSHED_KNOB:
-         ctx->style.knob = b->data.knob;
+         style.knob = b->data.knob;
          break;
       case MONSTRO_PUSHED_PROGRESS:
-         ctx->style.progress = b->data.progress;
+         style.progress = b->data.progress;
          break;
       case MONSTRO_PUSHED_PROPERTY:
-         ctx->style.property = b->data.property;
+         style.property = b->data.property;
          break;
       case MONSTRO_PUSHED_EDIT:
-         ctx->style.edit = b->data.edit;
+         style.edit = b->data.edit;
          break;
       case MONSTRO_PUSHED_TREE:
-         ctx->style.tree = b->data.tree;
+         style.tree = b->data.tree;
          break;
       case MONSTRO_PUSHED_TAB:
-         ctx->style.tab = b->data.tab;
+         style.tab = b->data.tab;
          break;
       case MONSTRO_PUSHED_TABLE:
-         ctx->style.table = b->data.table;
+         style.table = b->data.table;
          break;
       case MONSTRO_PUSHED_COMBO:
-         ctx->style.combo = b->data.combo;
+         style.combo = b->data.combo;
          break;
       case MONSTRO_PUSHED_MENU:
-         ctx->style.menu = b->data.menu;
+         style.menu = b->data.menu;
          break;
       case MONSTRO_PUSHED_SEPARATOR:
-         ctx->style.separator = b->data.separator;
+         style.separator = b->data.separator;
          break;
       case MONSTRO_PUSHED_TOOLTIP:
-         ctx->style.tooltip = b->data.tooltip;
+         style.tooltip = b->data.tooltip;
          break;
       case MONSTRO_PUSHED_CHART:
-         ctx->style.chart = b->data.chart;
+         style.chart = b->data.chart;
          break;
       case MONSTRO_PUSHED_SCROLLH:
-         ctx->style.scrollh = b->data.scrollbar;
+         style.scrollh = b->data.scrollbar;
          break;
       case MONSTRO_PUSHED_SCROLLV:
-         ctx->style.scrollv = b->data.scrollbar;
+         style.scrollv = b->data.scrollbar;
          break;
       case MONSTRO_PUSHED_WINDOW:
-         ctx->style.window = b->data.window;
+         style.window = b->data.window;
          break;
       }
    }
-}
-
-} // extern "C"
-
-/* ------------------------------------------------------------------------- */
-/* DrawBuffer C API                                                          */
-/* ------------------------------------------------------------------------- */
-
-extern "C"
-{
-
-void monstro_context_get_draw_commands(MonstroContext *ctx, const MonstroDrawCommand **out_commands,
-                                       uint32_t *out_count)
-{
-   if (!ctx)
-   {
-      if (out_commands)
-         *out_commands = nullptr;
-      if (out_count)
-         *out_count = 0;
-      return;
-   }
-   if (out_commands)
-      *out_commands = ctx->final_commands;
-   if (out_count)
-      *out_count = ctx->final_command_count;
-}
-
-void monstro_draw_buffer_get_vertex_buffer(MonstroDrawBuffer *buf, const MonstroVertex **out_data,
-                                           size_t *out_byte_size)
-{
-   if (!buf)
-   {
-      if (out_data)
-         *out_data = nullptr;
-      if (out_byte_size)
-         *out_byte_size = 0;
-      return;
-   }
-   buf->getVertexBuffer(out_data, out_byte_size);
-}
-
-void monstro_draw_buffer_get_index_buffer(MonstroDrawBuffer *buf, const uint32_t **out_data, uint32_t *out_count)
-{
-   if (!buf)
-   {
-      if (out_data)
-         *out_data = nullptr;
-      if (out_count)
-         *out_count = 0;
-      return;
-   }
-   buf->getIndexBuffer(out_data, out_count);
-}
-
-void monstro_draw_buffer_set_vertex_buffer(MonstroDrawBuffer *buf, MonstroVertex *buffer, size_t capacity_in_vertices)
-{
-   if (buf)
-      buf->setVertexBuffer(buffer, capacity_in_vertices);
-}
-
-void monstro_draw_buffer_set_index_buffer(MonstroDrawBuffer *buf, uint32_t *buffer, size_t capacity_in_indices)
-{
-   if (buf)
-      buf->setIndexBuffer(buffer, capacity_in_indices);
 }
 
 } // extern "C"
@@ -758,21 +619,20 @@ extern "C"
 
 void monstro_push_id(MonstroContext *ctx, const char *name)
 {
-   if (ctx)
-      ctx->id_stack.push(name);
+   requireWindow(ctx, __func__, {MONSTRO_ARG(name)});
+   ctx->ids().push(name);
 }
 
 void monstro_pop_id(MonstroContext *ctx)
 {
-   if (ctx)
-      ctx->id_stack.pop();
+   requireWindow(ctx, __func__);
+   ctx->ids().pop();
 }
 
 uint64_t monstro_get_id(MonstroContext *ctx, const char *name)
 {
-   if (!ctx || !name)
-      return 0;
-   uint64_t combined = ctx->id_stack.getId(name);
+   requireWindow(ctx, __func__, {MONSTRO_ARG(name)});
+   uint64_t combined = ctx->ids().getId(name);
    ctx->keepAliveId(combined);
    return combined;
 }
@@ -786,8 +646,7 @@ uint64_t monstro_get_id(MonstroContext *ctx, const char *name)
 void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, bool hovered, bool active, bool clicked,
                            bool edited)
 {
-   if (!ctx)
-      return;
+   requireContext(ctx, __func__);
    ctx->last_item_id = id;
    ctx->last_item_rect = rect;
    ctx->last_item_hovered = hovered;
@@ -799,50 +658,40 @@ void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, b
    ctx->last_item_deactivated_after_edit = was_active && edited;
 }
 
-bool monstro_is_item_hovered(MonstroContext *ctx) { return ctx ? ctx->last_item_hovered : false; }
+bool monstro_is_item_hovered(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_hovered; }
 
-bool monstro_is_item_active(MonstroContext *ctx) { return ctx ? ctx->last_item_active : false; }
+bool monstro_is_item_active(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_active; }
 
 bool monstro_is_item_clicked(MonstroContext *ctx, MonstroMouseButton button)
 {
-   if (!ctx)
-      return false;
-   return ctx->last_item_hovered && monstro_is_mouse_clicked(ctx, button, false);
+   return requireContext(ctx, __func__)->last_item_hovered && monstro_is_mouse_clicked(ctx, button, false);
 }
 
-bool monstro_is_item_edited(MonstroContext *ctx) { return ctx ? ctx->last_item_edited : false; }
+bool monstro_is_item_edited(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_edited; }
 
 bool monstro_is_item_deactivated_after_edit(MonstroContext *ctx)
 {
-   return ctx ? ctx->last_item_deactivated_after_edit : false;
+   return requireContext(ctx, __func__)->last_item_deactivated_after_edit;
 }
 
-MonstroRect monstro_get_item_rect(MonstroContext *ctx)
-{
-   if (!ctx)
-      return {0, 0, 0, 0};
-   return ctx->last_item_rect;
-}
+MonstroRect monstro_get_item_rect(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_rect; }
 
 MonstroVec2 monstro_get_item_rect_min(MonstroContext *ctx)
 {
-   if (!ctx)
-      return {0, 0};
-   return {ctx->last_item_rect.x, ctx->last_item_rect.y};
+   MonstroRect r = requireContext(ctx, __func__)->last_item_rect;
+   return {r.x, r.y};
 }
 
 MonstroVec2 monstro_get_item_rect_max(MonstroContext *ctx)
 {
-   if (!ctx)
-      return {0, 0};
-   return {ctx->last_item_rect.x + ctx->last_item_rect.w, ctx->last_item_rect.y + ctx->last_item_rect.h};
+   MonstroRect r = requireContext(ctx, __func__)->last_item_rect;
+   return {r.x + r.w, r.y + r.h};
 }
 
 MonstroVec2 monstro_get_item_rect_size(MonstroContext *ctx)
 {
-   if (!ctx)
-      return {0, 0};
-   return {ctx->last_item_rect.w, ctx->last_item_rect.h};
+   MonstroRect r = requireContext(ctx, __func__)->last_item_rect;
+   return {r.w, r.h};
 }
 
 /* ------------------------------------------------------------------------- */
@@ -851,18 +700,16 @@ MonstroVec2 monstro_get_item_rect_size(MonstroContext *ctx)
 
 void monstro_begin_disabled(MonstroContext *ctx, bool disabled)
 {
-   if (!ctx)
-      return;
+   requireWindow(ctx, __func__);
    // A scope is disabled when it asks to be or when any enclosing scope is.
-   ctx->disabled_stack.push(ctx->disabled);
+   ctx->canvas->disabled_stack.push(ctx->disabled);
    ctx->disabled = ctx->disabled || disabled;
 }
 
 void monstro_end_disabled(MonstroContext *ctx)
 {
-   if (!ctx)
-      return;
-   ctx->disabled = ctx->disabled_stack.pop();
+   requireWindow(ctx, __func__);
+   ctx->disabled = ctx->canvas->disabled_stack.pop();
 }
 
-bool monstro_is_disabled(MonstroContext *ctx) { return ctx ? ctx->disabled : false; }
+bool monstro_is_disabled(MonstroContext *ctx) { return requireContext(ctx, __func__)->disabled; }

@@ -251,56 +251,54 @@ extern "C"
 
 void monstro_set_mouse_pos(MonstroContext *ctx, float x, float y)
 {
-   if (ctx)
-      ctx->mouse.setPos(x, y);
+   monstro::requireContext(ctx, __func__);
+   ctx->mouse.setPos(x, y);
 }
 
 void monstro_set_mouse_button(MonstroContext *ctx, MonstroMouseButton button, bool down)
 {
-   if (ctx)
-      ctx->mouse.setButton(button, down);
+   monstro::requireContext(ctx, __func__);
+   ctx->mouse.setButton(button, down);
 }
 
 void monstro_set_mouse_wheel(MonstroContext *ctx, float x, float y)
 {
-   if (ctx)
-      ctx->mouse.setWheel(x, y);
+   monstro::requireContext(ctx, __func__);
+   ctx->mouse.setWheel(x, y);
 }
 
 void monstro_set_key(MonstroContext *ctx, MonstroKey key, bool down)
 {
-   if (ctx)
-      ctx->keyboard.setKey(key, down);
+   monstro::requireContext(ctx, __func__);
+   ctx->keyboard.setKey(key, down);
 }
 
 void monstro_set_key_mods(MonstroContext *ctx, MonstroModFlags mods)
 {
-   if (ctx)
-      ctx->keyboard.setMods(mods);
+   monstro::requireContext(ctx, __func__);
+   ctx->keyboard.setMods(mods);
 }
 
 void monstro_add_input_text(MonstroContext *ctx, const char *text)
 {
-   if (ctx)
-      ctx->keyboard.addInputText(text);
+   monstro::requireContext(ctx, __func__, {MONSTRO_ARG(text)});
+   ctx->keyboard.addInputText(text);
 }
 
 void monstro_set_mouse_cursor(MonstroContext *ctx, MonstroMouseCursor cursor)
 {
-   if (!ctx)
-      return;
+   monstro::requireContext(ctx, __func__);
    ctx->mouse_cursor = cursor;
 }
 
 bool monstro_is_mouse_down(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return ctx ? ctx->mouse.isDown(button) : false;
+   return monstro::requireContext(ctx, __func__)->mouse.isDown(button);
 }
 
 bool monstro_is_mouse_clicked(MonstroContext *ctx, MonstroMouseButton button, bool repeat)
 {
-   if (!ctx)
-      return false;
+   monstro::requireContext(ctx, __func__);
    if (!repeat)
       return ctx->mouse.isPressed(button);
    return ctx->mouse.isClicked(button, ctx->keyboard.repeat_delay, ctx->keyboard.repeat_rate, ctx->delta_time);
@@ -308,50 +306,49 @@ bool monstro_is_mouse_clicked(MonstroContext *ctx, MonstroMouseButton button, bo
 
 bool monstro_is_mouse_released(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return ctx ? ctx->mouse.isReleased(button) : false;
+   return monstro::requireContext(ctx, __func__)->mouse.isReleased(button);
 }
 
 bool monstro_is_mouse_double_clicked(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return ctx ? ctx->mouse.isDoubleClicked(button) : false;
+   return monstro::requireContext(ctx, __func__)->mouse.isDoubleClicked(button);
 }
 
 MonstroVec2 monstro_get_mouse_pos(MonstroContext *ctx)
 {
-   if (!ctx)
-      return {0.0f, 0.0f};
+   monstro::requireContext(ctx, __func__);
    return ctx->mouse.getPos();
 }
 
 MonstroVec2 monstro_get_mouse_delta(MonstroContext *ctx)
 {
-   if (!ctx)
-      return {0.0f, 0.0f};
+   monstro::requireContext(ctx, __func__);
    return ctx->mouse.getDelta();
 }
 
-float monstro_get_mouse_wheel(MonstroContext *ctx) { return ctx ? ctx->mouse.wheel_y : 0.0f; }
+float monstro_get_mouse_wheel(MonstroContext *ctx) { return monstro::requireContext(ctx, __func__)->mouse.wheel_y; }
 
-float monstro_get_mouse_wheel_h(MonstroContext *ctx) { return ctx ? ctx->mouse.wheel_x : 0.0f; }
+float monstro_get_mouse_wheel_h(MonstroContext *ctx) { return monstro::requireContext(ctx, __func__)->mouse.wheel_x; }
 
 bool monstro_is_mouse_dragging(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return ctx ? ctx->mouse.isDragging(button) : false;
+   return monstro::requireContext(ctx, __func__)->mouse.isDragging(button);
 }
 
 MonstroVec2 monstro_get_mouse_drag_delta(MonstroContext *ctx, MonstroMouseButton button)
 {
-   if (!ctx)
-      return {0.0f, 0.0f};
+   monstro::requireContext(ctx, __func__);
    return ctx->mouse.getDragDelta(button);
 }
 
-bool monstro_is_key_down(MonstroContext *ctx, MonstroKey key) { return ctx ? ctx->keyboard.isDown(key) : false; }
+bool monstro_is_key_down(MonstroContext *ctx, MonstroKey key)
+{
+   return monstro::requireContext(ctx, __func__)->keyboard.isDown(key);
+}
 
 bool monstro_is_key_pressed(MonstroContext *ctx, MonstroKey key, bool repeat)
 {
-   if (!ctx)
-      return false;
+   monstro::requireContext(ctx, __func__);
    if (ctx->keyboard.isPressed(key))
       return true;
    if (repeat && ctx->keyboard.isDown(key))
@@ -372,54 +369,34 @@ bool monstro_is_key_pressed(MonstroContext *ctx, MonstroKey key, bool repeat)
 
 bool monstro_is_key_released(MonstroContext *ctx, MonstroKey key)
 {
-   return ctx ? ctx->keyboard.isReleased(key) : false;
+   return monstro::requireContext(ctx, __func__)->keyboard.isReleased(key);
 }
 
-MonstroModFlags monstro_get_key_mods(MonstroContext *ctx) { return ctx ? ctx->keyboard.getMods() : MONSTRO_MOD_NONE; }
+MonstroModFlags monstro_get_key_mods(MonstroContext *ctx)
+{
+   return monstro::requireContext(ctx, __func__)->keyboard.getMods();
+}
 
-const char *monstro_get_input_text(MonstroContext *ctx) { return ctx ? ctx->keyboard.getInputText() : ""; }
+const char *monstro_get_input_text(MonstroContext *ctx)
+{
+   return monstro::requireContext(ctx, __func__)->keyboard.getInputText();
+}
 
 MonstroMouseCursor monstro_get_mouse_cursor(MonstroContext *ctx)
 {
-   return ctx ? ctx->mouse_cursor : MONSTRO_MOUSE_CURSOR_ARROW;
+   return monstro::requireContext(ctx, __func__)->mouse_cursor;
 }
 
-bool monstro_want_capture_mouse(MonstroContext *ctx) { return ctx ? ctx->want_capture_mouse : false; }
-
-bool monstro_want_capture_keyboard(MonstroContext *ctx) { return ctx ? ctx->want_capture_keyboard : false; }
-
-bool monstro_want_text_input(MonstroContext *ctx) { return ctx ? ctx->want_text_input : false; }
-
-void monstro_set_double_click_distance(MonstroContext *ctx, float distance)
+bool monstro_want_capture_mouse(MonstroContext *ctx)
 {
-   if (ctx)
-      ctx->mouse.double_click_distance = distance;
+   return monstro::requireContext(ctx, __func__)->want_capture_mouse;
 }
 
-void monstro_set_mouse_drag_threshold(MonstroContext *ctx, float threshold)
+bool monstro_want_capture_keyboard(MonstroContext *ctx)
 {
-   if (ctx)
-      ctx->mouse.drag_threshold = threshold;
+   return monstro::requireContext(ctx, __func__)->want_capture_keyboard;
 }
 
-void monstro_set_key_repeat_delay(MonstroContext *ctx, float delay)
-{
-   if (ctx)
-      ctx->keyboard.repeat_delay = delay;
-}
-
-void monstro_set_key_repeat_rate(MonstroContext *ctx, float rate)
-{
-   if (ctx)
-      ctx->keyboard.repeat_rate = rate;
-}
-
-float monstro_get_double_click_distance(MonstroContext *ctx) { return ctx ? ctx->mouse.double_click_distance : 6.0f; }
-
-float monstro_get_mouse_drag_threshold(MonstroContext *ctx) { return ctx ? ctx->mouse.drag_threshold : 6.0f; }
-
-float monstro_get_key_repeat_delay(MonstroContext *ctx) { return ctx ? ctx->keyboard.repeat_delay : 0.25f; }
-
-float monstro_get_key_repeat_rate(MonstroContext *ctx) { return ctx ? ctx->keyboard.repeat_rate : 0.05f; }
+bool monstro_want_text_input(MonstroContext *ctx) { return monstro::requireContext(ctx, __func__)->want_text_input; }
 
 } // extern "C"

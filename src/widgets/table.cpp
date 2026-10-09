@@ -12,43 +12,46 @@ static MonstroTableState *find_or_create_table(MonstroContext *ctx, uint64_t id)
       }
    }
 
-   MonstroTableState *state = &ctx->tables.allocate();
-   *state = MonstroTableState{};
+   MonstroTableState *state = &ctx->tables.add();
    state->id = id;
    return state;
 }
 
-static float column_offset(MonstroTableState *table, int col)
+static float column_offset(MonstroTableFrame *table, int col)
 {
    float x = 0.0f;
-   for (int i = 0; i < col && i < table->column_count; i++)
+   for (int i = 0; i < col && i < table->state->column_count; i++)
    {
-      x += table->columns[i].width;
+      x += table->state->widths[i];
    }
    return x;
+}
+
+// The open table, for calls that belong between monstro_begin_table and monstro_end_table.
+static MonstroTableFrame *require_table(MonstroContext *ctx, const char *function)
+{
+   MonstroTableFrame *table = &ctx->canvas->table;
+   MONSTRO_REQUIRE(table->state, "%s outside a table: call it between monstro_begin_table and monstro_end_table",
+                   function);
+   return table;
 }
 
 bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_count, MonstroTableFlags flags,
                          float width, float height)
 {
-   monstro::requireWindow(ctx, __func__);
+   monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
    MONSTRO_REQUIRE(column_count >= 1 && column_count <= MONSTRO_MAX_TABLE_COLUMNS,
                    "monstro_begin_table: column_count %d is outside 1..%d", column_count, MONSTRO_MAX_TABLE_COLUMNS);
-   MONSTRO_REQUIRE(!ctx->current_table, "monstro_begin_table: tables do not nest; end the open table first");
-   if (!str_id)
-      return false;
+   MONSTRO_REQUIRE(!ctx->canvas->table.state, "monstro_begin_table: tables do not nest; end the open table first");
    (void)height;
 
-   monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    uint64_t id = win->getChildId(str_id);
 
-   MonstroTableState *table = find_or_create_table(ctx, id);
-   if (!table)
-      return false;
+   MonstroTableState *state = find_or_create_table(ctx, id);
 
    monstro_add_item(ctx, style->table.cell_padding[0], style->table.cell_padding[1]);
 
@@ -68,10 +71,18 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
       }
    }
 
-   bool first_frame = (table->last_frame_active == 0 || table->column_count != column_count);
+   if (state->last_frame_active == 0 || state->column_count != column_count)
+   {
+      float col_w = table_w / (float)column_count;
+      for (int i = 0; i < column_count; i++)
+         state->widths[i] = col_w;
+   }
+   state->column_count = column_count;
+   state->last_frame_active = ctx->frame;
 
+   MonstroTableFrame *table = &ctx->canvas->table;
+   table->state = state;
    table->flags = flags;
-   table->column_count = column_count;
    table->setup_column_count = 0;
    table->current_column = -1;
    table->current_row = -1;
@@ -79,22 +90,10 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
    table->table_y = pos.y;
    table->table_w = table_w;
    table->row_y = pos.y;
-   table->last_frame_active = ctx->frame;
+   for (int i = 0; i < column_count; i++)
+      table->columns[i] = MonstroTableColumn{};
 
-   if (first_frame)
-   {
-      float col_w = table_w / (float)column_count;
-      for (int i = 0; i < column_count; i++)
-      {
-         table->columns[i].width = col_w;
-         table->columns[i].init_width = 0.0f;
-         table->columns[i].flags = MONSTRO_TABLE_COLUMN_NONE;
-         table->columns[i].label[0] = '\0';
-      }
-   }
-
-   ctx->current_table = table;
-   ctx->id_stack.push(str_id);
+   ctx->ids().push(str_id);
 
    return true;
 }
@@ -102,12 +101,11 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
 void monstro_end_table(MonstroContext *ctx)
 {
    monstro::requireWindow(ctx, __func__);
-   MONSTRO_REQUIRE(ctx->current_table, "monstro_end_table without monstro_begin_table");
+   MONSTRO_REQUIRE(ctx->canvas->table.state, "monstro_end_table without monstro_begin_table");
 
-   monstro::Window *win = ctx->current_window;
-   MonstroTableState *table = ctx->current_table;
-   MonstroStyle *style = &ctx->style;
-   monstro::Canvas *canvas = &win->canvas;
+   MonstroTableFrame *table = &ctx->canvas->table;
+   MonstroStyle *style = &ctx->style();
+   monstro::Canvas *canvas = ctx->canvas;
 
    float total_rows = (float)(table->current_row + 1);
    float header_h = style->table.header_height;
@@ -133,7 +131,7 @@ void monstro_end_table(MonstroContext *ctx)
          }
       }
 
-      for (int c = 1; c < table->column_count; c++)
+      for (int c = 1; c < table->state->column_count; c++)
       {
          float cx = table->table_x + column_offset(table, c);
          MonstroVec2 p1 = {cx, table->table_y};
@@ -145,18 +143,16 @@ void monstro_end_table(MonstroContext *ctx)
    monstro_set_cursor_screen_pos(ctx, table->table_x, table->table_y);
    monstro_add_item(ctx, table->table_w, table_h);
 
-   ctx->id_stack.pop();
-   ctx->current_table = nullptr;
+   ctx->ids().pop();
+   table->state = nullptr;
 }
 
 void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroTableColumnFlags flags, float init_width)
 {
-   if (!ctx || !ctx->current_table)
-      return;
-
-   MonstroTableState *table = ctx->current_table;
+   monstro::requireWindow(ctx, __func__);
+   MonstroTableFrame *table = require_table(ctx, __func__);
    int idx = table->setup_column_count;
-   if (idx >= table->column_count)
+   if (idx >= table->state->column_count)
       return;
 
    MonstroTableColumn *col = &table->columns[idx];
@@ -173,7 +169,7 @@ void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroT
 
    if (init_width > 0.0f && (flags & MONSTRO_TABLE_COLUMN_WIDTH_FIXED))
    {
-      col->width = init_width;
+      table->state->widths[idx] = init_width;
    }
 
    table->setup_column_count++;
@@ -181,24 +177,22 @@ void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroT
 
 void monstro_table_headers_row(MonstroContext *ctx)
 {
-   monstro::requireWindow(ctx, __func__);
-   if (!ctx->current_table)
-      return;
-
-   monstro::Window *win = ctx->current_window;
-   MonstroTableState *table = ctx->current_table;
-   MonstroStyle *style = &ctx->style;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__);
+   MonstroTableFrame *table = require_table(ctx, __func__);
+   int column_count = table->state->column_count;
+   float *widths = table->state->widths;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTable *ts = &style->table;
-   monstro::Canvas *canvas = &win->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
    float fixed_total = 0.0f;
    int flex_count = 0;
-   for (int i = 0; i < table->column_count; i++)
+   for (int i = 0; i < column_count; i++)
    {
       if ((table->columns[i].flags & MONSTRO_TABLE_COLUMN_WIDTH_FIXED) && table->columns[i].init_width > 0.0f)
       {
-         fixed_total += table->columns[i].width;
+         fixed_total += widths[i];
       }
       else
       {
@@ -211,11 +205,11 @@ void monstro_table_headers_row(MonstroContext *ctx)
       if (remaining < 0.0f)
          remaining = 0.0f;
       float flex_w = remaining / (float)flex_count;
-      for (int i = 0; i < table->column_count; i++)
+      for (int i = 0; i < column_count; i++)
       {
          if (!((table->columns[i].flags & MONSTRO_TABLE_COLUMN_WIDTH_FIXED) && table->columns[i].init_width > 0.0f))
          {
-            table->columns[i].width = flex_w;
+            widths[i] = flex_w;
          }
       }
    }
@@ -231,9 +225,9 @@ void monstro_table_headers_row(MonstroContext *ctx)
 
    float cx = table->table_x;
    uint32_t text_col = monstro_color_to_u32(ts->header_text);
-   for (int i = 0; i < table->column_count; i++)
+   for (int i = 0; i < column_count; i++)
    {
-      float col_w = table->columns[i].width;
+      float col_w = widths[i];
       if (font && table->columns[i].label[0] != '\0')
       {
          MonstroRect cell_rect = {cx + ts->cell_padding[0], table->table_y + ts->cell_padding[1],
@@ -243,12 +237,12 @@ void monstro_table_headers_row(MonstroContext *ctx)
 
       if (table->flags & MONSTRO_TABLE_RESIZABLE)
       {
-         if (i < table->column_count - 1 && !(table->columns[i].flags & MONSTRO_TABLE_COLUMN_NO_RESIZE))
+         if (i < column_count - 1 && !(table->columns[i].flags & MONSTRO_TABLE_COLUMN_NO_RESIZE))
          {
             float grip_x = cx + col_w - 3.0f;
             MonstroRect grip_rect = {grip_x, table->table_y, 6.0f, header_h};
 
-            uint64_t grip_id = ctx->id_stack.getId("##col_resize") ^ (uint64_t)(i + 1);
+            uint64_t grip_id = ctx->ids().getId("##col_resize") ^ (uint64_t)(i + 1);
             ctx->keepAliveId(grip_id);
 
             bool grip_hovered = false;
@@ -270,12 +264,12 @@ void monstro_table_headers_row(MonstroContext *ctx)
                {
                   float delta = ctx->mouse.delta_x;
                   float min_w = ts->cell_padding[0] * 2.0f + 10.0f;
-                  float new_w = table->columns[i].width + delta;
-                  float next_w = table->columns[i + 1].width - delta;
+                  float new_w = widths[i] + delta;
+                  float next_w = widths[i + 1] - delta;
                   if (new_w >= min_w && next_w >= min_w)
                   {
-                     table->columns[i].width = new_w;
-                     table->columns[i + 1].width = next_w;
+                     widths[i] = new_w;
+                     widths[i + 1] = next_w;
                   }
                }
                else
@@ -295,13 +289,10 @@ void monstro_table_headers_row(MonstroContext *ctx)
 void monstro_table_next_row(MonstroContext *ctx)
 {
    monstro::requireWindow(ctx, __func__);
-   if (!ctx->current_table)
-      return;
-
-   MonstroTableState *table = ctx->current_table;
-   MonstroStyle *style = &ctx->style;
+   MonstroTableFrame *table = require_table(ctx, __func__);
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTable *ts = &style->table;
-   monstro::Canvas *canvas = &ctx->current_window->canvas;
+   monstro::Canvas *canvas = ctx->canvas;
 
    table->current_row++;
    table->current_column = -1;
@@ -325,16 +316,13 @@ void monstro_table_next_row(MonstroContext *ctx)
 bool monstro_table_next_column(MonstroContext *ctx)
 {
    monstro::requireWindow(ctx, __func__);
-   if (!ctx->current_table)
-      return false;
-
-   MonstroTableState *table = ctx->current_table;
+   MonstroTableFrame *table = require_table(ctx, __func__);
    table->current_column++;
 
-   if (table->current_column >= table->column_count)
+   if (table->current_column >= table->state->column_count)
       return false;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTable *ts = &style->table;
 
    float cx = table->table_x + column_offset(table, table->current_column) + ts->cell_padding[0];
@@ -348,16 +336,13 @@ bool monstro_table_next_column(MonstroContext *ctx)
 bool monstro_table_set_column_index(MonstroContext *ctx, int column)
 {
    monstro::requireWindow(ctx, __func__);
-   if (!ctx->current_table)
-      return false;
-
-   MonstroTableState *table = ctx->current_table;
-   if (column < 0 || column >= table->column_count)
+   MonstroTableFrame *table = require_table(ctx, __func__);
+   if (column < 0 || column >= table->state->column_count)
       return false;
 
    table->current_column = column;
 
-   MonstroStyle *style = &ctx->style;
+   MonstroStyle *style = &ctx->style();
    MonstroStyleTable *ts = &style->table;
 
    float cx = table->table_x + column_offset(table, column) + ts->cell_padding[0];

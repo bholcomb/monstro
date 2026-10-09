@@ -16,18 +16,30 @@ static void fill_rects(MonstroCanvas *canvas, int count)
 
 TEST(config_defaults_match_documented_capacities)
 {
-   MonstroContextConfig config = monstro_context_config_default();
-   CHECK(config.max_vertices == 65536);
-   CHECK(config.max_indices == 65536 * 3);
-   CHECK(config.max_draw_commands == 4096);
-   CHECK(config.max_path_points == 1024);
+   MonstroEnvConfig env = monstro_env_config_default();
+   CHECK(env.canvas_count == 1);
+   CHECK(env.max_vertices == 65536);
+   CHECK(env.max_indices == 65536 * 3);
+   CHECK(env.max_draw_commands == 4096);
+   CHECK(env.max_path_points == 1024);
+   CHECK(env.atlas_width == 1024 && env.atlas_height == 1024);
+   CHECK(env.max_fonts == 16 && env.max_themes == 16 && env.max_icons == 512);
+   CHECK(env.vertex_layout.buffer_count == 1 && env.vertex_layout.stride[0] == sizeof(MonstroVertex));
+   CHECK(env.vertex_layout.position.offset == 0 && env.vertex_layout.texcoord.offset == 8 &&
+         env.vertex_layout.color.offset == 16);
+   MonstroContextConfig ctx = monstro_context_config_default();
+   CHECK(ctx.max_windows == 32);
+   CHECK(ctx.max_tree_nodes == 128);
+   CHECK(ctx.max_tab_bars == 16);
+   CHECK(ctx.max_tables == 8);
+   CHECK(ctx.max_popups == 8);
 }
 
 TEST(drawing_up_to_capacity_succeeds)
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_vertices = 4096;
-   Ui ui(false, &config);
+   Ui ui(false, nullptr, &config);
    ui.begin();
    int used = (int)ui.vertexCount();
    fill_rects(root_canvas(ui), (4096 - used) / 4);
@@ -37,7 +49,7 @@ TEST(drawing_up_to_capacity_succeeds)
 }
 
 FATAL_TEST(vertex_buffer_overflow_aborts, "vertex buffer overflow: capacity 65536, needed 65540",
-           "(window 'root', frame 1)", "raise MonstroContextConfig.max_vertices")
+           "(window 'root', frame 1)", "raise MonstroEnvConfig.max_vertices")
 {
    Ui ui(false);
    ui.begin();
@@ -46,53 +58,61 @@ FATAL_TEST(vertex_buffer_overflow_aborts, "vertex buffer overflow: capacity 6553
 
 FATAL_TEST(configured_vertex_capacity_is_enforced, "vertex buffer overflow: capacity 100", "(window 'Status', frame 1)")
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_vertices = 100;
-   Ui ui(false, &config);
+   Ui ui(false, nullptr, &config);
    ui.begin();
    monstro_begin_window(ui.ctx, "Status", nullptr, MONSTRO_WINDOW_DEFAULT);
    fill_rects(monstro_get_window_canvas(ui.ctx), 100);
 }
 
-FATAL_TEST(caller_vertex_buffer_overflow_aborts, "vertex buffer overflow: capacity 16, needed 20",
-           "pass a larger buffer to monstro_draw_buffer_set_vertex_buffer")
+FATAL_TEST(host_vertex_buffer_overflow_aborts, "host vertex buffer overflow: capacity 16, needed 20",
+           "pass larger buffers in MonstroFrameBuffers.vertex_capacity")
 {
    Ui ui(false);
    static MonstroVertex vertices[16];
-   monstro_draw_buffer_set_vertex_buffer(monstro_context_get_draw_buffer(ui.ctx), vertices, 16);
-   ui.begin();
+   MonstroFrameBuffers buffers = {};
+   buffers.vertex_buffers[0] = vertices;
+   buffers.vertex_capacity = 16;
+   monstro_begin_frame_into(ui.ctx, 1.0f / 60.0f, &buffers);
    fill_rects(root_canvas(ui), 5);
 }
 
-FATAL_TEST(caller_index_buffer_overflow_aborts, "index buffer overflow: capacity 12, needed 18",
-           "pass a larger buffer to monstro_draw_buffer_set_index_buffer")
+FATAL_TEST(host_index_buffer_overflow_aborts, "host index buffer overflow: capacity 12, needed 18",
+           "pass a larger MonstroFrameBuffers.index_capacity")
 {
    Ui ui(false);
    static uint32_t indices[12];
-   monstro_draw_buffer_set_index_buffer(monstro_context_get_draw_buffer(ui.ctx), indices, 12);
-   ui.begin();
+   MonstroFrameBuffers buffers = {};
+   buffers.indices = indices;
+   buffers.index_capacity = 12;
+   monstro_begin_frame_into(ui.ctx, 1.0f / 60.0f, &buffers);
    fill_rects(root_canvas(ui), 3);
 }
 
-TEST(clearing_a_caller_buffer_restores_the_context_buffer)
+TEST(host_buffers_last_one_frame)
 {
    Ui ui(false);
-   MonstroDrawBuffer *buffer = monstro_context_get_draw_buffer(ui.ctx);
    static MonstroVertex vertices[64];
-   monstro_draw_buffer_set_vertex_buffer(buffer, vertices, 64);
-   monstro_draw_buffer_set_vertex_buffer(buffer, nullptr, 0);
+   MonstroFrameBuffers buffers = {};
+   buffers.vertex_buffers[0] = vertices;
+   buffers.vertex_capacity = 64;
+   monstro_begin_frame_into(ui.ctx, 1.0f / 60.0f, &buffers);
+   fill_rects(root_canvas(ui), 4);
+   CHECK(ui.end()->vertices == nullptr);
    ui.begin();
    fill_rects(root_canvas(ui), 100);
-   ui.end();
-   CHECK(ui.vertexCount() >= 400);
+   const MonstroDrawData *data = ui.end();
+   CHECK(data->vertices != nullptr && data->vertices != vertices);
+   CHECK(data->vertex_count >= 400);
 }
 
 FATAL_TEST(draw_command_overflow_aborts, "draw command list overflow: capacity 8, needed 9", "window 'root'",
-           "raise MonstroContextConfig.max_draw_commands")
+           "raise MonstroEnvConfig.max_draw_commands")
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_draw_commands = 8;
-   Ui ui(false, &config);
+   Ui ui(false, nullptr, &config);
    ui.begin();
    MonstroCanvas *canvas = root_canvas(ui);
    for (int i = 0; i < 9; i++)
@@ -103,11 +123,11 @@ FATAL_TEST(draw_command_overflow_aborts, "draw command list overflow: capacity 8
    }
 }
 
-FATAL_TEST(frame_draw_command_overflow_aborts, "draw command overflow at frame 1: merging window")
+FATAL_TEST(windows_share_one_command_list, "draw command list overflow: capacity 4, needed 5", "window 'E'")
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_draw_commands = 4;
-   Ui ui(false, &config);
+   Ui ui(false, nullptr, &config);
    ui.begin();
    const char *names[] = {"A", "B", "C", "D", "E"};
    for (const char *name : names)
@@ -118,11 +138,11 @@ FATAL_TEST(frame_draw_command_overflow_aborts, "draw command overflow at frame 1
    ui.end();
 }
 
-FATAL_TEST(path_overflow_aborts, "path overflow: capacity 8, needed 9", "max_path_points")
+FATAL_TEST(path_overflow_aborts, "path overflow: capacity 8, needed 9", "MonstroEnvConfig.max_path_points")
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_path_points = 8;
-   Ui ui(false, &config);
+   Ui ui(false, nullptr, &config);
    ui.begin();
    MonstroCanvas *canvas = root_canvas(ui);
    monstro_path_move_to(canvas, {0, 0});
@@ -130,14 +150,22 @@ FATAL_TEST(path_overflow_aborts, "path overflow: capacity 8, needed 9", "max_pat
       monstro_path_line_to(canvas, {(float)i, (float)i});
 }
 
-FATAL_TEST(config_too_small_aborts, "MonstroContextConfig capacities too small")
+FATAL_TEST(env_config_too_small_aborts, "MonstroEnvConfig capacities too small", "max_draw_commands 0")
 {
-   MonstroContextConfig config = monstro_context_config_default();
+   MonstroEnvConfig config = monstro_env_config_default();
    config.max_draw_commands = 0;
-   monstro_context_create_ex(&config);
+   monstro_init(&config);
 }
 
-FATAL_TEST(id_stack_overflow_aborts, "ID stack overflow: capacity 64")
+FATAL_TEST(context_config_too_small_aborts, "MonstroContextConfig capacities too small", "max_popups 0")
+{
+   MonstroEnv *env = monstro_init(nullptr);
+   MonstroContextConfig config = monstro_context_config_default();
+   config.max_popups = 0;
+   monstro_context_create(env, &config);
+}
+
+FATAL_TEST(id_stack_overflow_aborts, "ID stack overflow: capacity 64, needed 65")
 {
    Ui ui(false);
    ui.begin();
@@ -148,6 +176,8 @@ FATAL_TEST(id_stack_overflow_aborts, "ID stack overflow: capacity 64")
 FATAL_TEST(id_stack_underflow_aborts, "ID stack underflow")
 {
    Ui ui(false);
+   ui.begin();
+   monstro_pop_id(ui.ctx);
    monstro_pop_id(ui.ctx);
 }
 
@@ -209,7 +239,7 @@ FATAL_TEST(is_popup_open_outside_frame_aborts, "monstro_is_popup_open called out
    monstro_is_popup_open(ui.ctx, "menu");
 }
 
-FATAL_TEST(style_stack_overflow_aborts, "style stack overflow: capacity 64")
+FATAL_TEST(style_stack_overflow_aborts, "style stack overflow: capacity 64, needed 65")
 {
    Ui ui(false);
    ui.begin();
@@ -289,11 +319,11 @@ FATAL_TEST(unended_disabled_aborts_at_end_frame, "1 disabled scopes")
    ui.end();
 }
 
-FATAL_TEST(layout_stack_overflow_aborts, "layout stack overflow: capacity 32")
+FATAL_TEST(layout_stack_overflow_aborts, "layout stack overflow: capacity 64, needed 65")
 {
    Ui ui(false);
    ui.begin();
-   for (int i = 0; i < 40; i++)
+   for (int i = 0; i < 70; i++)
       monstro_begin_layout(ui.ctx, MONSTRO_LAYOUT_VERTICAL);
 }
 
@@ -327,7 +357,8 @@ FATAL_TEST(unended_group_aborts_at_window_end, "1 groups open")
    monstro_end_window(ui.ctx);
 }
 
-FATAL_TEST(unpopped_clip_rect_aborts_at_window_end, "window 'Clips' ends with unbalanced canvas stacks: 2 clip rects")
+FATAL_TEST(unpopped_clip_rect_aborts_at_window_end,
+           "window 'Clips' ends with unbalanced canvas stacks: 2 clip rects and 1 layers open")
 {
    Ui ui(false);
    ui.begin();
@@ -345,12 +376,13 @@ FATAL_TEST(clip_rect_underflow_aborts, "clip rect stack underflow")
       monstro_pop_clip_rect(canvas);
 }
 
-FATAL_TEST(window_table_full_aborts, "window table full: all 64 slots are in use")
+FATAL_TEST(window_table_full_aborts, "window table full: capacity 32, needed 33",
+           "raise MonstroContextConfig.max_windows")
 {
    Ui ui(false);
    ui.begin();
    char name[32];
-   for (int i = 0; i < 64; i++)
+   for (int i = 0; i < 40; i++)
    {
       snprintf(name, sizeof(name), "Window %d", i);
       monstro_begin_window(ui.ctx, name, nullptr, MONSTRO_WINDOW_DEFAULT);
@@ -358,24 +390,26 @@ FATAL_TEST(window_table_full_aborts, "window table full: all 64 slots are in use
    }
 }
 
-FATAL_TEST(tree_node_table_full_aborts, "tree node table full: all 256 slots are in use")
+FATAL_TEST(tree_node_table_full_aborts, "tree node table full: capacity 128, needed 129",
+           "raise MonstroContextConfig.max_tree_nodes")
 {
    Ui ui(false);
    ui.begin();
    char name[32];
-   for (int i = 0; i < 257; i++)
+   for (int i = 0; i < 129; i++)
    {
       snprintf(name, sizeof(name), "node %d", i);
       monstro_begin_tree_node(ui.ctx, name, MONSTRO_TREE_NONE);
    }
 }
 
-FATAL_TEST(tab_bar_table_full_aborts, "tab bar table full: all 32 slots are in use")
+FATAL_TEST(tab_bar_table_full_aborts, "tab bar table full: capacity 16, needed 17",
+           "raise MonstroContextConfig.max_tab_bars")
 {
    Ui ui(false);
    ui.begin();
    char name[32];
-   for (int i = 0; i < 33; i++)
+   for (int i = 0; i < 17; i++)
    {
       snprintf(name, sizeof(name), "bar %d", i);
       if (monstro_begin_tab_bar(ui.ctx, name, MONSTRO_TAB_BAR_NONE))
@@ -383,12 +417,13 @@ FATAL_TEST(tab_bar_table_full_aborts, "tab bar table full: all 32 slots are in u
    }
 }
 
-FATAL_TEST(table_state_table_full_aborts, "table state table full: all 32 slots are in use")
+FATAL_TEST(table_state_table_full_aborts, "table state table full: capacity 8, needed 9",
+           "raise MonstroContextConfig.max_tables")
 {
    Ui ui(false);
    ui.begin();
    char name[32];
-   for (int i = 0; i < 33; i++)
+   for (int i = 0; i < 9; i++)
    {
       snprintf(name, sizeof(name), "table %d", i);
       if (monstro_begin_table(ui.ctx, name, 2, MONSTRO_TABLE_NONE, 0, 0))
@@ -396,7 +431,7 @@ FATAL_TEST(table_state_table_full_aborts, "table state table full: all 32 slots 
    }
 }
 
-FATAL_TEST(popup_stack_full_aborts, "popup stack overflow: capacity 8")
+FATAL_TEST(popup_stack_full_aborts, "popup stack full: capacity 8, needed 9", "raise MonstroContextConfig.max_popups")
 {
    Ui ui(false);
    ui.begin();

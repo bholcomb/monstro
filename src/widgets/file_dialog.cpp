@@ -256,7 +256,9 @@ extern "C"
 
 MonstroFileDialogState *monstro_file_dialog_create(void)
 {
-   auto *s = new MonstroFileDialogState();
+   auto *s = new (std::nothrow) MonstroFileDialogState();
+   if (!s)
+      return nullptr;
    memset(s, 0, sizeof(*s));
    s->selected_index = -1;
    return s;
@@ -267,8 +269,7 @@ void monstro_file_dialog_destroy(MonstroFileDialogState *state) { delete state; 
 void monstro_file_dialog_open(MonstroFileDialogState *state, const char *title, const char *start_path,
                               const char *filter, MonstroFileDialogMode mode)
 {
-   if (!state)
-      return;
+   MONSTRO_REQUIRE(state, "%s: the file dialog state must not be null", __func__);
 
    state->open = true;
    state->mode = mode;
@@ -302,7 +303,8 @@ void monstro_file_dialog_open(MonstroFileDialogState *state, const char *title, 
 
 MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext *ctx, MonstroFileDialogState *state)
 {
-   if (!ctx || !state || !state->open)
+   monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(state)});
+   if (!state->open)
       return MONSTRO_FILE_DIALOG_NONE;
 
    if (state->needs_refresh)
@@ -463,15 +465,13 @@ MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext *ctx, MonstroFil
 
 const char *monstro_file_dialog_get_path(const MonstroFileDialogState *state)
 {
-   if (!state)
-      return "";
+   MONSTRO_REQUIRE(state, "%s: the file dialog state must not be null", __func__);
    return state->selected_file;
 }
 
 bool monstro_file_dialog_is_open(const MonstroFileDialogState *state)
 {
-   if (!state)
-      return false;
+   MONSTRO_REQUIRE(state, "%s: the file dialog state must not be null", __func__);
    return state->open;
 }
 
