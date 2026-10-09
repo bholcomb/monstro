@@ -34,6 +34,7 @@ TEST(config_defaults_match_documented_capacities)
    CHECK(ctx.max_tables == 8);
    CHECK(ctx.max_popups == 8);
    CHECK(ctx.max_input_events == 64);
+   CHECK(ctx.max_items == 512);
 }
 
 TEST(drawing_up_to_capacity_succeeds)

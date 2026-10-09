@@ -73,7 +73,7 @@ TEST(a_press_and_release_between_frames_still_clicks)
    CHECK(t.clicks == 1);
 }
 
-TEST(a_tap_between_frames_moves_presses_and_releases_over_three_frames)
+TEST(a_tap_between_frames_moves_and_presses_then_releases)
 {
    OneButton t;
    t.frame();
@@ -84,11 +84,37 @@ TEST(a_tap_between_frames_moves_presses_and_releases_over_three_frames)
    CHECK(t.ui.ctx->input_events.size() == 3);
    t.frame();
    MonstroVec2 mouse = monstro_get_mouse_pos(t.ui.ctx);
-   CHECK(mouse.x == p.x && mouse.y == p.y && !monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
-   t.frame();
-   CHECK(t.clicks == 0);
+   CHECK(mouse.x == p.x && mouse.y == p.y && monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
+   CHECK(t.clicks == 0 && t.edges.activated);
    t.frame();
    CHECK(t.clicks == 1 && t.ui.ctx->input_events.empty());
+}
+
+TEST(a_grip_pressed_where_the_mouse_just_moved_does_not_jump)
+{
+   Ui ui;
+   monstro::Window *win = nullptr;
+   auto draw = [&]()
+   {
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_FIRST_USE_EVER);
+      monstro_set_next_window_size(ui.ctx, 300, 200, MONSTRO_COND_FIRST_USE_EVER);
+      monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+      win = ui.ctx->current_window;
+      monstro_end_window(ui.ctx);
+   };
+   frame(ui, draw);
+   frame(ui, draw);
+   // The resize grip is the window's bottom right corner.
+   ui.moveMouse(20 + 300 - 7, 20 + 200 - 7);
+   ui.pressLeft(true);
+   frame(ui, draw);
+   CHECK(ui.ctx->active_id != 0 && win->size.x == 300 && win->size.y == 200);
+   ui.moveMouse(20 + 300 - 7 + 30, 20 + 200 - 7 + 10);
+   frame(ui, draw);
+   CHECK(win->size.x == 330 && win->size.y == 210);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(ui.ctx->active_id == 0);
 }
 
 TEST(a_key_tapped_between_frames_is_pressed_then_released)
@@ -205,6 +231,23 @@ TEST(of_overlapping_buttons_only_the_one_on_top_hovers_and_fires)
    t.ui.pressLeft(false);
    t.frame();
    CHECK(t.over_clicks == 1 && t.under_clicks == 1);
+}
+
+TEST(a_press_where_the_mouse_just_moved_lands_on_the_button_on_top_there)
+{
+   OverlappingButtons t;
+   t.frame();
+   t.ui.moveMouse(t.under_rect.x + 5, t.under_rect.y + 5);
+   t.frame();
+   CHECK(t.under_hovered);
+   // Between two frames, the mouse moves into the overlap and presses: last frame's items say which is on top.
+   t.ui.moveMouse(t.over_rect.x + 10, t.over_rect.y + 10);
+   t.ui.pressLeft(true);
+   t.frame();
+   CHECK(t.over_hovered && !t.under_hovered && t.ui.ctx->active_id == t.ui.ctx->hovered_id);
+   t.ui.pressLeft(false);
+   t.frame();
+   CHECK(t.over_clicks == 1 && t.under_clicks == 0);
 }
 
 TEST(a_tap_on_overlapping_buttons_fires_only_the_one_on_top)

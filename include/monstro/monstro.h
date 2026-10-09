@@ -53,6 +53,7 @@ typedef struct MonstroContextConfig {
     uint32_t max_tables;
     uint32_t max_popups; /* popups open at once */
     uint32_t max_input_events; /* input events waiting for a frame; see the input setters in input.h */
+    uint32_t max_items; /* items drawn in a frame where they show, recorded to find the one on top under the mouse */
 } MonstroContextConfig;
 
 /* ------------------------------------------------------------------------- */

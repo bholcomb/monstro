@@ -255,7 +255,7 @@ void monstro_table_headers_row(MonstroContext *ctx)
             {
                if (ctx->mouse.isDown(MONSTRO_MOUSE_BUTTON_LEFT))
                {
-                  float delta = ctx->mouse.delta_x;
+                  float delta = ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT).x;
                   float min_w = ts->cell_padding[0] * 2.0f + 10.0f;
                   float new_w = widths[i] + delta;
                   float next_w = widths[i + 1] - delta;

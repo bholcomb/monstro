@@ -40,6 +40,13 @@ MonstroVec2 MouseState::getDragDelta(MonstroMouseButton button) const
    return result;
 }
 
+MonstroVec2 MouseState::getHeldDelta(MonstroMouseButton button) const
+{
+   if (!buttons[button].down || buttons[button].pressed)
+      return {0.0f, 0.0f};
+   return {delta_x, delta_y};
+}
+
 bool MouseState::isClicked(MonstroMouseButton button, float rep_delay, float rep_rate, float dt) const
 {
    if (buttons[button].pressed)
@@ -264,7 +271,6 @@ void Context::queueKey(MonstroKey key, bool down)
 
 void Context::takeInputEvents()
 {
-   bool moved = false;
    bool button_changed[MONSTRO_MOUSE_BUTTON_COUNT] = {};
    bool any_button_changed = false;
    bool key_changed[MONSTRO_KEY_COUNT] = {};
@@ -280,12 +286,12 @@ void Context::takeInputEvents()
          if (any_button_changed)
             break;
          mouse.setPos(event.x, event.y);
-         moved = true;
       }
       else if (event.type == InputEvent::MOUSE_BUTTON)
       {
-         // A press after a move waits a frame, so the item under the mouse at its new position is known.
-         if (moved || button_changed[event.index])
+         // A press after a move is taken: the item on top at the new position is known from the last frame's
+         // record of its items (see Context::drawn_items).
+         if (button_changed[event.index])
             break;
          mouse.setButton((MonstroMouseButton)event.index, event.down);
          button_changed[event.index] = true;

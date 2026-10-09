@@ -20,13 +20,14 @@ bool Context::init()
 {
    return windows.init(config.max_windows) && popup_stack.init(config.max_popups) &&
           tab_bars.init(config.max_tab_bars) && tree_states.init(config.max_tree_nodes) &&
-          tables.init(config.max_tables) && input_events.init(config.max_input_events);
+          tables.init(config.max_tables) && input_events.init(config.max_input_events) &&
+          drawn_items.init(config.max_items);
 }
 
 size_t Context::residentBytes() const
 {
    return sizeof(Context) + windows.bytes() + popup_stack.bytes() + tab_bars.bytes() + tree_states.bytes() +
-          tables.bytes() + input_events.bytes();
+          tables.bytes() + input_events.bytes() + drawn_items.bytes();
 }
 
 static void require_args(const char *function, std::initializer_list<RequiredArg> args)
@@ -113,8 +114,6 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
 
    hovered_id_prev_frame = hovered_id;
    hovered_id = 0;
-   hover_top_prev_frame = hover_top;
-   hover_top = {};
 
    if (!active_id_is_alive && active_id_prev_frame == active_id && active_id != 0)
    {
@@ -128,6 +127,8 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
    keyboard.newFrame(dt);
 
    hovered_window = findHoveredWindow(mouse.pos_x, mouse.pos_y, false);
+   top_item = findTopItem(mouse.pos_x, mouse.pos_y);
+   drawn_items.clear();
 
    for (Window &window : windows)
    {
@@ -258,28 +259,39 @@ static MonstroRect intersect(MonstroRect a, MonstroRect b)
    return {x0, y0, x1 > x0 ? x1 - x0 : 0.0f, y1 > y0 ? y1 - y0 : 0.0f};
 }
 
+uint64_t Context::findTopItem(float x, float y) const
+{
+   if (!hovered_window)
+      return 0;
+   // Drawn last, so on top of the items before it.
+   for (int i = drawn_items.size() - 1; i >= 0; i--)
+   {
+      const DrawnItem &item = drawn_items[i];
+      if (item.window == hovered_window->id && monstro_rect_contains(item.rect, x, y))
+         return item.id;
+   }
+   return 0;
+}
+
 bool Context::hoverItem(uint64_t id, MonstroRect rect, bool enabled)
 {
    Window *win = current_window;
+   MonstroRect visible = intersect(rect, canvas->getClipRect());
+   if (visible.w > 0.0f && visible.h > 0.0f)
+      drawn_items.add() = {id, win->id, visible};
+
    if (win != hovered_window)
       return false;
-   MonstroRect visible = intersect(rect, canvas->getClipRect());
    if (!monstro_rect_contains(visible, mouse.pos_x, mouse.pos_y))
       return false;
-
-   // Under the mouse and drawn after the items before it, so on top of them.
-   hover_top = {id, win->id, visible};
-
    if (!enabled || disabled)
       return false;
    if (active_id != 0 && active_id != id)
       return false;
    if (hovered_id != 0 && hovered_id != id)
       return false;
-   const HoverTop &top = hover_top_prev_frame;
-   bool covered = top.id != 0 && top.id != id && top.window == win->id &&
-                  monstro_rect_contains(top.rect, mouse.pos_x, mouse.pos_y);
-   if (covered)
+   // Covered here by the item on top in the last frame.
+   if (top_item != 0 && top_item != id)
       return false;
    hovered_id = id;
    return true;
@@ -321,6 +333,7 @@ MonstroContextConfig monstro_context_config_default(void)
    config.max_tables = MONSTRO_DEFAULT_MAX_TABLES;
    config.max_popups = MONSTRO_DEFAULT_MAX_POPUPS;
    config.max_input_events = MONSTRO_DEFAULT_MAX_INPUT_EVENTS;
+   config.max_items = MONSTRO_DEFAULT_MAX_ITEMS;
    return config;
 }
 
@@ -330,11 +343,12 @@ MonstroContext *monstro_context_create(MonstroEnv *env, const MonstroContextConf
    MonstroContextConfig defaults = monstro_context_config_default();
    const MonstroContextConfig &c = config ? *config : defaults;
    MONSTRO_REQUIRE(c.max_windows >= 2 && c.max_tree_nodes >= 1 && c.max_tab_bars >= 1 && c.max_tables >= 1 &&
-                       c.max_popups >= 1 && c.max_input_events >= 1,
+                       c.max_popups >= 1 && c.max_input_events >= 1 && c.max_items >= 1,
                    "MonstroContextConfig capacities too small (max_windows %u, at least 2 with the root; "
-                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, max_input_events %u, at "
-                   "least 1 each)",
-                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups, c.max_input_events);
+                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, max_input_events %u, "
+                   "max_items %u, at least 1 each)",
+                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups, c.max_input_events,
+                   c.max_items);
 
    MonstroContext *ctx = new (std::nothrow) MonstroContext(env, c);
    if (!ctx)

@@ -52,6 +52,9 @@ struct MouseState
    bool isDoubleClicked(MonstroMouseButton button) const;
    bool isDragging(MonstroMouseButton button) const;
    MonstroVec2 getDragDelta(MonstroMouseButton button) const;
+   // How far the mouse moved this frame with button held: nothing in the frame it was pressed, whose move only
+   // brought the mouse to where it pressed.
+   MonstroVec2 getHeldDelta(MonstroMouseButton button) const;
    bool isClicked(MonstroMouseButton button, float repeat_delay, float repeat_rate, float dt) const;
 
    bool anyButtonPressed() const;

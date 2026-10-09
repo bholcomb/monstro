@@ -62,9 +62,12 @@ struct Context
    void setActiveId(uint64_t id);
    void keepAliveId(uint64_t id);
 
-   // Whether the item id, at rect in the current window, is hovered: see hover_top. A disabled item is never
-   // hovered, but still covers the items under it.
+   // Records the item id at rect in the current window, and says whether it is hovered: see drawn_items. A
+   // disabled item is never hovered, but still covers the items under it.
    bool hoverItem(uint64_t id, MonstroRect rect, bool enabled = true);
+
+   // The item on top at x, y in the hovered window, from the record of the last frame's items; 0 when none.
+   uint64_t findTopItem(float x, float y) const;
 
    Window *findWindow(const char *name);
    Window *createWindow(const char *name, MonstroWindowFlags flags);
@@ -111,20 +114,22 @@ struct Context
    /*
     * One item is hovered at a time: the one drawn on top under the mouse, in
     * the hovered window, where it is not clipped away, and only while no other
-    * item is active. Items drawn later cover earlier ones, so the last item
-    * under the mouse in a frame is on top; it is remembered with its visible
-    * rect, and while the mouse stays in that rect the items under it are not
-    * hovered. Where nothing on top is known yet (the mouse just arrived), the
-    * first item under it is hovered for that frame.
+    * item is active. Items drawn later cover earlier ones. Every item is
+    * recorded with the rect where it shows as it is drawn, and when the next
+    * frame begins, once its input is taken, the last item in that record under
+    * the mouse in the hovered window is the one on top, wherever the mouse has
+    * moved: the items under it are not hovered. An item not drawn in the last
+    * frame is not in the record; where none is known on top, the first item
+    * under the mouse is hovered for that frame.
     */
-   struct HoverTop
+   struct DrawnItem
    {
       uint64_t id = 0;
       uint64_t window = 0;
-      MonstroRect rect = {};
+      MonstroRect rect = {}; // where it shows: its rect, clipped
    };
-   HoverTop hover_top;            // the last item under the mouse so far this frame
-   HoverTop hover_top_prev_frame; // the item on top at the end of the last frame
+   ConfiguredArray<DrawnItem> drawn_items{"item record", "raise MonstroContextConfig.max_items"};
+   uint64_t top_item = 0; // the item on top under the mouse in the last frame's record
    uint64_t hovered_id = 0;
    uint64_t hovered_id_prev_frame = 0;
    uint64_t active_id = 0;

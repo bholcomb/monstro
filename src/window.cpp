@@ -144,7 +144,8 @@ bool Window::begin(bool *p_open)
       {
          if (flags & MONSTRO_WINDOW_MOVABLE)
          {
-            move(ctx->mouse.delta_x, ctx->mouse.delta_y);
+            MonstroVec2 delta = ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_MIDDLE);
+            move(delta.x, delta.y);
          }
          ctx->focusWindow(this);
       }
@@ -287,8 +288,9 @@ bool Window::end()
       {
          if (ctx->mouse.isDown(MONSTRO_MOUSE_BUTTON_LEFT))
          {
-            size.x += ctx->mouse.delta_x;
-            size.y += ctx->mouse.delta_y;
+            MonstroVec2 delta = ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT);
+            size.x += delta.x;
+            size.y += delta.y;
             if (size.x < style->window.min_size[0])
                size.x = style->window.min_size[0];
             if (size.y < style->window.min_size[1])
@@ -495,7 +497,7 @@ void Window::drawVerticalScrollbar(float header_h)
          float scrollable_track = track_rect.h - thumb_h;
          if (scrollable_track > 0.0f)
          {
-            scroll_y += ctx->mouse.delta_y * (max_scroll / scrollable_track);
+            scroll_y += ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT).y * (max_scroll / scrollable_track);
             clampScrollOffsets();
          }
       }
@@ -579,7 +581,7 @@ void Window::drawHorizontalScrollbar(float header_h)
          float scrollable_track = track_rect.w - thumb_w;
          if (scrollable_track > 0.0f)
          {
-            scroll_x += ctx->mouse.delta_x * (max_scroll / scrollable_track);
+            scroll_x += ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT).x * (max_scroll / scrollable_track);
             clampScrollOffsets();
          }
       }

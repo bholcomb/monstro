@@ -507,6 +507,7 @@ public unsafe struct MonstroContextConfig
     public uint max_tables;
     public uint max_popups;
     public uint max_input_events;
+    public uint max_items;
 }
 
 [StructLayout(LayoutKind.Sequential)]

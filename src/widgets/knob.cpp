@@ -108,10 +108,10 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
 
    float old_value = *value;
 
-   if (held && !ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
+   if (held)
    {
       float sensitivity = range / (knob_diameter * 2.0f);
-      *value += -ctx->mouse.delta_y * sensitivity;
+      *value += -ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT).y * sensitivity;
    }
 
    *value = clampf(*value, min_val, max_val);

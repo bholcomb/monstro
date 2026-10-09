@@ -16,10 +16,11 @@ extern "C" {
  * and taken at the next begin_frame, so nothing is lost between frames: a
  * press and release that both happen before a frame still click. A frame
  * takes events in order until one would change something already changed
- * that frame (the same button or key again, or a button after a move, or a
- * move after a button), and the rest wait for the next frames. A tap that
- * moves, presses and releases between two frames is seen over three frames:
- * the move, then the press on what is under the mouse, then the release.
+ * that frame (the same button or key again, or a move after a button), and
+ * the rest wait for the next frames. A press after a move is taken with it:
+ * the item it lands on is the one on top there in the last frame. A tap that
+ * moves, presses and releases between two frames is seen over two frames: the
+ * move and the press, then the release.
  *
  * Setting a button, key or position to the state it already has queues
  * nothing, and moves in a row are merged, so polling every frame is fine.

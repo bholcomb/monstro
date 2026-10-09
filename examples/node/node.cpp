@@ -265,7 +265,9 @@ void node_editor_draw(NodeEditor *ne, MonstroContext *ctx)
          ne->dragging_node = -1;
       }
 
-      if (monstro_is_item_hovered(ctx) && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_MIDDLE))
+      // Not in the frame the button is pressed: a move taken with the press only brings the mouse there.
+      if (monstro_is_item_hovered(ctx) && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_MIDDLE) &&
+          !monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_MIDDLE, false))
       {
          MonstroVec2 md = monstro_get_mouse_delta(ctx);
          ne->pan_x += md.x;
