@@ -10,14 +10,30 @@ extern "C" {
 /* Double-click, drag and key repeat timing are environment settings: see MonstroSettings. */
 
 /*
- * Input State Setters (call from app input callbacks)
+ * Input Events (call from app input callbacks, or once a frame with polled state)
+ *
+ * Mouse moves, button and key changes and wheel movements are queued in order
+ * and taken at the next begin_frame, so nothing is lost between frames: a
+ * press and release that both happen before a frame still click. A frame
+ * takes events in order until one would change something already changed
+ * that frame (the same button or key again, or a button after a move, or a
+ * move after a button), and the rest wait for the next frames. A tap that
+ * moves, presses and releases between two frames is seen over three frames:
+ * the move, then the press on what is under the mouse, then the release.
+ *
+ * Setting a button, key or position to the state it already has queues
+ * nothing, and moves in a row are merged, so polling every frame is fine.
+ * The queue holds MonstroContextConfig.max_input_events; overfilling it stops
+ * the program.
  */
 
 void monstro_set_mouse_pos(MonstroContext* ctx, float x, float y);
 void monstro_set_mouse_button(MonstroContext* ctx, MonstroMouseButton button, bool down);
+/* Adds a wheel movement; movements in a row are summed. */
 void monstro_set_mouse_wheel(MonstroContext* ctx, float wheel_x, float wheel_y);
 
 void monstro_set_key(MonstroContext* ctx, MonstroKey key, bool down);
+/* Modifiers and typed text are not queued: they are current state, taken as they are. */
 void monstro_set_key_mods(MonstroContext* ctx, MonstroModFlags mods);
 void monstro_add_input_text(MonstroContext* ctx, const char* utf8_text);
 

@@ -189,6 +189,126 @@ void KeyboardState::endFrame()
    input_text[0] = '\0';
 }
 
+/* ------------------------------------------------------------------------- */
+/* Input events                                                              */
+/* ------------------------------------------------------------------------- */
+
+// The most recent queued event of a type (and button or key), or null when none is queued.
+static const InputEvent *last_queued(const ConfiguredArray<InputEvent> &events, InputEvent::Type type, int index)
+{
+   for (int i = events.size() - 1; i >= 0; i--)
+   {
+      if (events[i].type == type && events[i].index == index)
+         return &events[i];
+   }
+   return nullptr;
+}
+
+void Context::queueMousePos(float x, float y)
+{
+   const InputEvent *last = last_queued(input_events, InputEvent::MOUSE_POS, 0);
+   float queued_x = last ? last->x : mouse.pos_x;
+   float queued_y = last ? last->y : mouse.pos_y;
+   if (x == queued_x && y == queued_y)
+      return;
+   // Moves in a row are one move.
+   if (!input_events.empty() && input_events.top().type == InputEvent::MOUSE_POS)
+   {
+      input_events.top().x = x;
+      input_events.top().y = y;
+      return;
+   }
+   InputEvent &event = input_events.add();
+   event.type = InputEvent::MOUSE_POS;
+   event.x = x;
+   event.y = y;
+}
+
+void Context::queueMouseButton(MonstroMouseButton button, bool down)
+{
+   const InputEvent *last = last_queued(input_events, InputEvent::MOUSE_BUTTON, button);
+   if (down == (last ? last->down : mouse.isDown(button)))
+      return;
+   InputEvent &event = input_events.add();
+   event.type = InputEvent::MOUSE_BUTTON;
+   event.index = button;
+   event.down = down;
+}
+
+void Context::queueMouseWheel(float x, float y)
+{
+   if (x == 0.0f && y == 0.0f)
+      return;
+   if (!input_events.empty() && input_events.top().type == InputEvent::MOUSE_WHEEL)
+   {
+      input_events.top().x += x;
+      input_events.top().y += y;
+      return;
+   }
+   InputEvent &event = input_events.add();
+   event.type = InputEvent::MOUSE_WHEEL;
+   event.x = x;
+   event.y = y;
+}
+
+void Context::queueKey(MonstroKey key, bool down)
+{
+   const InputEvent *last = last_queued(input_events, InputEvent::KEY, key);
+   if (down == (last ? last->down : keyboard.isDown(key)))
+      return;
+   InputEvent &event = input_events.add();
+   event.type = InputEvent::KEY;
+   event.index = key;
+   event.down = down;
+}
+
+void Context::takeInputEvents()
+{
+   bool moved = false;
+   bool button_changed[MONSTRO_MOUSE_BUTTON_COUNT] = {};
+   bool any_button_changed = false;
+   bool key_changed[MONSTRO_KEY_COUNT] = {};
+
+   // Events are taken in order up to the first that changes what this frame has already changed.
+   int taken = 0;
+   for (; taken < input_events.size(); taken++)
+   {
+      const InputEvent &event = input_events[taken];
+      if (event.type == InputEvent::MOUSE_POS)
+      {
+         // A move after a press or release waits, so the button changes where it was pressed.
+         if (any_button_changed)
+            break;
+         mouse.setPos(event.x, event.y);
+         moved = true;
+      }
+      else if (event.type == InputEvent::MOUSE_BUTTON)
+      {
+         // A press after a move waits a frame, so the item under the mouse at its new position is known.
+         if (moved || button_changed[event.index])
+            break;
+         mouse.setButton((MonstroMouseButton)event.index, event.down);
+         button_changed[event.index] = true;
+         any_button_changed = true;
+      }
+      else if (event.type == InputEvent::MOUSE_WHEEL)
+      {
+         mouse.addWheel(event.x, event.y);
+      }
+      else
+      {
+         if (key_changed[event.index])
+            break;
+         keyboard.setKey((MonstroKey)event.index, event.down);
+         key_changed[event.index] = true;
+      }
+   }
+
+   for (int i = taken; i < input_events.size(); i++)
+      input_events[i - taken] = input_events[i];
+   input_events.truncate(input_events.size() - taken);
+}
+
 } // namespace monstro
 
 /* ------------------------------------------------------------------------- */
@@ -201,25 +321,25 @@ extern "C"
 void monstro_set_mouse_pos(MonstroContext *ctx, float x, float y)
 {
    monstro::requireContext(ctx, __func__);
-   ctx->mouse.setPos(x, y);
+   ctx->queueMousePos(x, y);
 }
 
 void monstro_set_mouse_button(MonstroContext *ctx, MonstroMouseButton button, bool down)
 {
    monstro::requireMouseButton(ctx, __func__, button);
-   ctx->mouse.setButton(button, down);
+   ctx->queueMouseButton(button, down);
 }
 
 void monstro_set_mouse_wheel(MonstroContext *ctx, float x, float y)
 {
    monstro::requireContext(ctx, __func__);
-   ctx->mouse.setWheel(x, y);
+   ctx->queueMouseWheel(x, y);
 }
 
 void monstro_set_key(MonstroContext *ctx, MonstroKey key, bool down)
 {
    monstro::requireKey(ctx, __func__, key);
-   ctx->keyboard.setKey(key, down);
+   ctx->queueKey(key, down);
 }
 
 void monstro_set_key_mods(MonstroContext *ctx, MonstroModFlags mods)

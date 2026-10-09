@@ -20,13 +20,13 @@ bool Context::init()
 {
    return windows.init(config.max_windows) && popup_stack.init(config.max_popups) &&
           tab_bars.init(config.max_tab_bars) && tree_states.init(config.max_tree_nodes) &&
-          tables.init(config.max_tables);
+          tables.init(config.max_tables) && input_events.init(config.max_input_events);
 }
 
 size_t Context::residentBytes() const
 {
    return sizeof(Context) + windows.bytes() + popup_stack.bytes() + tab_bars.bytes() + tree_states.bytes() +
-          tables.bytes();
+          tables.bytes() + input_events.bytes();
 }
 
 static void require_args(const char *function, std::initializer_list<RequiredArg> args)
@@ -121,6 +121,7 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
    active_id_prev_frame = active_id;
    active_id_is_alive = false;
 
+   takeInputEvents();
    mouse.newFrame(dt, time);
    keyboard.newFrame(dt);
 
@@ -277,6 +278,7 @@ MonstroContextConfig monstro_context_config_default(void)
    config.max_tab_bars = MONSTRO_DEFAULT_MAX_TAB_BARS;
    config.max_tables = MONSTRO_DEFAULT_MAX_TABLES;
    config.max_popups = MONSTRO_DEFAULT_MAX_POPUPS;
+   config.max_input_events = MONSTRO_DEFAULT_MAX_INPUT_EVENTS;
    return config;
 }
 
@@ -286,10 +288,11 @@ MonstroContext *monstro_context_create(MonstroEnv *env, const MonstroContextConf
    MonstroContextConfig defaults = monstro_context_config_default();
    const MonstroContextConfig &c = config ? *config : defaults;
    MONSTRO_REQUIRE(c.max_windows >= 2 && c.max_tree_nodes >= 1 && c.max_tab_bars >= 1 && c.max_tables >= 1 &&
-                       c.max_popups >= 1,
+                       c.max_popups >= 1 && c.max_input_events >= 1,
                    "MonstroContextConfig capacities too small (max_windows %u, at least 2 with the root; "
-                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, at least 1 each)",
-                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups);
+                   "max_tree_nodes %u, max_tab_bars %u, max_tables %u, max_popups %u, max_input_events %u, at "
+                   "least 1 each)",
+                   c.max_windows, c.max_tree_nodes, c.max_tab_bars, c.max_tables, c.max_popups, c.max_input_events);
 
    MonstroContext *ctx = new (std::nothrow) MonstroContext(env, c);
    if (!ctx)

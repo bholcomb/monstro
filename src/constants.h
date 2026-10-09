@@ -18,6 +18,7 @@
 #define MONSTRO_DEFAULT_MAX_TAB_BARS 16
 #define MONSTRO_DEFAULT_MAX_TABLES 8
 #define MONSTRO_DEFAULT_MAX_POPUPS 8
+#define MONSTRO_DEFAULT_MAX_INPUT_EVENTS 64
 
 /* Nesting depths and per-frame scratch in a canvas; not configurable. */
 #define MONSTRO_MAX_ID_STACK_DEPTH 64

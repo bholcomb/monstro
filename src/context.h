@@ -78,6 +78,13 @@ struct Context
 
    MonstroTreeNodeState *findOrCreateTreeState(uint64_t id, bool default_open);
 
+   // Input changes wait in input_events until a frame takes them; see input.h.
+   void queueMousePos(float x, float y);
+   void queueMouseButton(MonstroMouseButton button, bool down);
+   void queueMouseWheel(float x, float y);
+   void queueKey(MonstroKey key, bool down);
+   void takeInputEvents();
+
    Env *env = nullptr;
    MonstroContextConfig config = {};
    Theme *theme = nullptr;
@@ -113,6 +120,8 @@ struct Context
 
    bool disabled = false;
 
+   ConfiguredArray<InputEvent> input_events{"input event queue",
+                                            "raise MonstroContextConfig.max_input_events or begin frames more often"};
    MouseState mouse;
    KeyboardState keyboard;
    MonstroMouseCursor mouse_cursor = MONSTRO_MOUSE_CURSOR_ARROW;

@@ -40,10 +40,10 @@ struct MouseState
    MonstroVec2 getDelta() const { return {delta_x, delta_y}; }
 
    void setButton(MonstroMouseButton button, bool is_down);
-   void setWheel(float x, float y)
+   void addWheel(float x, float y)
    {
-      wheel_x = x;
-      wheel_y = y;
+      wheel_x += x;
+      wheel_y += y;
    }
 
    bool isDown(MonstroMouseButton button) const;
@@ -91,6 +91,22 @@ struct KeyboardState
 
    void newFrame(float dt);
    void endFrame();
+};
+
+// One change of input, queued until a frame takes it.
+struct InputEvent
+{
+   enum Type
+   {
+      MOUSE_POS,
+      MOUSE_BUTTON,
+      MOUSE_WHEEL,
+      KEY
+   };
+   Type type = MOUSE_POS;
+   int index = 0; // the button or key
+   bool down = false;
+   float x = 0.0f, y = 0.0f; // the position, or the wheel movement
 };
 
 } // namespace monstro
