@@ -137,6 +137,9 @@ struct Context
 
 // The context an API function works on: it must not be null, nor any of args.
 Context *requireContext(Context *ctx, const char *function, std::initializer_list<RequiredArg> args = {});
+// Closes the popup with this ID, if it is open, and the popups opened from it.
+void closePopup(Context *ctx, uint64_t popup_id);
+
 // The context, for an API function given a mouse button or key: it must be one Monstro tracks.
 Context *requireMouseButton(Context *ctx, const char *function, MonstroMouseButton button);
 Context *requireKey(Context *ctx, const char *function, MonstroKey key);

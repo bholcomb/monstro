@@ -140,9 +140,10 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
       return false;
    }
 
+   // A press on the open combo closes its list; the combo itself is not in a popup.
    if (pressed && opened)
    {
-      monstro_close_current_popup(ctx);
+      monstro::closePopup(ctx, id);
       return false;
    }
 

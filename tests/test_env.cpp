@@ -687,3 +687,31 @@ TEST(child_regions_pair_with_end_child)
       ui.end();
    }
 }
+
+TEST(pressing_an_open_combo_closes_its_list)
+{
+   Ui ui(true);
+   MonstroRect box = {};
+   auto frame = [&](bool open)
+   {
+      ui.begin();
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (open)
+         monstro_open_popup(ui.ctx, "Mode");
+      bool listed = monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr);
+      box = monstro_get_item_rect(ui.ctx);
+      if (listed)
+         monstro_end_combo(ui.ctx);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+   frame(true);
+   CHECK(ui.ctx->popup_stack.size() == 1);
+   // The press lands on the combo box itself, outside any popup.
+   ui.moveMouse(box.x + box.w - 10.0f, box.y + box.h * 0.5f);
+   ui.pressLeft(true);
+   frame(false);
+   ui.pressLeft(false);
+   frame(false);
+   CHECK(ui.ctx->popup_stack.size() == 0);
+}

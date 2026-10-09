@@ -33,6 +33,24 @@ static void build_window_name(char *out, size_t out_size, const char *prefix, co
    monstro_utf8_trim_partial(out);
 }
 
+namespace monstro
+{
+
+void closePopup(Context *ctx, uint64_t popup_id)
+{
+   // Popups opened from this one sit above it in the stack.
+   for (int i = 0; i < ctx->popup_stack.size(); i++)
+   {
+      if (ctx->popup_stack[i].popup_id == popup_id)
+      {
+         ctx->popup_stack.truncate(i);
+         return;
+      }
+   }
+}
+
+} // namespace monstro
+
 void monstro_open_popup(MonstroContext *ctx, const char *label) { monstro_open_popup_ex(ctx, label, false); }
 
 void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
@@ -76,15 +94,7 @@ void monstro_close_current_popup(MonstroContext *ctx)
    MONSTRO_REQUIRE(popup, "monstro_close_current_popup called outside a popup (window '%s', frame %d)",
                    ctx->current_window->name, ctx->frame);
 
-   // Closing a popup closes the popups opened from it, which sit above it.
-   for (int i = 0; i < ctx->popup_stack.size(); i++)
-   {
-      if (ctx->popup_stack[i].popup_id == popup->popup_id)
-      {
-         ctx->popup_stack.truncate(i);
-         return;
-      }
-   }
+   monstro::closePopup(ctx, popup->popup_id);
 }
 
 bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFlags extra_flags)
