@@ -234,6 +234,5 @@ bool monstro_is_popup_open(MonstroContext *ctx, const char *str_id)
       return false;
 
    uint64_t popup_id = win->getChildId(str_id);
-
    return is_popup_open_internal(ctx, popup_id);
 }

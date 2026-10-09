@@ -13,7 +13,6 @@ static MonstroTableState *find_or_create_table(MonstroContext *ctx, uint64_t id)
    }
 
    MonstroTableState *state = &ctx->tables.allocate();
-
    *state = MonstroTableState{};
    state->id = id;
    return state;

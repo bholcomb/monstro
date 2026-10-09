@@ -179,7 +179,6 @@ void Context::requireBalanced(const char *where) const
 }
 
 void Context::setDefaultFont(MonstroFont *font)
-
 {
    default_font = font;
    style.font = font;
