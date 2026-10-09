@@ -1,8 +1,8 @@
 /**
  * Shared boilerplate for Monstro example applications.
  *
- * Provides GLFW window creation, Vulkan/VulkEase rendering setup,
- * Monstro context initialization, input forwarding, and the main loop.
+ * Provides GLFW window creation, Vulkan/VulkEase rendering setup, the Monstro
+ * environment and context, input forwarding, and the main loop.
  *
  * Usage:
  *   1. Include this header.
@@ -44,10 +44,11 @@ struct ExampleApp
    size_t vertexBufferCapacity;
    size_t indexBufferCapacity;
 
+   MonstroEnv *env;
    MonstroContext *ui;
    MonstroFont *font;
-   VETextureIndex fontAtlasTexture;
-   uint64_t fontAtlasTextureId;
+   VETextureIndex atlasTexture;
+   uint64_t atlasVersion;
 
    void *user_data;
 };
@@ -241,7 +242,6 @@ static void ea_scroll_cb(GLFWwindow *w, double xo, double yo)
 enum EATextureType : uint32_t
 {
    EA_TEX_RGBA = 0,
-   EA_TEX_FONT = 1,
    EA_TEX_NONE = 2
 };
 
@@ -255,17 +255,33 @@ struct EAPushConstants
    uint32_t samplerIndex;
    uint32_t indexOffset;
    uint32_t textureType;
+   uint32_t vertexOffset;
+   uint32_t padding;
 };
 
-static bool ea_upload_buffers(ExampleApp *app, MonstroDrawBuffer *db)
+// The environment's atlas holds every font and the white texel solid shapes use; upload it when it changes.
+static void ea_upload_atlas(ExampleApp *app)
 {
-   const MonstroVertex *verts = nullptr;
-   size_t vbs = 0;
-   monstro_draw_buffer_get_vertex_buffer(db, &verts, &vbs);
-   const uint32_t *idx = nullptr;
-   uint32_t ic = 0;
-   monstro_draw_buffer_get_index_buffer(db, &idx, &ic);
-   size_t ibs = ic * sizeof(uint32_t);
+   MonstroTextureData atlas = monstro_env_get_atlas(app->env);
+   if (atlas.version == app->atlasVersion)
+      return;
+   VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
+   if (app->atlasTexture == VE_INVALID_TEXTURE_INDEX)
+   {
+      veCreateTexture2D(app->device, atlas.width, atlas.height, VK_FORMAT_R8G8B8A8_UNORM, usage, "EAAtlas",
+                        &app->atlasTexture);
+      monstro_env_set_atlas_texture(app->env, (uint64_t)app->atlasTexture);
+   }
+   veHostWriteTextureRegion(app->device, app->atlasTexture, atlas.data, atlas.data_size, nullptr);
+   app->atlasVersion = atlas.version;
+}
+
+static bool ea_upload_buffers(ExampleApp *app, const MonstroDrawData *data)
+{
+   const MonstroVertex *verts = data->vertices;
+   size_t vbs = data->vertex_count * sizeof(MonstroVertex);
+   const uint32_t *idx = data->indices;
+   size_t ibs = data->index_count * sizeof(uint32_t);
    if (vbs == 0 || ibs == 0)
       return true;
 
@@ -302,11 +318,10 @@ static bool ea_upload_buffers(ExampleApp *app, MonstroDrawBuffer *db)
    return true;
 }
 
-static void ea_render_ui(ExampleApp *app, VECommandBuffer *cmd, uint32_t w, uint32_t h)
+static void ea_render_ui(ExampleApp *app, const MonstroDrawData *data, VECommandBuffer *cmd, uint32_t w, uint32_t h)
 {
-   const MonstroDrawCommand *dcs = nullptr;
-   uint32_t dc_count = 0;
-   monstro_context_get_draw_commands(app->ui, &dcs, &dc_count);
+   const MonstroDrawCommand *dcs = data->commands;
+   uint32_t dc_count = data->command_count;
    if (dc_count == 0 || app->vertexBuffer == VE_INVALID_ADDRESS)
       return;
    veApplyGraphicsState(cmd, app->pipeline, nullptr, nullptr, nullptr);
@@ -337,14 +352,10 @@ static void ea_render_ui(ExampleApp *app, VECommandBuffer *cmd, uint32_t w, uint
          sh = h - (uint32_t)sy;
       veSetScissor(cmd, sx, sy, sw, sh);
 
+      // Text and solid shapes use the atlas; other IDs are the textures the examples registered.
       VETextureIndex tex = app->whiteTexture;
       EATextureType tt = EA_TEX_NONE;
-      if (dc->texture_id == app->fontAtlasTextureId && app->fontAtlasTextureId != 0)
-      {
-         tex = app->fontAtlasTexture;
-         tt = EA_TEX_FONT;
-      }
-      else if (dc->texture_id != 0)
+      if (dc->texture_id == (uint64_t)app->atlasTexture || dc->texture_id != 0)
       {
          tex = (VETextureIndex)dc->texture_id;
          tt = EA_TEX_RGBA;
@@ -359,6 +370,7 @@ static void ea_render_ui(ExampleApp *app, VECommandBuffer *cmd, uint32_t w, uint
       pc.samplerIndex = app->sampler;
       pc.indexOffset = dc->index_offset;
       pc.textureType = tt;
+      pc.vertexOffset = dc->vertex_offset;
       vePushConstants(cmd, &pc, sizeof(pc), 0);
       veDraw(cmd, dc->index_count, 1, 0, 0);
    }
@@ -369,7 +381,7 @@ static void ea_render_ui(ExampleApp *app, VECommandBuffer *cmd, uint32_t w, uint
 static int example_app_run(const ExampleAppDesc &desc)
 {
    ExampleApp app = {};
-   app.fontAtlasTexture = VE_INVALID_TEXTURE_INDEX;
+   app.atlasTexture = VE_INVALID_TEXTURE_INDEX;
    app.vertexBuffer = VE_INVALID_ADDRESS;
    app.indexBuffer = VE_INVALID_ADDRESS;
    app.user_data = desc.user_data;
@@ -491,28 +503,21 @@ static int example_app_run(const ExampleAppDesc &desc)
    uint32_t wp = 0xFFFFFFFF;
    veHostWriteTextureRegion(app.device, app.whiteTexture, &wp, sizeof(wp), nullptr);
 
-   app.ui = monstro_context_create();
+   // One environment holds the fonts, themes and canvas; the example's UI is one context on it.
+   app.env = monstro_init(nullptr);
+   const char *fp = desc.font_path ? desc.font_path : "data/fonts/freeSans.ttf";
+   float fs = desc.font_size > 0 ? desc.font_size : 16.0f;
+   app.font = monstro_font_load_ttf_from_file(app.env, "default", fp, fs, 32, 96);
+   if (!app.font)
+      fprintf(stderr, "Failed to load font %s\n", fp);
+
+   app.ui = monstro_context_create(app.env, nullptr);
    glfwGetFramebufferSize(app.window, &fw, &fh);
    monstro_set_display_size(app.ui, (float)fw, (float)fh);
 
-   const char *fp = desc.font_path ? desc.font_path : "data/fonts/freeSans.ttf";
-   float fs = desc.font_size > 0 ? desc.font_size : 16.0f;
-   MonstroFontManager *fm = monstro_context_get_font_manager(app.ui);
-   MonstroTextureData ad = {};
-   app.font = monstro_font_load_ttf_from_file(fm, fp, fs, 32, 96, &ad);
-   if (app.font)
-   {
-      VkFormat af = (ad.format == MONSTRO_TEXTURE_FORMAT_R8) ? VK_FORMAT_R8_UNORM : VK_FORMAT_R8G8B8A8_UNORM;
-      veCreateTexture2D(app.device, ad.width, ad.height, af, wtu, "EAFontAtlas", &app.fontAtlasTexture);
-      veHostWriteTextureRegion(app.device, app.fontAtlasTexture, ad.data, ad.data_size, nullptr);
-      app.fontAtlasTextureId = (uint64_t)app.fontAtlasTexture;
-      monstro_font_set_atlas_texture(app.font, app.fontAtlasTextureId);
-      monstro_font_add(fm, app.font, "default", fs);
-      monstro_context_set_default_font(app.ui, app.font);
-   }
-
    if (desc.init)
       desc.init(&app, desc.user_data);
+   ea_upload_atlas(&app);
 
    double lastTime = glfwGetTime();
    VEFrameTimingInfo timing = {};
@@ -527,17 +532,19 @@ static int example_app_run(const ExampleAppDesc &desc)
       monstro_begin_frame(app.ui, dt);
       if (desc.update)
          desc.update(&app, desc.user_data, dt);
-      monstro_end_frame(app.ui);
+      const MonstroDrawData *data = monstro_end_frame(app.ui);
 
-      MonstroDrawBuffer *db = monstro_context_get_draw_buffer(app.ui);
-      ea_upload_buffers(&app, db);
+      // The draw data stays valid until the canvas is lent again, at the next begin_frame.
+      ea_upload_atlas(&app);
+      if (data->changed)
+         ea_upload_buffers(&app, data);
 
       VECommandBuffer *cmd = nullptr;
       if (veBeginCommandBuffer(app.device, &cmd) == VE_SUCCESS && cmd)
       {
          glfwGetFramebufferSize(app.window, &fw, &fh);
          veBeginRendering(cmd, &app.renderTarget);
-         ea_render_ui(&app, cmd, (uint32_t)fw, (uint32_t)fh);
+         ea_render_ui(&app, data, cmd, (uint32_t)fw, (uint32_t)fh);
          veEndRendering(cmd);
          veBlitTextureToSwapchain(cmd, app.colorTexture, app.swapchain, VK_FILTER_LINEAR);
          vePresentImage(app.swapchain, cmd, true);
@@ -557,14 +564,16 @@ static int example_app_run(const ExampleAppDesc &desc)
 
    if (app.ui)
       monstro_context_destroy(app.ui);
+   if (app.env)
+      monstro_shutdown(app.env);
    if (app.vertexBuffer != VE_INVALID_ADDRESS)
       veDestroyBuffer(app.device, app.vertexBuffer);
    if (app.indexBuffer != VE_INVALID_ADDRESS)
       veDestroyBuffer(app.device, app.indexBuffer);
    if (app.whiteTexture != VE_INVALID_TEXTURE_INDEX)
       veDestroyTexture(app.device, app.whiteTexture);
-   if (app.fontAtlasTexture != VE_INVALID_TEXTURE_INDEX)
-      veDestroyTexture(app.device, app.fontAtlasTexture);
+   if (app.atlasTexture != VE_INVALID_TEXTURE_INDEX)
+      veDestroyTexture(app.device, app.atlasTexture);
    if (app.pipeline)
       veDestroyGraphicsPipeline(app.pipeline);
    if (app.vertexShader)

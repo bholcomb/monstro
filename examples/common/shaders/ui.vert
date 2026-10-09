@@ -35,7 +35,9 @@ layout(push_constant) uniform PushConstants {
     uint textureIndex;
     uint samplerIndex;
     uint indexOffset;       // Offset into index buffer for this draw
-    uint textureType;       // 0=RGBA, 1=Font atlas (R8), 2=none, use vertex color.
+    uint textureType;       // 0=RGBA (the atlas or an image), 2=none, use vertex color.
+    uint vertexOffset;      // The command's first vertex: its indices count from here
+    uint padding;
 } pc;
 
 // Unpack RGBA from uint32 (ABGR format - Vulkan standard)
@@ -53,7 +55,7 @@ void main() {
     IndexBuffer indexBuffer = IndexBuffer(pc.indexBufferAddress);
     
     // Fetch index and then vertex
-    uint index = indexBuffer.indices[pc.indexOffset + gl_VertexIndex];
+    uint index = pc.vertexOffset + indexBuffer.indices[pc.indexOffset + gl_VertexIndex];
     Vertex vertex = vertexBuffer.vertices[index];
     
     // Convert pixel coordinates to NDC [-1, 1]

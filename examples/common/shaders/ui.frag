@@ -18,7 +18,6 @@ layout(location = 0) out vec4 outColor;
 
 // Texture type constants
 const uint UI_TEXTURE_RGBA = 0;
-const uint UI_TEXTURE_FONT_ATLAS = 1;
 const uint UI_TEXTURE_NONE = 2;
 
 // Push constants (must match vertex shader layout)
@@ -30,17 +29,13 @@ layout(push_constant) uniform PushConstants {
     uint samplerIndex;
     uint indexOffset;
     uint textureType;
+    uint vertexOffset;
+    uint padding;
 } pc;
 
 void main() {
     if (pc.textureType == UI_TEXTURE_NONE) {
         outColor = fragColor;
-    } else if (pc.textureType == UI_TEXTURE_FONT_ATLAS) {
-        vec4 texColor = texture(
-            sampler2D(ve_textures[nonuniformEXT(pc.textureIndex)], 
-                      ve_samplers[nonuniformEXT(pc.samplerIndex)]), 
-            fragTexCoord);
-        outColor = vec4(fragColor.rgb, fragColor.a * texColor.r);
     } else {
         vec4 texColor = texture(
             sampler2D(ve_textures[nonuniformEXT(pc.textureIndex)], 

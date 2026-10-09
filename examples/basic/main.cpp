@@ -65,7 +65,7 @@ static void basic_init(ExampleApp *app, void *ud)
       veHostWriteTextureRegion(app->device, d->iconAtlasTexture, pixels, sizeof(pixels), nullptr);
       d->iconAtlasTextureId = (uint64_t)d->iconAtlasTexture;
       d->firstIconId = 1;
-      monstro_register_icon_atlas(app->ui, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h,
+      monstro_register_icon_atlas(app->env, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h,
                                   cols, rows);
    }
 }
