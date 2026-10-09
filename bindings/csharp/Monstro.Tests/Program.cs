@@ -182,6 +182,8 @@ unsafe class Program
             edit.EndFrame();
         }
         Check("color helpers", Native.monstro_color_to_u32(Native.monstro_color_from_u32(0xaabbccdd)) == 0xaabbccdd);
+        Check("color clamping", Native.monstro_color_to_u32(new() { r = 2, g = -1, b = float.NaN, a = 0.5f }) == 0x800000ff);
+
         Check("rect boundary", Native.monstro_rect_contains(new() { w = 10, h = 10 }, 0, 0) && !Native.monstro_rect_contains(new() { w = 10, h = 10 }, 10, 5));
         Native.monstro_shutdown();
         Console.WriteLine($"C# binding: {(_failures == 0 ? "PASS" : "FAIL")} ({_checks} checks, {_failures} failures)");

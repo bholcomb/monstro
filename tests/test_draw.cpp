@@ -29,3 +29,10 @@ TEST(rounded_rect_corners_lie_on_their_arcs)
       CHECK(dx <= 0.001f && dy <= 0.001f);
    }
 }
+
+TEST(color_conversion_clamps_channels)
+{
+   CHECK(monstro_color_to_u32(monstro_color_rgba(2.0f, -1.0f, NAN, 0.5f)) == 0x800000ffu);
+   CHECK(monstro_color_to_u32(monstro_color_rgba(1.0f, 0.0f, INFINITY, -INFINITY)) == 0x00ff00ffu);
+   CHECK(monstro_color_to_u32(monstro_color_from_u32(0xaabbccddu)) == 0xaabbccddu);
+}

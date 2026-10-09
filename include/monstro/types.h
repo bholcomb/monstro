@@ -52,13 +52,18 @@ typedef struct MonstroColor {
 /* Color Helpers                                                             */
 /* ------------------------------------------------------------------------- */
 
+/* Packs as 0xAABBGGRR. Channels are clamped to 0..1 first; NaN becomes 0. */
 static inline uint32_t monstro_color_to_u32(MonstroColor c) {
-    uint8_t ri = (uint8_t)(c.r * 255.0f + 0.5f);
-    uint8_t gi = (uint8_t)(c.g * 255.0f + 0.5f);
-    uint8_t bi = (uint8_t)(c.b * 255.0f + 0.5f);
-    uint8_t ai = (uint8_t)(c.a * 255.0f + 0.5f);
-    return ((uint32_t)ai << 24) | ((uint32_t)bi << 16) | ((uint32_t)gi << 8) | (uint32_t)ri;
+    const float channels[4] = { c.r, c.g, c.b, c.a };
+    uint32_t packed = 0;
+    for (int i = 0; i < 4; i++) {
+        float v = channels[i];
+        uint32_t byte = v > 0.0f ? (v < 1.0f ? (uint32_t)(v * 255.0f + 0.5f) : 255u) : 0u;
+        packed |= byte << (8 * i);
+    }
+    return packed;
 }
+
 
 static inline MonstroColor monstro_color_from_u32(uint32_t c) {
     MonstroColor color;

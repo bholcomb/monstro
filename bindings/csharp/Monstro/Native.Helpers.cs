@@ -15,9 +15,12 @@ public static unsafe partial class Native
     public static bool monstro_rect_contains(MonstroRect r, float px, float py) =>
         px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h;
 
+    // Channels are clamped to 0..1 first; NaN becomes 0.
     public static uint monstro_color_to_u32(MonstroColor c) =>
-        (uint)(byte)(c.a * 255.0f + 0.5f) << 24 | (uint)(byte)(c.b * 255.0f + 0.5f) << 16 |
-        (uint)(byte)(c.g * 255.0f + 0.5f) << 8 | (byte)(c.r * 255.0f + 0.5f);
+        ColorChannel(c.a) << 24 | ColorChannel(c.b) << 16 | ColorChannel(c.g) << 8 | ColorChannel(c.r);
+
+    private static uint ColorChannel(float v) => v > 0.0f ? (v < 1.0f ? (uint)(v * 255.0f + 0.5f) : 255u) : 0u;
+
 
     public static MonstroColor monstro_color_from_u32(uint c) => new()
     {
