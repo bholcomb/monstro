@@ -2145,6 +2145,16 @@ text input, tables, trees, tabs, color picker, child scroll regions, file
 dialog, menus, and more.  Also serves as the reference for GLFW/Vulkan
 integration.
 
+### interaction
+
+A page to click through the interaction rules (see
+[Interaction rules](#interaction-rules)): overlapping buttons where only the
+top one lights up and fires, a scrolled list whose buttons take the mouse only
+where they show, a slider and knob that leave other buttons dark while dragged
+and log their activated and deactivated edges, labels that show live values
+and keep their IDs, two windows each with a popup named "menu", and a button
+that counts every click however fast.  It is a page, not a library.
+
 ### console
 
 An interactive debug console with log levels (info, warning, error, debug),

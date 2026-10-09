@@ -164,6 +164,23 @@ targets:
         targets: [monstro]
         artifacts: [ui_shaders]
 
+    - name: monstro_interaction
+      language: cpp
+      sources:
+        - "interaction/*.cpp"
+      include_dirs:
+        - "../include"
+        - "common"
+      deps:
+        - glfw3
+        - vulkease
+        - vulkan
+      libs:
+        - monstro
+      depends_on:
+        targets: [monstro]
+        artifacts: [ui_shaders]
+
 staging:
   name: monstro_examples_dist
   destination: "../bin"
@@ -181,6 +198,7 @@ staging:
         - monstro_curve
         - monstro_timeline
         - monstro_node
+        - monstro_interaction
         - monstro
 
     - folder: data/shaders
