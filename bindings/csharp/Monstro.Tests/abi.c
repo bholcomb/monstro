@@ -62,7 +62,9 @@ size_t monstro_binding_sizeof(const char *name) {
     if (!strcmp(name, "MonstroStyle")) return sizeof(MonstroStyle);
     if (!strcmp(name, "MonstroSelectableFlags")) return sizeof(MonstroSelectableFlags);
     if (!strcmp(name, "MonstroSliderFlags")) return sizeof(MonstroSliderFlags);
+    if (!strcmp(name, "MonstroKnobFlags")) return sizeof(MonstroKnobFlags);
     if (!strcmp(name, "MonstroInputTextFlags")) return sizeof(MonstroInputTextFlags);
+    if (!strcmp(name, "MonstroProgressFlags")) return sizeof(MonstroProgressFlags);
     if (!strcmp(name, "MonstroTreeFlags")) return sizeof(MonstroTreeFlags);
     if (!strcmp(name, "MonstroTabBarFlags")) return sizeof(MonstroTabBarFlags);
     if (!strcmp(name, "MonstroButtonFlags")) return sizeof(MonstroButtonFlags);
@@ -692,6 +694,8 @@ int monstro_binding_constant(const char *name) {
     if (!strcmp(name, "MONSTRO_SELECTABLE_HAS_TOGGLE")) return MONSTRO_SELECTABLE_HAS_TOGGLE;
     if (!strcmp(name, "MONSTRO_SLIDER_NONE")) return MONSTRO_SLIDER_NONE;
     if (!strcmp(name, "MONSTRO_SLIDER_VERTICAL")) return MONSTRO_SLIDER_VERTICAL;
+    if (!strcmp(name, "MONSTRO_KNOB_NONE")) return MONSTRO_KNOB_NONE;
+    if (!strcmp(name, "MONSTRO_KNOB_ABSOLUTE")) return MONSTRO_KNOB_ABSOLUTE;
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_NONE")) return MONSTRO_INPUT_TEXT_NONE;
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_READ_ONLY")) return MONSTRO_INPUT_TEXT_READ_ONLY;
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_PASSWORD")) return MONSTRO_INPUT_TEXT_PASSWORD;
@@ -700,6 +704,8 @@ int monstro_binding_constant(const char *name) {
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_CHARS_DECIMAL")) return MONSTRO_INPUT_TEXT_CHARS_DECIMAL;
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL")) return MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL;
     if (!strcmp(name, "MONSTRO_INPUT_TEXT_CHARS_NO_BLANK")) return MONSTRO_INPUT_TEXT_CHARS_NO_BLANK;
+    if (!strcmp(name, "MONSTRO_PROGRESS_NONE")) return MONSTRO_PROGRESS_NONE;
+    if (!strcmp(name, "MONSTRO_PROGRESS_VERTICAL")) return MONSTRO_PROGRESS_VERTICAL;
     if (!strcmp(name, "MONSTRO_TREE_NONE")) return MONSTRO_TREE_NONE;
     if (!strcmp(name, "MONSTRO_TREE_DEFAULT_OPEN")) return MONSTRO_TREE_DEFAULT_OPEN;
     if (!strcmp(name, "MONSTRO_TREE_SELECTED")) return MONSTRO_TREE_SELECTED;

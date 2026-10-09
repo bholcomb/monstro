@@ -205,6 +205,8 @@ public static unsafe partial class Native
     public const MonstroSelectableFlags MONSTRO_SELECTABLE_HAS_TOGGLE = MonstroSelectableFlags.HasToggle;
     public const MonstroSliderFlags MONSTRO_SLIDER_NONE = MonstroSliderFlags.None;
     public const MonstroSliderFlags MONSTRO_SLIDER_VERTICAL = MonstroSliderFlags.Vertical;
+    public const MonstroKnobFlags MONSTRO_KNOB_NONE = MonstroKnobFlags.None;
+    public const MonstroKnobFlags MONSTRO_KNOB_ABSOLUTE = MonstroKnobFlags.Absolute;
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_NONE = MonstroInputTextFlags.None;
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_READ_ONLY = MonstroInputTextFlags.ReadOnly;
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_PASSWORD = MonstroInputTextFlags.Password;
@@ -213,6 +215,8 @@ public static unsafe partial class Native
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_CHARS_DECIMAL = MonstroInputTextFlags.CharsDecimal;
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL = MonstroInputTextFlags.CharsHexadecimal;
     public const MonstroInputTextFlags MONSTRO_INPUT_TEXT_CHARS_NO_BLANK = MonstroInputTextFlags.CharsNoBlank;
+    public const MonstroProgressFlags MONSTRO_PROGRESS_NONE = MonstroProgressFlags.None;
+    public const MonstroProgressFlags MONSTRO_PROGRESS_VERTICAL = MonstroProgressFlags.Vertical;
     public const MonstroTreeFlags MONSTRO_TREE_NONE = MonstroTreeFlags.None;
     public const MonstroTreeFlags MONSTRO_TREE_DEFAULT_OPEN = MonstroTreeFlags.DefaultOpen;
     public const MonstroTreeFlags MONSTRO_TREE_SELECTED = MonstroTreeFlags.Selected;
@@ -876,6 +880,12 @@ public static unsafe partial class Native
     public static extern void monstro_draw_quad_filled(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_draw_ellipse(MonstroCanvas canvas, MonstroVec2 center, MonstroVec2 radii, float rotation, uint color, int num_segments, float thickness);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_draw_ellipse_filled(MonstroCanvas canvas, MonstroVec2 center, MonstroVec2 radii, float rotation, uint color, int num_segments);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_draw_polyline(MonstroCanvas canvas, MonstroVec2* points, int count, uint color, [MarshalAs(UnmanagedType.U1)] bool closed, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
@@ -895,6 +905,9 @@ public static unsafe partial class Native
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_draw_text_wrapped(MonstroCanvas canvas, MonstroFont font, MonstroVec2 pos, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float wrap_width);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_draw_text_rotated(MonstroCanvas canvas, MonstroFont font, MonstroRect rect, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, MonstroAlign align, MonstroVec2 pivot, float angle);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_draw_image(MonstroCanvas canvas, ulong texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint tint_color);
@@ -1058,7 +1071,14 @@ public static unsafe partial class Native
     public static extern bool monstro_knob_sized(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float diameter, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_knob_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float diameter, MonstroKnobFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_progress_bar(MonstroContext ctx, float fraction, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? overlay);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_progress_bar_ex(MonstroContext ctx, float fraction, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? overlay, MonstroProgressFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
@@ -1197,6 +1217,10 @@ public static unsafe partial class Native
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_end_tab_item(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_page_tabs(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, byte** labels, int count, int* selected, float width, float height);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]

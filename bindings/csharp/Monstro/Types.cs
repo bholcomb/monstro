@@ -952,6 +952,13 @@ public enum MonstroSliderFlags
 }
 
 [Flags]
+public enum MonstroKnobFlags
+{
+    None = 0,
+    Absolute = 1,
+}
+
+[Flags]
 public enum MonstroInputTextFlags
 {
     None = 0,
@@ -962,6 +969,13 @@ public enum MonstroInputTextFlags
     CharsDecimal = 16,
     CharsHexadecimal = 32,
     CharsNoBlank = 64,
+}
+
+[Flags]
+public enum MonstroProgressFlags
+{
+    None = 0,
+    Vertical = 1,
 }
 
 [Flags]
