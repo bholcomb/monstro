@@ -177,7 +177,6 @@ size_t monstro_binding_offsetof(const char *type, const char *field) {
     if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_tables")) return offsetof(MonstroContextConfig, max_tables);
     if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_popups")) return offsetof(MonstroContextConfig, max_popups);
     if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_input_events")) return offsetof(MonstroContextConfig, max_input_events);
-    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "evict_after_frames")) return offsetof(MonstroContextConfig, evict_after_frames);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "color")) return offsetof(MonstroStyleText, color);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "background")) return offsetof(MonstroStyleText, background);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "padding")) return offsetof(MonstroStyleText, padding);

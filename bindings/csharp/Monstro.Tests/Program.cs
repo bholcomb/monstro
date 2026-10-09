@@ -304,7 +304,7 @@ unsafe class Program
             Frame(false);
             Check("item edges over a drag", activations == 1 && deactivations == 1 && commits == 1 && activeThroughout && throttle != 0.5f);
             MonstroContextConfig defaults = Native.monstro_context_config_default();
-            Check("context config defaults", defaults.max_input_events == 64 && defaults.evict_after_frames == 3600);
+            Check("context config defaults", defaults.max_input_events == 64);
         }
 
         using (var edit = new Env())

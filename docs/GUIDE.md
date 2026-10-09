@@ -765,19 +765,6 @@ Child panels are named the same way: two `"list"` panels under different
 pushed IDs are two panels.  Top-level windows are found by name within their
 context; windows of different contexts never meet.
 
-### Forgetting unused state
-
-A context remembers windows (their position, size, scroll and collapsed
-state), tree node open states, tab bar selections and table column widths in
-fixed tables.  State not used for `MonstroContextConfig.evict_after_frames`
-frames is forgotten at the end of a frame, and the next use starts afresh, as
-the first did.  The default, 3,600 frames, is a minute at 60 frames a second:
-a tool window closed for longer comes back as it first opened.  This keeps
-a UI that keeps making new state -- a context menu per row, a tree node per
-contact -- from filling the tables over a long session.  It is lifetime
-management, not growth: a table full of state in use still stops the program,
-and its capacity is sized for what one frame uses.
-
 ### Input between frames
 
 The input setters queue changes (up to `max_input_events`), and each frame
@@ -878,11 +865,6 @@ MonstroContext* ctx = monstro_context_create(env, &config);
 | `max_tables` | 8 |
 | `max_popups`: popups open at once | 8 |
 | `max_input_events`: input events waiting for a frame | 64 |
-| `evict_after_frames`: frames before unused state is forgotten (not a capacity) | 3,600 |
-
-State a UI stops using is forgotten after `evict_after_frames`, so the tables
-only need to hold what is in use; see
-[Forgetting unused state](#forgetting-unused-state).
 
 A default context holds about 32 KB; a default environment about 7.4 MB
 (a 2.9 MB canvas and a 4 MB atlas).

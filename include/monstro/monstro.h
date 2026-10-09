@@ -53,13 +53,6 @@ typedef struct MonstroContextConfig {
     uint32_t max_tables;
     uint32_t max_popups; /* popups open at once */
     uint32_t max_input_events; /* input events waiting for a frame; see the input setters in input.h */
-    /*
-     * Windows (with their position, size and scroll), tree node open states,
-     * tab bars and table column widths not used for this many frames are
-     * forgotten, so a UI that keeps making new ones does not fill the tables
-     * above. A table full of state in use still stops the program.
-     */
-    uint32_t evict_after_frames;
 } MonstroContextConfig;
 
 /* ------------------------------------------------------------------------- */
