@@ -174,7 +174,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    {
       if (ctx->disabled)
       {
-         *value = (float)atof(edit->myBuf);
+         *value = (float)atof(edit->myNumberText);
          edit->deactivate();
          is_active = false;
          ctx->want_text_input = false;
@@ -195,7 +195,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
          if (is_active && monstro_is_key_pressed(ctx, MONSTRO_KEY_ENTER, false))
          {
-            *value = (float)atof(edit->myBuf);
+            *value = (float)atof(edit->myNumberText);
             edit->deactivate();
             is_active = false;
             ctx->want_text_input = false;
@@ -218,7 +218,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
                }
                if (accept)
                {
-                  edit->insertText(input);
+                  edit->insertText(edit->myNumberText, sizeof(edit->myNumberText), input);
                   edit->myCursorBlinkTimer = 0.0f;
                }
             }
@@ -227,12 +227,12 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
             {
                if (edit->myHasSelection)
                {
-                  edit->deleteSelection();
+                  edit->deleteSelection(edit->myNumberText);
                }
                else if (edit->myCursorPos > 0)
                {
-                  int len = (int)strlen(edit->myBuf);
-                  memmove(edit->myBuf + edit->myCursorPos - 1, edit->myBuf + edit->myCursorPos,
+                  int len = (int)strlen(edit->myNumberText);
+                  memmove(edit->myNumberText + edit->myCursorPos - 1, edit->myNumberText + edit->myCursorPos,
                           len - edit->myCursorPos + 1);
                   edit->myCursorPos--;
                   edit->mySelectStart = edit->myCursorPos;
@@ -251,7 +251,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
             }
             if (monstro_is_key_pressed(ctx, MONSTRO_KEY_RIGHT_ARROW, true))
             {
-               int len = (int)strlen(edit->myBuf);
+               int len = (int)strlen(edit->myNumberText);
                if (edit->myCursorPos < len)
                   edit->myCursorPos++;
                edit->mySelectStart = edit->myCursorPos;
@@ -268,7 +268,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
             }
             if (monstro_is_key_pressed(ctx, MONSTRO_KEY_END, false))
             {
-               int len = (int)strlen(edit->myBuf);
+               int len = (int)strlen(edit->myNumberText);
                edit->myCursorPos = len;
                edit->mySelectStart = len;
                edit->mySelectEnd = len;
@@ -278,7 +278,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
          if (is_active && !hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
          {
-            *value = (float)atof(edit->myBuf);
+            *value = (float)atof(edit->myNumberText);
             edit->deactivate();
             is_active = false;
             ctx->want_text_input = false;
@@ -290,9 +290,8 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
    {
       if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
       {
-         static char num_buf[64];
-         snprintf(num_buf, sizeof(num_buf), format, *value);
-         edit->activate(id, num_buf, sizeof(num_buf), true);
+         snprintf(edit->myNumberText, sizeof(edit->myNumberText), format, *value);
+         edit->activate(id, edit->myNumberText, true);
          is_active = true;
          ctx->want_text_input = true;
       }
@@ -318,7 +317,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
       char value_text[64];
       if (is_active)
       {
-         snprintf(value_text, sizeof(value_text), "%s", edit->myBuf);
+         snprintf(value_text, sizeof(value_text), "%s", edit->myNumberText);
       }
       else
       {

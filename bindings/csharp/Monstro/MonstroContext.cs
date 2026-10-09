@@ -1,6 +1,5 @@
 // Optional convenience layer over the one-to-one C API mirror in Native.cs.
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -43,9 +42,6 @@ public sealed unsafe class MonstroContext : IDisposable
     // Like MobiusState, ownership is explicit: dispose the context. There is no
     // finalizer that could release it while a raw Native call is using Handle.
     private IntPtr _handle;
-    // Native EditState retains the active widget's buffer between calls/frames.
-    // Pinned, context-owned buffers preserve that address until context disposal.
-    private readonly Dictionary<ulong, byte[]> _textBuffers = new();
     private bool _inFrame;
     private bool _hasFrame;
 
@@ -65,7 +61,6 @@ public sealed unsafe class MonstroContext : IDisposable
         if (_handle == IntPtr.Zero) return;
         Native.monstro_context_destroy(_handle);
         _handle = IntPtr.Zero;
-        _textBuffers.Clear();
     }
 
     public void BeginFrame(float width, float height, float deltaTime)
@@ -130,14 +125,8 @@ public sealed unsafe class MonstroContext : IDisposable
         IntPtr ctx = RequireFrame();
         if (value == null) throw new ArgumentNullException(nameof(value));
         if (capacityBytes <= Encoding.UTF8.GetByteCount(value)) throw new ArgumentOutOfRangeException(nameof(capacityBytes));
-        ulong id = Native.monstro_get_id(ctx, label);
-        if (!_textBuffers.TryGetValue(id, out byte[]? buffer))
-        {
-            buffer = GC.AllocateArray<byte>(capacityBytes, pinned: true);
-            _textBuffers.Add(id, buffer);
-        }
-        if (buffer.Length != capacityBytes)
-            throw new ArgumentException("A text widget's byte capacity must remain fixed for the context's lifetime", nameof(capacityBytes));
+        // Native editing reads and writes the buffer only during the call.
+        byte[] buffer = new byte[capacityBytes];
         int length = Encoding.UTF8.GetBytes(value, buffer);
         buffer[length] = 0;
         fixed (byte* pointer = buffer)

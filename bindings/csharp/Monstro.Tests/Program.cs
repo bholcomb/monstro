@@ -174,12 +174,11 @@ unsafe class Program
             edit.AddInputText("é");
             edit.BeginFrame(400, 100, 0.01f);
             Check("active UTF-8 edit after GC", edit.InputText("edit", ref text, 64) && text == "Aé");
-            Throws<ArgumentException>("active text capacity fixed", () => edit.InputText("edit", ref text, 128));
             edit.EndFrame();
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             edit.AddInputText("🚀");
             edit.BeginFrame(400, 100, 0.01f);
-            Check("active edit retains buffer across frames", edit.InputText("edit", ref text, 64) && text == "Aé🚀");
+            Check("active edit takes a new buffer each frame", edit.InputText("edit", ref text, 128) && text == "Aé🚀");
             edit.EndFrame();
         }
         Check("color helpers", Native.monstro_color_to_u32(Native.monstro_color_from_u32(0xaabbccdd)) == 0xaabbccdd);

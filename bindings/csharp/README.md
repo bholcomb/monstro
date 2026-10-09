@@ -48,9 +48,8 @@ keep those resources alive until it finishes rendering the copied data.
 Fonts loaded by `LoadFont` belong to the context and are destroyed with it; the
 atlas pixels are a managed copy. Do not destroy or register those fonts again
 through `Native`. Dispose contexts explicitly, as with MobiusState.
-`InputText` keeps one pinned UTF-8 buffer per widget ID until context disposal,
-because native editing retains that pointer between frames. Its byte capacity
-must remain fixed; scope repeated labels with windows or `Native.monstro_push_id`.
+`InputText` copies the string into a UTF-8 buffer of `capacityBytes` for each
+call; native editing keeps only the cursor and selection between frames.
 
 Use one context on one thread at a time, including disposal. Balance every
 window/layout/ID/style/disabled stack before `EndFrame`; do not allow native C++
@@ -74,8 +73,8 @@ be ended. A collapsed window still needs `monstro_end_window`.
 | C structs/unions | sequential/explicit blittable structs, fixed inline arrays |
 | custom draw callback | `delegate* unmanaged[Cdecl]<IntPtr, float*, int, void>` |
 
-Native text editing retains its mutable buffer while the widget is active;
-keep that buffer alive and pinned for that whole lifetime, not just one call.
+Native text editing uses its mutable buffer only during the call; pin it for
+that call. Pass the same text each frame (the buffer may move between frames).
 
 Callbacks must be static `[UnmanagedCallersOnly(CallConvs = new[] {
 typeof(CallConvCdecl) })]` methods. A renderer invokes custom draw commands; the

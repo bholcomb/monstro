@@ -1,14 +1,24 @@
 #include "context.h"
 #include <cmath>
+#include <cstring>
 
 namespace monstro
 {
 
-void TooltipState::beginFrame() { myText = nullptr; }
+void TooltipState::beginFrame() { myHasText = false; }
+
+void TooltipState::setText(const char *text)
+{
+   size_t length = std::strlen(text);
+   MONSTRO_REQUIRE(length < sizeof(myText), "tooltip text is %zu bytes; a tooltip holds at most %zu", length,
+                   sizeof(myText) - 1);
+   std::memcpy(myText, text, length + 1);
+   myHasText = true;
+}
 
 void TooltipState::endFrame(Context *ctx)
 {
-   if (myText == nullptr)
+   if (!myHasText)
    {
       myHoveredId = 0;
       myHoverTimer = 0.0f;
@@ -20,7 +30,7 @@ void TooltipState::endFrame(Context *ctx)
       return;
 
    MonstroFont *font = ctx->style.font;
-   if (!font || !myText)
+   if (!font)
       return;
 
    MonstroVec2 text_size = monstro_font_measure_text(font, myText, 0.0f);
@@ -63,7 +73,7 @@ void TooltipState::update(uint64_t hoveredId, float deltaTime, float mouseDeltaX
    {
       myHoverTimer = 0.0f;
       myActive = false;
-      myText = text;
+      setText(text);
       return;
    }
 
@@ -72,7 +82,7 @@ void TooltipState::update(uint64_t hoveredId, float deltaTime, float mouseDeltaX
       myHoveredId = hoveredId;
       myHoverTimer = 0.0f;
       myActive = false;
-      myText = text;
+      setText(text);
       return;
    }
 
@@ -81,12 +91,12 @@ void TooltipState::update(uint64_t hoveredId, float deltaTime, float mouseDeltaX
    {
       myHoverTimer = 0.0f;
       myActive = false;
-      myText = text;
+      setText(text);
       return;
    }
 
    myHoverTimer += deltaTime;
-   myText = text;
+   setText(text);
 
    if (myHoverTimer >= myHoverDelay)
    {

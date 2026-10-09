@@ -17,8 +17,6 @@ static int clamp_index(int value, int min_value, int max_value)
 void EditState::clear()
 {
    myId = 0;
-   myBuf = nullptr;
-   myBufSize = 0;
    myCursorPos = 0;
    mySelectStart = 0;
    mySelectEnd = 0;
@@ -26,11 +24,9 @@ void EditState::clear()
    myCursorBlinkTimer = 0.0f;
 }
 
-void EditState::activate(uint64_t id, char *buf, size_t buf_size, bool select_all)
+void EditState::activate(uint64_t id, const char *buf, bool select_all)
 {
    myId = id;
-   myBuf = buf;
-   myBufSize = buf_size;
    myCursorBlinkTimer = 0.0f;
 
    int len = (int)strlen(buf);
@@ -56,12 +52,12 @@ int EditState::getSelectionStart() const { return std::min(mySelectStart, mySele
 
 int EditState::getSelectionEnd() const { return std::max(mySelectStart, mySelectEnd); }
 
-void EditState::deleteSelection()
+void EditState::deleteSelection(char *buf)
 {
-   if (!myHasSelection || !myBuf)
+   if (!myHasSelection)
       return;
 
-   int len = (int)strlen(myBuf);
+   int len = (int)strlen(buf);
    myCursorPos = clamp_index(myCursorPos, 0, len);
    mySelectStart = clamp_index(mySelectStart, 0, len);
    mySelectEnd = clamp_index(mySelectEnd, 0, len);
@@ -72,47 +68,45 @@ void EditState::deleteSelection()
    if (sel_start >= sel_end)
       return;
 
-   memmove(myBuf + sel_start, myBuf + sel_end, len - sel_end + 1);
+   memmove(buf + sel_start, buf + sel_end, len - sel_end + 1);
    myCursorPos = sel_start;
    myHasSelection = false;
    mySelectStart = sel_start;
    mySelectEnd = sel_start;
 }
 
-void EditState::insertText(const char *text)
+void EditState::insertText(char *buf, size_t buf_size, const char *text)
 {
-   if (!myBuf || !text)
+   if (!text)
       return;
 
    if (myHasSelection)
    {
-      deleteSelection();
+      deleteSelection(buf);
    }
 
-   int len = (int)strlen(myBuf);
+   int len = (int)strlen(buf);
    myCursorPos = clamp_index(myCursorPos, 0, len);
    mySelectStart = clamp_index(mySelectStart, 0, len);
    mySelectEnd = clamp_index(mySelectEnd, 0, len);
 
    int insert_len = (int)strlen(text);
-   int available = (int)myBufSize - len - 1;
+   int available = (int)buf_size - len - 1;
    if (available <= 0)
       return;
    if (insert_len > available)
       insert_len = available;
 
-   memmove(myBuf + myCursorPos + insert_len, myBuf + myCursorPos, len - myCursorPos + 1);
-   memcpy(myBuf + myCursorPos, text, insert_len);
+   memmove(buf + myCursorPos + insert_len, buf + myCursorPos, len - myCursorPos + 1);
+   memcpy(buf + myCursorPos, text, insert_len);
    myCursorPos += insert_len;
    mySelectStart = myCursorPos;
    mySelectEnd = myCursorPos;
 }
 
-void EditState::selectAll()
+void EditState::selectAll(const char *buf)
 {
-   if (!myBuf)
-      return;
-   int len = (int)strlen(myBuf);
+   int len = (int)strlen(buf);
    mySelectStart = 0;
    mySelectEnd = len;
    myCursorPos = len;

@@ -151,7 +151,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    {
       if (!is_active)
       {
-         edit->activate(id, buf, buf_size, auto_select);
+         edit->activate(id, buf, auto_select);
          is_active = true;
          ctx->want_text_input = true;
       }
@@ -244,7 +244,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
                }
                if (accept)
                {
-                  edit->insertText(input);
+                  edit->insertText(buf, buf_size, input);
                   value_changed = true;
                   edit->myCursorBlinkTimer = 0.0f;
                }
@@ -254,7 +254,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
             {
                if (edit->myHasSelection)
                {
-                  edit->deleteSelection();
+                  edit->deleteSelection(buf);
                   value_changed = true;
                }
                else if (edit->myCursorPos > 0)
@@ -273,7 +273,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
             {
                if (edit->myHasSelection)
                {
-                  edit->deleteSelection();
+                  edit->deleteSelection(buf);
                   value_changed = true;
                }
                else
@@ -367,7 +367,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 
             if (is_ctrl_pressed(ctx) && key_pressed(ctx, MONSTRO_KEY_A))
             {
-               edit->selectAll();
+               edit->selectAll(buf);
                edit->myCursorBlinkTimer = 0.0f;
             }
          }
@@ -549,7 +549,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
    {
       if (!is_active)
       {
-         edit->activate(id, buf, buf_size, false);
+         edit->activate(id, buf, false);
          is_active = true;
          ctx->want_text_input = true;
       }
@@ -587,7 +587,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
          {
             if (key_pressed(ctx, MONSTRO_KEY_ENTER))
             {
-               edit->insertText("\n");
+               edit->insertText(buf, buf_size, "\n");
                value_changed = true;
                edit->myCursorBlinkTimer = 0.0f;
             }
@@ -595,7 +595,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             const char *input = ctx->keyboard.getInputText();
             if (input && input[0] != '\0')
             {
-               edit->insertText(input);
+               edit->insertText(buf, buf_size, input);
                value_changed = true;
                edit->myCursorBlinkTimer = 0.0f;
             }
@@ -604,7 +604,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             {
                if (edit->myHasSelection)
                {
-                  edit->deleteSelection();
+                  edit->deleteSelection(buf);
                }
                else if (edit->myCursorPos > 0)
                {
@@ -622,7 +622,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             {
                if (edit->myHasSelection)
                {
-                  edit->deleteSelection();
+                  edit->deleteSelection(buf);
                }
                else
                {
@@ -676,7 +676,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
             }
             if (is_ctrl_pressed(ctx) && key_pressed(ctx, MONSTRO_KEY_A))
             {
-               edit->selectAll();
+               edit->selectAll(buf);
                edit->myCursorBlinkTimer = 0.0f;
             }
          }
