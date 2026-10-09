@@ -5,6 +5,8 @@
 
 static bool near(float a, float b, float tolerance = 0.01f) { return std::fabs(a - b) < tolerance; }
 
+static MonstroVec2 middle(MonstroRect r) { return {r.x + r.w * 0.5f, r.y + r.h * 0.5f}; }
+
 // One fixed window filling the display, without decorations, as a cockpit screen draws.
 static void begin_screen(Ui &ui)
 {
@@ -296,4 +298,68 @@ TEST(a_vertical_slider_fills_from_the_bottom)
          bottom = std::fmax(bottom, data->vertices[i].position[1]);
       }
    CHECK(near(top, r.y + 150.0f, 0.5f) && near(bottom, r.y + 200.0f, 0.5f));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Absolute knobs                                                            */
+/* ------------------------------------------------------------------------- */
+
+// The point at angle degrees clockwise from the right (+y down), 40 pixels from the centre of a knob at rect.
+static MonstroVec2 on_knob(MonstroRect knob, float degrees)
+{
+   float a = degrees * 3.14159265f / 180.0f;
+   MonstroVec2 c = middle(knob);
+   return {c.x + 40.0f * std::cos(a), c.y + 40.0f * std::sin(a)};
+}
+
+TEST(an_absolute_knob_points_where_the_pointer_is)
+{
+   float value = 3.0f;
+   auto t = one_control(
+       [&](MonstroContext *ctx) {
+          return monstro_knob_ex(ctx, "trim##", &value, 0.0f, 12.0f, nullptr, 100.0f, MONSTRO_KNOB_ABSOLUTE, nullptr);
+       });
+   t.frame();
+   // No shown label: the item is the knob alone.
+   CHECK(t.rect.x == 100 && t.rect.w == 100 && t.rect.h == 100);
+   MonstroVec2 c = middle(t.rect);
+
+   // The sweep runs clockwise from the lower left (135 degrees) over the top to the lower right (405).
+   MonstroVec2 top = on_knob(t.rect, 270);
+   t.press(top.x, top.y);
+   CHECK(t.changed && t.activated && near(value, 6.0f));
+   MonstroVec2 right = on_knob(t.rect, 360);
+   t.ui.moveMouse(right.x, right.y);
+   t.frame();
+   CHECK(near(value, 10.0f));
+   // Into the gap at the bottom: the nearer end.
+   t.ui.moveMouse(c.x + 10, c.y + 40);
+   t.frame();
+   CHECK(near(value, 12.0f));
+   t.ui.moveMouse(c.x - 10, c.y + 40);
+   t.frame();
+   CHECK(near(value, 0.0f));
+   t.release();
+   CHECK(t.deactivated);
+
+   // A tap points the knob in its frame.
+   MonstroVec2 left = on_knob(t.rect, 180);
+   t.tap(left.x, left.y);
+   CHECK(t.changed && t.activated && t.deactivated && near(value, 2.0f));
+}
+
+TEST(a_relative_knob_does_not_jump_where_it_is_pressed)
+{
+   float value = 3.0f;
+   auto t = one_control([&](MonstroContext *ctx)
+                        { return monstro_knob_sized(ctx, "trim##", &value, 0.0f, 12.0f, nullptr, 100.0f, nullptr); });
+   t.frame();
+   MonstroVec2 top = on_knob(t.rect, 270);
+   t.press(top.x, top.y);
+   CHECK(t.activated && value == 3.0f);
+   // Dragged up by 50 pixels: a quarter of the range per diameter.
+   t.ui.moveMouse(top.x, top.y - 50);
+   t.frame();
+   CHECK(near(value, 6.0f));
+   t.release();
 }

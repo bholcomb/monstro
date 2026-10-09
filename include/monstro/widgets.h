@@ -28,6 +28,15 @@ typedef enum MonstroSliderFlags {
     MONSTRO_SLIDER_VERTICAL = 1 << 0
 } MonstroSliderFlags;
 
+/*
+ * A knob turns by dragging up and down, relative to where it was; an absolute
+ * knob points where the pointer is, about its centre, from a press on.
+ */
+typedef enum MonstroKnobFlags {
+    MONSTRO_KNOB_NONE     = 0,
+    MONSTRO_KNOB_ABSOLUTE = 1 << 0
+} MonstroKnobFlags;
+
 typedef enum MonstroInputTextFlags {
     MONSTRO_INPUT_TEXT_NONE              = 0,
     MONSTRO_INPUT_TEXT_READ_ONLY         = 1 << 0,
@@ -167,6 +176,9 @@ bool monstro_knob(MonstroContext* ctx, const char* label, float* value,
                   float min, float max, const char* format, const char* tooltip);
 bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
                         float min, float max, const char* format, float diameter, const char* tooltip);
+bool monstro_knob_ex(MonstroContext* ctx, const char* label, float* value,
+                     float min, float max, const char* format, float diameter,
+                     MonstroKnobFlags flags, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Progress Bar                                                              */

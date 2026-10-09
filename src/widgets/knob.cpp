@@ -60,8 +60,20 @@ static void draw_style_item_circle(monstro::Canvas *canvas, MonstroStyleItem *it
    }
 }
 
-bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
-                        const char *format, float diameter, const char *tooltip)
+// The value at the pointer's angle about the knob's centre, over the sweep from the minimum at the lower left,
+// clockwise over the top, to the maximum at the lower right. In the gap at the bottom it is the nearer end.
+static float knob_value_at(float dx, float dy, float min_val, float max_val)
+{
+   float angle = atan2f(dy, dx);
+   // Measured from the middle of the gap at the bottom (+y is down), so the sweep is one unbroken run.
+   if (angle < (float)(M_PI * 0.5))
+      angle += (float)(M_PI * 2.0);
+   float t = clampf((angle - KNOB_MIN_ANGLE) / (KNOB_MAX_ANGLE - KNOB_MIN_ANGLE), 0.0f, 1.0f);
+   return min_val + t * (max_val - min_val);
+}
+
+bool monstro_knob_ex(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
+                     const char *format, float diameter, MonstroKnobFlags flags, const char *tooltip)
 {
    monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label), MONSTRO_ARG(value)});
 
@@ -85,12 +97,14 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
    float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
    float label_w = font ? monstro_font_measure_text(font, display, 0.0f).x : (float)strlen(display) * 8.0f;
 
-   float total_w = label_w + ks->padding[0] + knob_diameter;
+   // A knob with no shown label ("id##") is the knob alone, without the space before it.
+   float label_gap = display[0] ? ks->padding[0] : 0.0f;
+   float total_w = label_w + label_gap + knob_diameter;
    float total_h = knob_diameter > text_h ? knob_diameter : text_h;
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
 
-   float knob_x = pos.x + label_w + ks->padding[0];
+   float knob_x = pos.x + label_w + label_gap;
    MonstroVec2 center = {knob_x + knob_radius, pos.y + knob_radius};
    MonstroRect knob_rect = {knob_x, pos.y, knob_diameter, knob_diameter};
 
@@ -104,7 +118,15 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
 
    float old_value = *value;
 
-   if (held)
+   if (held && (flags & MONSTRO_KNOB_ABSOLUTE))
+   {
+      float dx = ctx->mouse.pos_x - center.x;
+      float dy = ctx->mouse.pos_y - center.y;
+      // At the very centre the pointer points nowhere: the value stays.
+      if (dx * dx + dy * dy >= 1.0f)
+         *value = knob_value_at(dx, dy, min_val, max_val);
+   }
+   else if (held)
    {
       float sensitivity = range / (knob_diameter * 2.0f);
       *value += -ctx->mouse.getHeldDelta(MONSTRO_MOUSE_BUTTON_LEFT).y * sensitivity;
@@ -190,7 +212,7 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
    }
 
    // Label to the left of the knob
-   if (font && label[0] != '#')
+   if (font && display[0])
    {
       MonstroRect label_rect = {pos.x, pos.y, label_w, knob_diameter};
       canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_DEFAULT);
@@ -210,8 +232,14 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
    return *value != old_value;
 }
 
+bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
+                        const char *format, float diameter, const char *tooltip)
+{
+   return monstro_knob_ex(ctx, label, value, min_val, max_val, format, diameter, MONSTRO_KNOB_NONE, tooltip);
+}
+
 bool monstro_knob(MonstroContext *ctx, const char *label, float *value, float min_val, float max_val,
                   const char *format, const char *tooltip)
 {
-   return monstro_knob_sized(ctx, label, value, min_val, max_val, format, 0.0f, tooltip);
+   return monstro_knob_ex(ctx, label, value, min_val, max_val, format, 0.0f, MONSTRO_KNOB_NONE, tooltip);
 }
