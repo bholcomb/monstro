@@ -1,0 +1,15 @@
+# Monstro headless tests (tests/run.sh also builds a sanitizer variant)
+
+targets:
+  executables:
+    - name: monstro_tests
+      language: cpp
+      sources:
+        - "*.cpp"
+        - "../src/*.cpp"
+        - "../src/widgets/*.cpp"
+      include_dirs:
+        - "../include"
+        - "../externals"
+        - "../src"
+      deps: []
