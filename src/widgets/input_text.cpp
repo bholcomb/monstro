@@ -71,7 +71,8 @@ static void clamp_edit_state_to_buffer(monstro::EditState *edit, const char *buf
 bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, MonstroInputTextFlags flags,
                         const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label || !buf)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !buf)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -485,7 +486,8 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *buf, size_t buf_size, float width,
                                   float height, MonstroInputTextFlags flags, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label || !buf)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !buf)
       return false;
 
    monstro::Window *win = ctx->current_window;

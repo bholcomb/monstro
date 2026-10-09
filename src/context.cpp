@@ -1,15 +1,16 @@
 #include "context.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <new>
-#include <stdexcept>
 
 namespace monstro
 {
 
-Context::Context()
+Context::Context(const MonstroContextConfig &context_config) : config(context_config)
 {
    font_manager = monstro_font_manager_create();
+   final_commands = (MonstroDrawCommand *)std::malloc(sizeof(MonstroDrawCommand) * config.max_draw_commands);
    monstro_style_set_default(&style);
 }
 
@@ -19,10 +20,28 @@ Context::~Context()
    {
       monstro_font_manager_destroy(font_manager);
    }
+   std::free(final_commands);
+}
+
+Window *requireWindow(Context *ctx, const char *function)
+{
+   MONSTRO_REQUIRE(ctx, "%s: the context must not be null", function);
+   MONSTRO_REQUIRE(ctx->current_window,
+                   "%s called outside a frame: window and widget calls belong between "
+                   "monstro_begin_frame and monstro_end_frame",
+                   function);
+   return ctx->current_window;
 }
 
 void Context::beginFrame(float dt)
 {
+   MONSTRO_REQUIRE(!in_frame,
+                   "monstro_begin_frame called during frame %d: the previous frame is missing "
+                   "monstro_end_frame",
+                   frame);
+   requireBalanced("monstro_begin_frame");
+   in_frame = true;
+
    delta_time = dt;
    time += dt;
    frame++;
@@ -42,12 +61,12 @@ void Context::beginFrame(float dt)
 
    hovered_window = findHoveredWindow(mouse.pos_x, mouse.pos_y, false);
 
-   for (int i = 0; i < window_count; i++)
+   for (Window &window : windows)
    {
-      windows[i].active = false;
+      window.active = false;
    }
 
-   draw_buffer.beginFrame();
+   draw_buffer.beginFrame(frame);
    final_command_count = 0;
 
    next_window_pos_cond = MONSTRO_COND_NONE;
@@ -72,19 +91,6 @@ void Context::beginFrame(float dt)
 
    tooltip.beginFrame();
 
-   if (window_stack_top != 0)
-   {
-      throw std::runtime_error("Unbalanced window stack: missing monstro_end_window() calls");
-   }
-   if (!id_stack.isBalanced())
-   {
-      throw std::runtime_error("Unbalanced ID stack: missing monstro_pop_id() calls");
-   }
-   if (disabled_stack_depth != 0)
-   {
-      throw std::runtime_error("Unbalanced disabled stack: missing monstro_end_disabled() calls");
-   }
-
    next_window_size_x = display_width;
    next_window_size_y = display_height;
    next_window_size_cond = MONSTRO_COND_ALWAYS;
@@ -98,18 +104,16 @@ void Context::beginFrame(float dt)
 
 MonstroTreeNodeState *Context::findOrCreateTreeState(uint64_t id, bool default_open)
 {
-   for (int i = 0; i < tree_state_count; i++)
+   for (MonstroTreeNodeState &existing : tree_states)
    {
-      if (tree_states[i].id == id)
+      if (existing.id == id)
       {
-         tree_states[i].last_frame_active = frame;
-         return &tree_states[i];
+         existing.last_frame_active = frame;
+         return &existing;
       }
    }
-   if (tree_state_count >= MONSTRO_MAX_TREE_STATES)
-      return nullptr;
 
-   MonstroTreeNodeState *state = &tree_states[tree_state_count++];
+   MonstroTreeNodeState *state = &tree_states.allocate();
    state->id = id;
    state->open = default_open;
    state->last_frame_active = frame;
@@ -118,25 +122,29 @@ MonstroTreeNodeState *Context::findOrCreateTreeState(uint64_t id, bool default_o
 
 void Context::endFrame()
 {
+   MONSTRO_REQUIRE(in_frame, "monstro_end_frame called without monstro_begin_frame");
+   MONSTRO_REQUIRE(current_window == root_window,
+                   "window '%s' is still open at the end of frame %d: its monstro_end_window (or end_child, "
+                   "end_popup, end_menu, end_combo) is missing",
+                   current_window->name, frame);
+
    tooltip.endFrame(this);
 
-   monstro_end_window(this);
+   root_window->end();
+   popWindow();
+   requireBalanced("monstro_end_frame");
+   root_window->collectDrawCommands(this);
 
-   if (root_window)
+   if (!popup_stack.empty() && mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
    {
-      root_window->collectDrawCommands(this);
-   }
-
-   if (popup_stack_top > 0 && mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
-   {
-      bool opened_this_frame = popup_stack[popup_stack_top - 1].open_frame == frame;
-      bool is_modal = popup_stack[popup_stack_top - 1].is_modal;
+      bool opened_this_frame = popup_stack.top().open_frame == frame;
+      bool is_modal = popup_stack.top().is_modal;
       if (!opened_this_frame && !is_modal)
       {
          bool clicked_inside_popup = hovered_window != nullptr && (hovered_window->flags & MONSTRO_WINDOW_POPUP);
          if (!clicked_inside_popup)
          {
-            popup_stack_top = 0;
+            popup_stack.clear();
          }
       }
    }
@@ -157,9 +165,21 @@ void Context::endFrame()
 
    mouse.endFrame();
    keyboard.endFrame();
+   in_frame = false;
+}
+
+void Context::requireBalanced(const char *where) const
+{
+   MONSTRO_REQUIRE(window_stack.empty() && id_stack.isBalanced() && style_stack.empty() && disabled_stack.empty() &&
+                       columns_stack.empty() && !current_table && !current_tab_bar,
+                   "unbalanced begin/end or push/pop pairs at %s (frame %d): %d windows, %d IDs, %d styles, %d "
+                   "disabled scopes and %d column sets still open; table open: %s; tab bar open: %s",
+                   where, frame, window_stack.size(), id_stack.depth(), style_stack.size(), disabled_stack.size(),
+                   columns_stack.size(), current_table ? "yes" : "no", current_tab_bar ? "yes" : "no");
 }
 
 void Context::setDefaultFont(MonstroFont *font)
+
 {
    default_font = font;
    style.font = font;
@@ -195,13 +215,36 @@ extern "C"
 void monstro_init(void) {}
 void monstro_shutdown(void) {}
 
+MonstroContextConfig monstro_context_config_default(void)
+{
+   MonstroContextConfig config;
+   config.max_vertices = MONSTRO_DEFAULT_MAX_VERTICES;
+   config.max_indices = MONSTRO_DEFAULT_MAX_INDICES;
+   config.max_draw_commands = MONSTRO_DEFAULT_MAX_DRAW_COMMANDS;
+   config.max_path_points = MONSTRO_DEFAULT_MAX_PATH_POINTS;
+   return config;
+}
+
 MonstroContext *monstro_context_create(void)
 {
-   MonstroContext *ctx = new (std::nothrow) MonstroContext();
+   MonstroContextConfig config = monstro_context_config_default();
+   return monstro_context_create_ex(&config);
+}
+
+MonstroContext *monstro_context_create_ex(const MonstroContextConfig *config)
+{
+   MONSTRO_REQUIRE(config, "monstro_context_create_ex needs a config; start from monstro_context_config_default()");
+   MONSTRO_REQUIRE(config->max_vertices >= 4 && config->max_indices >= 6 && config->max_draw_commands >= 1 &&
+                       config->max_path_points >= 4,
+                   "MonstroContextConfig capacities too small to draw anything (max_vertices %u, max_indices %u, "
+                   "max_draw_commands %u, max_path_points %u)",
+                   config->max_vertices, config->max_indices, config->max_draw_commands, config->max_path_points);
+
+   MonstroContext *ctx = new (std::nothrow) MonstroContext(*config);
    if (!ctx)
       return nullptr;
 
-   if (!ctx->font_manager)
+   if (!ctx->font_manager || !ctx->final_commands || !ctx->draw_buffer.init(config->max_vertices, config->max_indices))
    {
       delete ctx;
       return nullptr;
@@ -449,11 +492,12 @@ void monstro_set_window_style(MonstroContext *ctx, const MonstroStyleWindow *s)
 #define MONSTRO_PUSH_STYLE(CTX, ENUM_TAG, UNION_FIELD, STYLE_FIELD, SRC)                                               \
    do                                                                                                                  \
    {                                                                                                                   \
-      if (!(CTX) || !(SRC) || (CTX)->style_stack_top >= MONSTRO_MAX_STYLE_VAR_STACK)                                   \
+      if (!(CTX) || !(SRC))                                                                                            \
          return;                                                                                                       \
-      MonstroStyleBackup *_b = &(CTX)->style_stack[(CTX)->style_stack_top++];                                          \
-      _b->type = (ENUM_TAG);                                                                                           \
-      _b->data.UNION_FIELD = (CTX)->style.STYLE_FIELD;                                                                 \
+      MonstroStyleBackup _b = {};                                                                                      \
+      _b.type = (ENUM_TAG);                                                                                            \
+      _b.data.UNION_FIELD = (CTX)->style.STYLE_FIELD;                                                                  \
+      (CTX)->style_stack.push(_b);                                                                                     \
       (CTX)->style.STYLE_FIELD = *(SRC);                                                                               \
    } while (0)
 
@@ -560,10 +604,10 @@ void monstro_pop_style(MonstroContext *ctx, int count)
 {
    if (!ctx)
       return;
-   for (int i = 0; i < count && ctx->style_stack_top > 0; i++)
+   for (int i = 0; i < count; i++)
    {
-      ctx->style_stack_top--;
-      MonstroStyleBackup *b = &ctx->style_stack[ctx->style_stack_top];
+      MonstroStyleBackup backup = ctx->style_stack.pop();
+      MonstroStyleBackup *b = &backup;
       switch (b->type)
       {
       case MONSTRO_PUSHED_TEXT:
@@ -810,22 +854,16 @@ void monstro_begin_disabled(MonstroContext *ctx, bool disabled)
 {
    if (!ctx)
       return;
-   ctx->disabled_stack_depth++;
-   if (disabled)
-   {
-      ctx->disabled = true;
-   }
+   // A scope is disabled when it asks to be or when any enclosing scope is.
+   ctx->disabled_stack.push(ctx->disabled);
+   ctx->disabled = ctx->disabled || disabled;
 }
 
 void monstro_end_disabled(MonstroContext *ctx)
 {
-   if (!ctx || ctx->disabled_stack_depth <= 0)
+   if (!ctx)
       return;
-   ctx->disabled_stack_depth--;
-   if (ctx->disabled_stack_depth == 0)
-   {
-      ctx->disabled = false;
-   }
+   ctx->disabled = ctx->disabled_stack.pop();
 }
 
 bool monstro_is_disabled(MonstroContext *ctx) { return ctx ? ctx->disabled : false; }

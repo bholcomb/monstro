@@ -26,11 +26,10 @@ struct Window
    bool skip_items = false;
    uint64_t move_id = 0;
 
-   Layout layout_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
-   int layout_stack_top = -1;
+   FixedStack<Layout, MONSTRO_MAX_LAYOUT_STACK_DEPTH> layouts{"layout stack"};
+   int layout_depth_at_begin = 0;
 
-   MonstroGroupFlags group_flags_stack[MONSTRO_MAX_LAYOUT_STACK_DEPTH] = {};
-   int group_stack_top = -1;
+   FixedStack<MonstroGroupFlags, MONSTRO_MAX_LAYOUT_STACK_DEPTH> groups{"group stack"};
 
    MonstroVec2 pos = {0.0f, 0.0f};
    MonstroVec2 size = {0.0f, 0.0f};

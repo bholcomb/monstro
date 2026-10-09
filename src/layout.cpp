@@ -50,7 +50,6 @@ void Layout::addItem(float width, float height)
    }
 }
 
-
 } // namespace monstro
 
 /* ------------------------------------------------------------------------- */
@@ -59,29 +58,25 @@ void Layout::addItem(float width, float height)
 
 void monstro_begin_layout(MonstroContext *ctx, MonstroLayoutDirection direction)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->beginLayout(direction);
 }
 
 void monstro_begin_layout_at(MonstroContext *ctx, float x, float y, MonstroLayoutDirection direction)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->beginLayout(x, y, direction);
 }
 
 void monstro_end_layout(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->endLayout();
 }
 
 void monstro_add_item(MonstroContext *ctx, float width, float height)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->addItem(width, height);
 }
 
@@ -121,36 +116,31 @@ void monstro_copy_id_text(const char *label, char *out, size_t out_size)
 
 MonstroVec2 monstro_get_cursor_pos(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0.0f, 0.0f};
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->getCursorPos();
 }
 
 void monstro_set_cursor_pos(MonstroContext *ctx, float x, float y)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->setCursorPos(x, y);
 }
 
 MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0.0f, 0.0f};
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->getCursorScreenPos();
 }
 
 void monstro_set_cursor_screen_pos(MonstroContext *ctx, float x, float y)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->setCursorScreenPos(x, y);
 }
 
 MonstroVec2 monstro_get_content_region_avail(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0.0f, 0.0f};
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
@@ -218,11 +208,9 @@ void monstro_spacer(MonstroContext *ctx, float size)
 
 void monstro_dummy(MonstroContext *ctx, float width, float height)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    monstro_add_item(ctx, width, height);
 }
-
 
 float monstro_percent(MonstroContext *ctx, float percent, MonstroLayoutDirection direction)
 {
@@ -246,12 +234,9 @@ float monstro_percent(MonstroContext *ctx, float percent, MonstroLayoutDirection
 
 void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count, const float *widths)
 {
-   if (!ctx || !ctx->current_window || count < 1)
-      return;
-   if (ctx->columns_stack_top >= MONSTRO_MAX_COLUMN_STACK)
-      return;
-   if (count > MONSTRO_MAX_COLUMNS)
-      count = MONSTRO_MAX_COLUMNS;
+   monstro::requireWindow(ctx, __func__);
+   MONSTRO_REQUIRE(count >= 1 && count <= MONSTRO_MAX_COLUMNS, "monstro_begin_columns: count %d is outside 1..%d",
+                   count, MONSTRO_MAX_COLUMNS);
 
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
@@ -262,7 +247,7 @@ void monstro_begin_columns_ex(MonstroContext *ctx, const char *str_id, int count
    if (avail_w <= 0.0f)
       avail_w = ctx->current_window->size.x - ctx->style.window.padding[0] * 2.0f;
 
-   MonstroColumnsState *cs = &ctx->columns_stack[ctx->columns_stack_top++];
+   MonstroColumnsState *cs = &ctx->columns_stack.push({});
    cs->id = ctx->current_window->getChildId(str_id);
    cs->column_count = count;
    cs->current_column = 0;
@@ -317,10 +302,10 @@ void monstro_begin_columns(MonstroContext *ctx, const char *str_id, int count)
 
 void monstro_next_column(MonstroContext *ctx)
 {
-   if (!ctx || ctx->columns_stack_top <= 0)
+   if (!ctx)
       return;
 
-   MonstroColumnsState *cs = &ctx->columns_stack[ctx->columns_stack_top - 1];
+   MonstroColumnsState *cs = &ctx->columns_stack.top();
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (!layout)
       return;
@@ -346,10 +331,11 @@ void monstro_next_column(MonstroContext *ctx)
 
 void monstro_end_columns(MonstroContext *ctx)
 {
-   if (!ctx || ctx->columns_stack_top <= 0)
+   if (!ctx)
       return;
 
-   MonstroColumnsState *cs = &ctx->columns_stack[ctx->columns_stack_top - 1];
+   MonstroColumnsState cs_copy = ctx->columns_stack.pop();
+   MonstroColumnsState *cs = &cs_copy;
    monstro::Layout *layout = ctx->getCurrentLayout();
 
    MonstroVec2 cur = monstro_get_cursor_screen_pos(ctx);
@@ -359,8 +345,6 @@ void monstro_end_columns(MonstroContext *ctx)
 
    float final_y = cs->row_y + cs->row_max_h;
    float total_h = final_y - cs->start_y;
-
-   ctx->columns_stack_top--;
 
    if (layout)
    {

@@ -4,17 +4,16 @@
 
 static MonstroTableState *find_or_create_table(MonstroContext *ctx, uint64_t id)
 {
-   for (int i = 0; i < ctx->table_count; i++)
+   for (MonstroTableState &existing : ctx->tables)
    {
-      if (ctx->tables[i].id == id)
+      if (existing.id == id)
       {
-         return &ctx->tables[i];
+         return &existing;
       }
    }
-   if (ctx->table_count >= MONSTRO_MAX_TABLES)
-      return nullptr;
 
-   MonstroTableState *state = &ctx->tables[ctx->table_count++];
+   MonstroTableState *state = &ctx->tables.allocate();
+
    *state = MonstroTableState{};
    state->id = id;
    return state;
@@ -33,7 +32,11 @@ static float column_offset(MonstroTableState *table, int col)
 bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_count, MonstroTableFlags flags,
                          float width, float height)
 {
-   if (!ctx || !ctx->current_window || !str_id || column_count <= 0)
+   monstro::requireWindow(ctx, __func__);
+   MONSTRO_REQUIRE(column_count >= 1 && column_count <= MONSTRO_MAX_TABLE_COLUMNS,
+                   "monstro_begin_table: column_count %d is outside 1..%d", column_count, MONSTRO_MAX_TABLE_COLUMNS);
+   MONSTRO_REQUIRE(!ctx->current_table, "monstro_begin_table: tables do not nest; end the open table first");
+   if (!str_id)
       return false;
    (void)height;
 
@@ -99,8 +102,8 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
 
 void monstro_end_table(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window || !ctx->current_table)
-      return;
+   monstro::requireWindow(ctx, __func__);
+   MONSTRO_REQUIRE(ctx->current_table, "monstro_end_table without monstro_begin_table");
 
    monstro::Window *win = ctx->current_window;
    MonstroTableState *table = ctx->current_table;
@@ -180,7 +183,8 @@ void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroT
 
 void monstro_table_headers_row(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window || !ctx->current_table)
+   monstro::requireWindow(ctx, __func__);
+   if (!ctx->current_table)
       return;
 
    monstro::Window *win = ctx->current_window;
@@ -292,7 +296,8 @@ void monstro_table_headers_row(MonstroContext *ctx)
 
 void monstro_table_next_row(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window || !ctx->current_table)
+   monstro::requireWindow(ctx, __func__);
+   if (!ctx->current_table)
       return;
 
    MonstroTableState *table = ctx->current_table;
@@ -321,7 +326,8 @@ void monstro_table_next_row(MonstroContext *ctx)
 
 bool monstro_table_next_column(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window || !ctx->current_table)
+   monstro::requireWindow(ctx, __func__);
+   if (!ctx->current_table)
       return false;
 
    MonstroTableState *table = ctx->current_table;
@@ -343,7 +349,8 @@ bool monstro_table_next_column(MonstroContext *ctx)
 
 bool monstro_table_set_column_index(MonstroContext *ctx, int column)
 {
-   if (!ctx || !ctx->current_window || !ctx->current_table)
+   monstro::requireWindow(ctx, __func__);
+   if (!ctx->current_table)
       return false;
 
    MonstroTableState *table = ctx->current_table;

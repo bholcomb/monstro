@@ -5,8 +5,7 @@ static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi 
 
 void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, float height, const char *overlay)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)

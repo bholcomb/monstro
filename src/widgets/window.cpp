@@ -1,5 +1,6 @@
 #include "../context.h"
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 
 /* ------------------------------------------------------------------------- */
@@ -67,10 +68,9 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
 
 void monstro_end_window(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
-
-   monstro::Window *win = ctx->current_window;
+   monstro::Window *win = monstro::requireWindow(ctx, __func__);
+   MONSTRO_REQUIRE(win != ctx->root_window, "monstro_end_window without a matching monstro_begin_window (frame %d)",
+                   ctx->frame);
    win->end();
    ctx->popWindow();
 }
@@ -81,35 +81,32 @@ void monstro_end_window(MonstroContext *ctx)
 
 void monstro_set_window_pos(MonstroContext *ctx, float x, float y, MonstroCondition cond)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->setPosition(x, y, cond);
 }
 
 void monstro_set_window_size(MonstroContext *ctx, float width, float height, MonstroCondition cond)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->setSize(width, height, cond);
 }
 
 void monstro_set_window_focus(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->focusWindow(ctx->current_window);
 }
 
 void monstro_set_window_layout(MonstroContext *ctx, MonstroLayoutDirection direction)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->setLayoutDirection(direction);
 }
 
 void monstro_set_window_title(MonstroContext *ctx, const char *title)
 {
-   if (!ctx || !ctx->current_window || !title)
+   monstro::requireWindow(ctx, __func__);
+   if (!title)
       return;
    std::strncpy(ctx->current_window->title, title, sizeof(ctx->current_window->title) - 1);
    ctx->current_window->title[sizeof(ctx->current_window->title) - 1] = '\0';
@@ -175,22 +172,19 @@ void monstro_set_window_title_named(MonstroContext *ctx, const char *name, const
 
 MonstroRect monstro_get_window_rect(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0, 0, 0, 0};
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->getRect();
 }
 
 MonstroVec2 monstro_get_window_pos(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0.0f, 0.0f};
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->pos;
 }
 
 MonstroVec2 monstro_get_window_size(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return {0.0f, 0.0f};
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->size;
 }
 
@@ -200,29 +194,25 @@ MonstroVec2 monstro_get_window_size(MonstroContext *ctx)
 
 float monstro_get_scroll_x(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return 0.0f;
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->scroll_x;
 }
 
 float monstro_get_scroll_y(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return 0.0f;
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->scroll_y;
 }
 
 void monstro_set_scroll_x(MonstroContext *ctx, float scroll_x)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->scroll_x = scroll_x;
 }
 
 void monstro_set_scroll_y(MonstroContext *ctx, float scroll_y)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->current_window->scroll_y = scroll_y;
 }
 
@@ -232,22 +222,19 @@ void monstro_set_scroll_y(MonstroContext *ctx, float scroll_y)
 
 bool monstro_is_window_collapsed(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return false;
+   monstro::requireWindow(ctx, __func__);
    return ctx->current_window->collapsed;
 }
 
 bool monstro_is_window_focused(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return false;
+   monstro::requireWindow(ctx, __func__);
    return ctx->focused_window == ctx->current_window;
 }
 
 bool monstro_is_window_hovered(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return false;
+   monstro::requireWindow(ctx, __func__);
    return monstro_rect_contains(ctx->current_window->getRect(), ctx->mouse.pos_x, ctx->mouse.pos_y);
 }
 
@@ -257,8 +244,7 @@ bool monstro_is_window_hovered(MonstroContext *ctx)
 
 MonstroCanvas *monstro_get_window_canvas(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return nullptr;
+   monstro::requireWindow(ctx, __func__);
    return reinterpret_cast<MonstroCanvas *>(&ctx->current_window->canvas);
 }
 
@@ -268,7 +254,8 @@ MonstroCanvas *monstro_get_window_canvas(MonstroContext *ctx)
 
 bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, float height, MonstroWindowFlags flags)
 {
-   if (!ctx || !ctx->current_window || !str_id)
+   monstro::requireWindow(ctx, __func__);
+   if (!str_id)
       return false;
 
    monstro::Window *parent = ctx->current_window;
@@ -292,8 +279,8 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
    }
 
    MonstroWindowFlags child_flags =
-       (MonstroWindowFlags)(flags | MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_INPUTS |
-                            MONSTRO_WINDOW_SCROLL_WITH_MOUSE | MONSTRO_WINDOW_VERTICAL_SCROLLBAR);
+       (MonstroWindowFlags)(flags | MONSTRO_WINDOW_CHILD | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLL_WITH_MOUSE |
+                            MONSTRO_WINDOW_VERTICAL_SCROLLBAR);
 
    if (!(flags & MONSTRO_WINDOW_BORDERS))
    {
@@ -333,10 +320,8 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
 
 void monstro_end_child(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
-   if (!(ctx->current_window->flags & MONSTRO_WINDOW_CHILD))
-      return;
-
+   monstro::Window *win = monstro::requireWindow(ctx, __func__);
+   MONSTRO_REQUIRE(win->flags & MONSTRO_WINDOW_CHILD,
+                   "monstro_end_child: the current window '%s' is not a child window", win->name);
    monstro_end_window(ctx);
 }

@@ -26,6 +26,7 @@ size_t monstro_binding_sizeof(const char *name) {
     if (!strcmp(name, "MonstroTextureFormat")) return sizeof(MonstroTextureFormat);
     if (!strcmp(name, "MonstroGlyph")) return sizeof(MonstroGlyph);
     if (!strcmp(name, "MonstroTextureData")) return sizeof(MonstroTextureData);
+    if (!strcmp(name, "MonstroContextConfig")) return sizeof(MonstroContextConfig);
     if (!strcmp(name, "MonstroStyleText")) return sizeof(MonstroStyleText);
     if (!strcmp(name, "MonstroStyleButton")) return sizeof(MonstroStyleButton);
     if (!strcmp(name, "MonstroStyleToggle")) return sizeof(MonstroStyleToggle);
@@ -111,6 +112,10 @@ size_t monstro_binding_offsetof(const char *type, const char *field) {
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "format")) return offsetof(MonstroTextureData, format);
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "data_size")) return offsetof(MonstroTextureData, data_size);
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "data")) return offsetof(MonstroTextureData, data);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_vertices")) return offsetof(MonstroContextConfig, max_vertices);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_indices")) return offsetof(MonstroContextConfig, max_indices);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_draw_commands")) return offsetof(MonstroContextConfig, max_draw_commands);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_path_points")) return offsetof(MonstroContextConfig, max_path_points);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "color")) return offsetof(MonstroStyleText, color);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "background")) return offsetof(MonstroStyleText, background);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "padding")) return offsetof(MonstroStyleText, padding);

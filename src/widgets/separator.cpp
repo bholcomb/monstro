@@ -4,8 +4,7 @@
 
 void monstro_separator(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -35,7 +34,8 @@ void monstro_separator(MonstroContext *ctx)
 
 void monstro_separator_text(MonstroContext *ctx, const char *text)
 {
-   if (!ctx || !ctx->current_window || !text)
+   monstro::requireWindow(ctx, __func__);
+   if (!text)
       return;
 
    monstro::Window *win = ctx->current_window;

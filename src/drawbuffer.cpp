@@ -1,101 +1,80 @@
 #include "drawbuffer.h"
-#include <stdexcept>
+#include <cstdlib>
 
 namespace monstro
 {
 
-DrawBuffer::DrawBuffer()
-{
-   myVertexCapacity = MONSTRO_MAX_VERTICES;
-   myIndexCapacity = MONSTRO_MAX_INDICES;
-   myVertices = new (std::nothrow) MonstroVertex[myVertexCapacity];
-   myIndices = new (std::nothrow) uint32_t[myIndexCapacity];
-
-   if (!myVertices || !myIndices)
-   {
-      delete[] myVertices;
-      delete[] myIndices;
-      myVertices = nullptr;
-      myIndices = nullptr;
-      myVertexCapacity = 0;
-      myIndexCapacity = 0;
-   }
-}
-
 DrawBuffer::~DrawBuffer()
 {
-   if (!myUserProvidedVertexBuffer)
-   {
-      delete[] myVertices;
-   }
-   if (!myUserProvidedIndexBuffer)
-   {
-      delete[] myIndices;
-   }
+   std::free(myOwnVertices);
+   std::free(myOwnIndices);
 }
 
-void DrawBuffer::beginFrame()
+bool DrawBuffer::init(uint32_t max_vertices, uint32_t max_indices)
 {
-   myVertexCount = 0;
-   myIndexCount = 0;
+   myOwnVertices = (MonstroVertex *)std::malloc(sizeof(MonstroVertex) * max_vertices);
+   myOwnIndices = (uint32_t *)std::malloc(sizeof(uint32_t) * max_indices);
+   if (!myOwnVertices || !myOwnIndices)
+      return false;
+
+   myOwnVertexCapacity = max_vertices;
+   myOwnIndexCapacity = max_indices;
+   setVertexBuffer(nullptr, 0);
+   setIndexBuffer(nullptr, 0);
+   return true;
 }
 
-Reservation DrawBuffer::reserve(uint32_t vert_count, uint32_t idx_count)
+void DrawBuffer::beginFrame(int frame)
 {
-   if (myVertexCount + vert_count > myVertexCapacity)
-   {
-      throw std::runtime_error("DrawBuffer vertex buffer overflow");
-   }
-   if (myIndexCount + idx_count > myIndexCapacity)
-   {
-      throw std::runtime_error("DrawBuffer index buffer overflow");
-   }
+   myFrame = frame;
+   myVertices.myCount = 0;
+   myIndices.myCount = 0;
+}
 
+Reservation DrawBuffer::reserve(uint32_t vert_count, uint32_t idx_count, const char *owner)
+{
    Reservation r;
-   r.vertices = {myVertices + myVertexCount, vert_count};
-   r.indices = {myIndices + myIndexCount, idx_count};
-   r.baseVertex = myVertexCount;
-   myVertexCount += vert_count;
-   myIndexCount += idx_count;
+   r.baseVertex = myVertices.myCount;
+   r.vertices =
+       myVertices.reserve(vert_count, owner, myFrame,
+                          myUserProvidedVertexBuffer ? "pass a larger buffer to monstro_draw_buffer_set_vertex_buffer"
+                                                     : "raise MonstroContextConfig.max_vertices");
+   r.indices =
+       myIndices.reserve(idx_count, owner, myFrame,
+                         myUserProvidedIndexBuffer ? "pass a larger buffer to monstro_draw_buffer_set_index_buffer"
+                                                   : "raise MonstroContextConfig.max_indices");
    return r;
 }
 
 void DrawBuffer::setVertexBuffer(MonstroVertex *buffer, size_t capacity_in_vertices)
 {
-   if (!myUserProvidedVertexBuffer && myVertices)
-   {
-      delete[] myVertices;
-   }
-   myVertices = buffer;
-   myVertexCapacity = capacity_in_vertices;
+   // A null buffer hands storage back to the context's own buffer.
    myUserProvidedVertexBuffer = (buffer != nullptr);
+   myVertices.myData = buffer ? buffer : myOwnVertices;
+   myVertices.myCapacity = buffer ? capacity_in_vertices : myOwnVertexCapacity;
 }
 
 void DrawBuffer::setIndexBuffer(uint32_t *buffer, size_t capacity_in_indices)
 {
-   if (!myUserProvidedIndexBuffer && myIndices)
-   {
-      delete[] myIndices;
-   }
-   myIndices = buffer;
-   myIndexCapacity = capacity_in_indices;
    myUserProvidedIndexBuffer = (buffer != nullptr);
+   myIndices.myData = buffer ? buffer : myOwnIndices;
+   myIndices.myCapacity = buffer ? capacity_in_indices : myOwnIndexCapacity;
 }
 
 void DrawBuffer::getVertexBuffer(const MonstroVertex **out_data, size_t *out_byte_size) const
 {
    if (out_data)
-      *out_data = myVertices;
+      *out_data = myVertices.myData;
    if (out_byte_size)
-      *out_byte_size = myVertexCount * sizeof(MonstroVertex);
+      *out_byte_size = myVertices.myCount * sizeof(MonstroVertex);
 }
 
 void DrawBuffer::getIndexBuffer(const uint32_t **out_data, uint32_t *out_count) const
 {
    if (out_data)
-      *out_data = myIndices;
+      *out_data = myIndices.myData;
    if (out_count)
-      *out_count = myIndexCount;
+      *out_count = myIndices.myCount;
 }
 
 } // namespace monstro

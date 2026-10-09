@@ -4,7 +4,8 @@
 
 bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *preview_value, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;

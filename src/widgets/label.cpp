@@ -3,7 +3,8 @@
 
 void monstro_label(MonstroContext *ctx, const char *text)
 {
-   if (!ctx || !ctx->current_window || !text)
+   monstro::requireWindow(ctx, __func__);
+   if (!text)
       return;
 
    monstro::Window *win = ctx->current_window;
@@ -40,7 +41,8 @@ void monstro_label(MonstroContext *ctx, const char *text)
 
 void monstro_label_sized(MonstroContext *ctx, const char *text, float width, float height)
 {
-   if (!ctx || !ctx->current_window || !text)
+   monstro::requireWindow(ctx, __func__);
+   if (!text)
       return;
 
    monstro::Window *win = ctx->current_window;
@@ -64,7 +66,8 @@ void monstro_label_sized(MonstroContext *ctx, const char *text, float width, flo
 
 void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_width)
 {
-   if (!ctx || !ctx->current_window || !text)
+   monstro::requireWindow(ctx, __func__);
+   if (!text)
       return;
 
    monstro::Window *win = ctx->current_window;
@@ -112,7 +115,8 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
 
 void monstro_label_colored(MonstroContext *ctx, const char *text, MonstroColor color)
 {
-   if (!ctx || !ctx->current_window || !text)
+   monstro::requireWindow(ctx, __func__);
+   if (!text)
       return;
 
    monstro::Window *win = ctx->current_window;

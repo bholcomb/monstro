@@ -2,8 +2,7 @@
 
 void monstro_image(MonstroContext *ctx, uint64_t texture_id, float width, float height)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)

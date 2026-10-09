@@ -5,8 +5,7 @@
 
 bool monstro_begin_menu_bar(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return false;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -36,8 +35,7 @@ bool monstro_begin_menu_bar(MonstroContext *ctx)
 
 void monstro_end_menu_bar(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -45,8 +43,7 @@ void monstro_end_menu_bar(MonstroContext *ctx)
 
    ctx->id_stack.pop();
 
-   if (win->layout_stack_top > 0)
-      win->layout_stack_top--;
+   win->layouts.pop();
 
    if (win->content_clip_pushed)
    {
@@ -58,7 +55,8 @@ void monstro_end_menu_bar(MonstroContext *ctx)
 
 bool monstro_begin_menu(MonstroContext *ctx, const char *label, bool enabled)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -164,7 +162,8 @@ void monstro_end_menu(MonstroContext *ctx) { monstro_end_popup(ctx); }
 
 bool monstro_menu_item(MonstroContext *ctx, const char *label, bool *selected, bool enabled)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;

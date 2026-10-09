@@ -4,18 +4,16 @@
 
 static MonstroTabBarState *find_or_create_tab_bar(MonstroContext *ctx, uint64_t bar_id)
 {
-   for (int i = 0; i < ctx->tab_bar_count; i++)
+   for (MonstroTabBarState &existing : ctx->tab_bars)
    {
-      if (ctx->tab_bars[i].id == bar_id)
+      if (existing.id == bar_id)
       {
-         return &ctx->tab_bars[i];
+         return &existing;
       }
    }
 
-   if (ctx->tab_bar_count >= MONSTRO_MAX_TAB_BARS)
-      return nullptr;
+   MonstroTabBarState *state = &ctx->tab_bars.allocate();
 
-   MonstroTabBarState *state = &ctx->tab_bars[ctx->tab_bar_count++];
    state->id = bar_id;
    state->selected_tab = 0;
    state->last_frame_active = 0;
@@ -31,7 +29,8 @@ static MonstroTabBarState *find_or_create_tab_bar(MonstroContext *ctx, uint64_t 
 
 bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBarFlags flags)
 {
-   if (!ctx || !ctx->current_window || !str_id)
+   monstro::requireWindow(ctx, __func__);
+   if (!str_id)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -72,8 +71,7 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
 
 void monstro_end_tab_bar(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -95,7 +93,8 @@ void monstro_end_tab_bar(MonstroContext *ctx)
 
 bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -242,8 +241,7 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
 
 void monstro_end_tab_item(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    MonstroTabBarState *bar = ctx->current_tab_bar;
    if (bar && bar->content_active)

@@ -367,8 +367,10 @@ uint64_t monstro_font_get_atlas_texture(MonstroFont *font)
 
 void monstro_font_add(MonstroFontManager *manager, MonstroFont *font, const char *name, float size)
 {
-   if (!manager || !font || manager->font_count >= MONSTRO_MAX_FONTS)
+   if (!manager || !font)
       return;
+   MONSTRO_REQUIRE(manager->font_count < MONSTRO_MAX_FONTS, "font table full: all %d slots are in use",
+                   MONSTRO_MAX_FONTS);
 
    strncpy(font->name, name, sizeof(font->name) - 1);
    font->name[sizeof(font->name) - 1] = '\0';

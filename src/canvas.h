@@ -14,21 +14,15 @@ typedef bool (*MonstroIconLookupFn)(void *user_data, uint32_t icon_id, uint64_t 
 struct Canvas
 {
    DrawBuffer *buffer = nullptr;
+   const char *owner_name = nullptr;
 
-   MonstroDrawCommand draw_commands[MONSTRO_MAX_DRAW_COMMANDS];
-   uint32_t draw_command_count = 0;
+   CapacityBuffer<MonstroDrawCommand> commands{"draw command list"};
 
-   MonstroRect clip_rect_stack[MONSTRO_MAX_CLIP_RECT_STACK];
-   int clip_rect_stack_top = -1;
+   FixedStack<MonstroRect, MONSTRO_MAX_CLIP_RECT_STACK> clip_rects{"clip rect stack"};
+   FixedStack<uint64_t, MONSTRO_MAX_TEXTURE_STACK> textures{"texture stack"};
+   FixedStack<int, MONSTRO_MAX_LAYER_STACK> layers{"layer stack"};
 
-   uint64_t texture_stack[MONSTRO_MAX_TEXTURE_STACK];
-   int texture_stack_top = -1;
-
-   int layer_stack[MONSTRO_MAX_LAYER_STACK];
-   int layer_stack_top = -1;
-
-   MonstroVec2 path[MONSTRO_MAX_PATH_POINTS];
-   int path_count = 0;
+   CapacityBuffer<MonstroVec2> path{"path"};
 
    uint64_t default_texture_id = 0;
    uint32_t myLastIndexCount = 0;
@@ -36,6 +30,12 @@ struct Canvas
    MonstroIconLookupFn icon_lookup = nullptr;
    void *icon_lookup_user_data = nullptr;
 
+   Canvas() = default;
+   ~Canvas();
+   Canvas(const Canvas &) = delete;
+   Canvas &operator=(const Canvas &) = delete;
+
+   void allocate(const char *owner, uint32_t max_draw_commands, uint32_t max_path_points);
    void init(DrawBuffer *draw_buffer);
    void clear();
 
@@ -90,6 +90,8 @@ struct Canvas
 
  private:
    MonstroDrawCommand *getOrCreateDrawCommand(uint64_t texture_id);
+   MonstroDrawCommand *newDrawCommand();
+   void pathPush(MonstroVec2 point);
    Reservation reserveGeometry(uint32_t vert_count, uint32_t idx_count);
    void pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12);
    void pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCornerFlags rounding_corners);

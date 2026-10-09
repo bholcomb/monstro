@@ -80,7 +80,8 @@ static bool spinner_button(MonstroContext *ctx, monstro::Canvas *canvas, Monstro
 bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, float step, float step_fast,
                          const char *format, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label || !value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -314,14 +315,14 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
 
    if (font)
    {
-      char display[64];
+      char value_text[64];
       if (is_active)
       {
-         snprintf(display, sizeof(display), "%s", edit->myBuf);
+         snprintf(value_text, sizeof(value_text), "%s", edit->myBuf);
       }
       else
       {
-         snprintf(display, sizeof(display), format, *value);
+         snprintf(value_text, sizeof(value_text), format, *value);
       }
 
       MonstroColor text_col = is_active ? es->text_active : (hovered ? es->text_hover : es->text_normal);
@@ -330,14 +331,14 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
       if (is_active)
       {
          MonstroVec2 tpos = {field_rect.x + es->padding[0], ty};
-         canvas->addText(font, tpos, monstro_color_to_u32(text_col), display);
+         canvas->addText(font, tpos, monstro_color_to_u32(text_col), value_text);
 
          bool blink_on = fmodf(edit->myCursorBlinkTimer, 1.0f) < 0.5f;
          if (blink_on)
          {
             char tmp[64];
             int clen = edit->myCursorPos < (int)sizeof(tmp) - 1 ? edit->myCursorPos : (int)sizeof(tmp) - 1;
-            memcpy(tmp, display, clen);
+            memcpy(tmp, value_text, clen);
             tmp[clen] = '\0';
             float cx = field_rect.x + es->padding[0] + monstro_font_measure_text(font, tmp, 0.0f).x;
             MonstroVec2 c1 = {cx, field_rect.y + 2.0f};
@@ -348,7 +349,7 @@ bool monstro_input_float(MonstroContext *ctx, const char *label, float *value, f
       }
       else
       {
-         canvas->addTextEx(font, field_rect, monstro_color_to_u32(text_col), display, MONSTRO_ALIGN_CENTER);
+         canvas->addTextEx(font, field_rect, monstro_color_to_u32(text_col), value_text, MONSTRO_ALIGN_CENTER);
       }
    }
 

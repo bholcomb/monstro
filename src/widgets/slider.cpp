@@ -52,7 +52,8 @@ bool monstro_slider_float_ex(MonstroContext *ctx, const char *label, float *valu
                              const char *format, float width, float height, MonstroSliderFlags flags,
                              const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label || !value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
    (void)flags;
 

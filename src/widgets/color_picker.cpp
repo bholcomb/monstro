@@ -162,7 +162,8 @@ static void draw_checkerboard(monstro::Canvas *canvas, MonstroRect r, float cell
 
 bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *color, MonstroColorPickerFlags flags)
 {
-   if (!ctx || !ctx->current_window || !color)
+   monstro::requireWindow(ctx, __func__);
+   if (!color)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -385,7 +386,8 @@ bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *
 
 bool monstro_color_button(MonstroContext *ctx, const char *label, MonstroColor color, float width, float height)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;

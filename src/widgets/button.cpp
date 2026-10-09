@@ -51,7 +51,8 @@ static bool button_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, boo
       if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
-         if ((flags & MONSTRO_BUTTON_REPEAT) && hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, true))
+         if ((flags & MONSTRO_BUTTON_REPEAT) && hovered &&
+             monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, true))
          {
             pressed = true;
          }
@@ -116,8 +117,8 @@ static void draw_button_text(monstro::Canvas *canvas, MonstroFont *font, Monstro
    canvas->popClipRect();
 }
 
-static void button_size_from_label(MonstroStyle *style, MonstroFont *font, const char *display, float width, float height,
-                                   float *out_width, float *out_height)
+static void button_size_from_label(MonstroStyle *style, MonstroFont *font, const char *display, float width,
+                                   float height, float *out_width, float *out_height)
 {
    float text_w = 0.0f;
    if (font)
@@ -149,7 +150,8 @@ static void maybe_close_button_popup(MonstroContext *ctx, MonstroButtonFlags fla
 bool monstro_button_ex(MonstroContext *ctx, const char *label, float width, float height, MonstroButtonFlags flags,
                        const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -204,7 +206,8 @@ bool monstro_button_sized(MonstroContext *ctx, const char *label, float width, f
 bool monstro_image_button_ex(MonstroContext *ctx, const char *str_id, uint64_t texture_id, float width, float height,
                              MonstroButtonFlags flags, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !str_id)
+   monstro::requireWindow(ctx, __func__);
+   if (!str_id)
       return false;
 
    monstro::Window *win = ctx->current_window;
@@ -259,7 +262,8 @@ bool monstro_image_button(MonstroContext *ctx, const char *str_id, uint64_t text
 bool monstro_invisible_button_ex(MonstroContext *ctx, const char *str_id, float width, float height,
                                  MonstroButtonFlags flags)
 {
-   if (!ctx || !ctx->current_window || !str_id)
+   monstro::requireWindow(ctx, __func__);
+   if (!str_id)
       return false;
 
    monstro::Window *win = ctx->current_window;

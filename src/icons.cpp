@@ -95,7 +95,8 @@ bool monstro_get_icon(MonstroContext *ctx, MonstroIconId id, uint64_t *out_textu
 
 void monstro_icon(MonstroContext *ctx, MonstroIconId icon_id, float size)
 {
-   if (!ctx || !ctx->current_window || icon_id == 0)
+   monstro::requireWindow(ctx, __func__);
+   if (icon_id == 0)
       return;
 
    monstro::Window *win = ctx->current_window;

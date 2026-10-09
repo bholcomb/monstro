@@ -2,63 +2,46 @@
 #define MONSTRO_INTERNAL_DRAWBUFFER_H
 
 #include "constants.h"
+#include "fixed.h"
 #include "monstro.h"
-#include <stdexcept>
 
 namespace monstro
 {
 
-template <typename T> struct WriteSpan
-{
-   T *myData;
-   uint32_t mySize;
-
-   T &operator[](uint32_t i)
-   {
-      if (i >= mySize)
-      {
-         throw std::out_of_range("WriteSpan index out of bounds");
-      }
-      return myData[i];
-   }
-
-   const T &operator[](uint32_t i) const
-   {
-      if (i >= mySize)
-      {
-         throw std::out_of_range("WriteSpan index out of bounds");
-      }
-      return myData[i];
-   }
-};
-
 struct Reservation
 {
-   WriteSpan<MonstroVertex> vertices;
-   WriteSpan<uint32_t> indices;
+   MonstroVertex *vertices;
+   uint32_t *indices;
    uint32_t baseVertex;
 };
 
+// Per-frame vertex and index storage. The context's own buffers are sized by
+// MonstroContextConfig; buffers set by the caller keep the caller's capacity.
 struct DrawBuffer
 {
-   MonstroVertex *myVertices = nullptr;
-   uint32_t *myIndices = nullptr;
-   uint32_t myVertexCount = 0;
-   uint32_t myIndexCount = 0;
-   size_t myVertexCapacity = 0;
-   size_t myIndexCapacity = 0;
+   CapacityBuffer<MonstroVertex> myVertices{"vertex buffer"};
+   CapacityBuffer<uint32_t> myIndices{"index buffer"};
    bool myUserProvidedVertexBuffer = false;
    bool myUserProvidedIndexBuffer = false;
+   int myFrame = 0;
 
-   DrawBuffer();
+   MonstroVertex *myOwnVertices = nullptr;
+   uint32_t *myOwnIndices = nullptr;
+   uint32_t myOwnVertexCapacity = 0;
+   uint32_t myOwnIndexCapacity = 0;
+
+   DrawBuffer() = default;
    ~DrawBuffer();
 
    DrawBuffer(const DrawBuffer &) = delete;
    DrawBuffer &operator=(const DrawBuffer &) = delete;
 
-   void beginFrame();
+   bool init(uint32_t max_vertices, uint32_t max_indices);
 
-   Reservation reserve(uint32_t vert_count, uint32_t idx_count);
+   void beginFrame(int frame);
+
+   // The only place draw geometry is allocated, and so the only place it can overflow.
+   Reservation reserve(uint32_t vert_count, uint32_t idx_count, const char *owner);
 
    void setVertexBuffer(MonstroVertex *buffer, size_t capacity_in_vertices);
    void setIndexBuffer(uint32_t *buffer, size_t capacity_in_indices);

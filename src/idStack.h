@@ -2,6 +2,7 @@
 #define MONSTRO_INTERNAL_ID_STACK_H
 
 #include "constants.h"
+#include "fixed.h"
 #include <stdint.h>
 
 namespace monstro
@@ -10,20 +11,17 @@ namespace monstro
 class IdStack
 {
  public:
-   IdStack();
-
    void push(uint64_t id);
    void push(const char *name);
    void pop();
 
    uint64_t getId(const char *name) const;
 
-   int depth() const { return top_index; }
-   bool isBalanced() const { return top_index == 0; }
+   int depth() const { return seeds.size(); }
+   bool isBalanced() const { return seeds.empty(); }
 
  private:
-   uint64_t seeds[MONSTRO_MAX_ID_STACK_DEPTH];
-   int top_index = 0;
+   FixedStack<uint64_t, MONSTRO_MAX_ID_STACK_DEPTH> seeds{"ID stack"};
 };
 
 } // namespace monstro

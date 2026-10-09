@@ -7,10 +7,26 @@
 extern "C" {
 #endif
 
+/*
+ * Context capacities. They are fixed for the life of a context: a frame that
+ * needs more stops the process with a message naming the buffer, the window
+ * and the frame, so a UI that outgrows them gets noticed and fixed instead of
+ * silently losing geometry. monstro_context_config_default() returns the
+ * capacities that monstro_context_create() uses.
+ */
+typedef struct MonstroContextConfig {
+    uint32_t max_vertices;      /* vertices per frame in the context's own vertex buffer */
+    uint32_t max_indices;       /* indices per frame in the context's own index buffer */
+    uint32_t max_draw_commands; /* draw commands per window, and per frame once windows are merged */
+    uint32_t max_path_points;   /* points in one canvas path */
+} MonstroContextConfig;
+
 void monstro_init(void);
 void monstro_shutdown(void);
 
+MonstroContextConfig monstro_context_config_default(void);
 MonstroContext* monstro_context_create(void);
+MonstroContext* monstro_context_create_ex(const MonstroContextConfig* config);
 void monstro_context_destroy(MonstroContext* ctx);
 
 MonstroDrawBuffer* monstro_context_get_draw_buffer(MonstroContext* ctx);

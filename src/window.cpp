@@ -113,7 +113,7 @@ bool Window::begin(bool *p_open)
       }
    }
 
-   layout_stack_top = -1;
+   layouts.clear();
 
    MonstroStyle *pad_style = &ctx->style;
    beginLayout(pad_style->window.padding[0], pad_style->window.padding[1], MONSTRO_LAYOUT_VERTICAL);
@@ -121,10 +121,8 @@ bool Window::begin(bool *p_open)
    last_frame_active = ctx->frame;
    active = true;
 
-   if (ctx->current_window != this)
-   {
-      ctx->pushWindow(this);
-   }
+   groups.clear();
+   ctx->pushWindow(this);
 
    canvas.init(&ctx->draw_buffer);
    canvas.icon_lookup = icon_lookup_from_context;
@@ -133,7 +131,7 @@ bool Window::begin(bool *p_open)
    if ((flags & MONSTRO_WINDOW_CHILD) && parent)
    {
       MonstroRect parent_clip = parent->canvas.getClipRect();
-      canvas.clip_rect_stack[0] = parent_clip;
+      canvas.clip_rects[0] = parent_clip;
    }
 
    if (ctx->next_window_focus || (appearing && (flags & MONSTRO_WINDOW_FOCUS_ON_APPEARING)))
@@ -198,15 +196,15 @@ bool Window::begin(bool *p_open)
       pushContentClipRect();
 
       beginLayout(MONSTRO_LAYOUT_VERTICAL);
-      if (layout_stack_top >= 0)
+      if (!layouts.empty())
       {
-         layout_stack[layout_stack_top].myScrollOffsetX = -scroll_x;
-         layout_stack[layout_stack_top].myScrollOffsetY = -scroll_y;
-         layout_stack[layout_stack_top].myAvailableWidth = content_view_width;
-         layout_stack[layout_stack_top].myAvailableHeight = content_view_height;
+         layouts.top().myScrollOffsetX = -scroll_x;
+         layouts.top().myScrollOffsetY = -scroll_y;
+         layouts.top().myAvailableWidth = content_view_width;
+         layouts.top().myAvailableHeight = content_view_height;
          MonstroVec2 cursor = getCursorScreenPos();
-         layout_stack[layout_stack_top].myVisibleMaxScreenX = cursor.x + content_view_width;
-         layout_stack[layout_stack_top].myVisibleMaxScreenY = cursor.y + content_view_height;
+         layouts.top().myVisibleMaxScreenX = cursor.x + content_view_width;
+         layouts.top().myVisibleMaxScreenY = cursor.y + content_view_height;
       }
    }
 
@@ -231,6 +229,7 @@ bool Window::begin(bool *p_open)
       ctx->want_capture_mouse = true;
    }
 
+   layout_depth_at_begin = layouts.size();
    return true;
 }
 
@@ -239,7 +238,12 @@ bool Window::end()
    MonstroStyle *style = &ctx->style;
    float header_h = getTitleBarHeight() + getMenuBarHeight();
 
-   if (!collapsed && layout_stack_top > 0)
+   MONSTRO_REQUIRE(layouts.size() == layout_depth_at_begin && groups.empty(),
+                   "window '%s' ends with %d layouts open (expected %d) and %d groups open: a monstro_end_layout or "
+                   "monstro_end_group is missing or doubled",
+                   name, layouts.size(), layout_depth_at_begin, groups.size());
+
+   if (!collapsed)
    {
       Layout *content_layout = getCurrentLayout();
       if (content_layout)
@@ -337,8 +341,12 @@ bool Window::end()
    }
 
    canvas.popClipRect();
+   MONSTRO_REQUIRE(canvas.clip_rects.size() == 1 && canvas.layers.size() == 1 && canvas.textures.size() == 1,
+                   "window '%s' ends with unbalanced canvas stacks: %d clip rects, %d layers and %d textures open "
+                   "(expected 1 each); a monstro_push_clip_rect or monstro_pop_clip_rect is unpaired",
+                   name, canvas.clip_rects.size(), canvas.layers.size(), canvas.textures.size());
 
-   layout_stack_top = -1;
+   layouts.clear();
    p_open_ref = nullptr;
    ctx->id_stack.pop();
    return true;
@@ -831,7 +839,6 @@ void Window::drawForeground()
          {
             canvas.addTextEx(style->font, text_rect, label_color, title, MONSTRO_ALIGN_CENTER);
          }
-
       }
 
       if (flags & MONSTRO_WINDOW_MENU_BAR)
@@ -884,35 +891,35 @@ void Window::drawForeground()
 
 MonstroVec2 Window::getCursorPos() const
 {
-   if (layout_stack_top < 0)
+   if (layouts.empty())
       return {0.0f, 0.0f};
-   const Layout *l = &layout_stack[layout_stack_top];
+   const Layout *l = &layouts.top();
    return {l->myPosX + l->myCursorX, l->myPosY + l->myCursorY};
 }
 
 void Window::setCursorPos(float x, float y)
 {
-   if (layout_stack_top < 0)
+   if (layouts.empty())
       return;
-   Layout *l = &layout_stack[layout_stack_top];
+   Layout *l = &layouts.top();
    l->myCursorX = x - l->myPosX;
    l->myCursorY = y - l->myPosY;
 }
 
 MonstroVec2 Window::getCursorScreenPos() const
 {
-   if (layout_stack_top < 0)
+   if (layouts.empty())
       return {pos.x, pos.y};
-   const Layout *l = &layout_stack[layout_stack_top];
+   const Layout *l = &layouts.top();
    return {pos.x + l->myPosX + l->myCursorX + l->myScrollOffsetX,
            pos.y + l->myPosY + l->myCursorY + l->myScrollOffsetY};
 }
 
 void Window::setCursorScreenPos(float x, float y)
 {
-   if (layout_stack_top < 0)
+   if (layouts.empty())
       return;
-   const Layout *l = &layout_stack[layout_stack_top];
+   const Layout *l = &layouts.top();
    setCursorPos(x - pos.x - l->myScrollOffsetX, y - pos.y - l->myScrollOffsetY);
 }
 
@@ -1002,18 +1009,16 @@ void Window::setSize(float w, float h, MonstroCondition cond)
 
 Layout *Window::getCurrentLayout()
 {
-   if (layout_stack_top < 0 || layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH)
-   {
+   if (layouts.empty())
       return nullptr;
-   }
-   return &layout_stack[layout_stack_top];
+   return &layouts.top();
 }
 
 void Window::setLayoutDirection(MonstroLayoutDirection direction)
 {
-   if (layout_stack_top < 0)
+   if (layouts.empty())
       return;
-   layout_stack[layout_stack_top].myDirection = direction;
+   layouts.top().myDirection = direction;
 }
 
 void Window::addItem(float width, float height)
@@ -1024,91 +1029,35 @@ void Window::addItem(float width, float height)
    layout->addItem(width, height);
 }
 
-
 void Window::beginLayout(MonstroLayoutDirection direction)
 {
-   if (layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1)
-      return;
-
-   float start_x = 0.0f;
-   float start_y = 0.0f;
-   float parent_scroll_x = 0.0f;
-   float parent_scroll_y = 0.0f;
-
-   float parent_avail_w = 0.0f;
-   float parent_avail_h = 0.0f;
-   float parent_visible_max_screen_x = 0.0f;
-   float parent_visible_max_screen_y = 0.0f;
-
-   if (layout_stack_top >= 0)
-   {
-      MonstroVec2 cursor = getCursorPos();
-      start_x = cursor.x;
-      start_y = cursor.y;
-      parent_scroll_x = layout_stack[layout_stack_top].myScrollOffsetX;
-      parent_scroll_y = layout_stack[layout_stack_top].myScrollOffsetY;
-      Layout &parent = layout_stack[layout_stack_top];
-      parent_avail_w = parent.myAvailableWidth;
-      parent_avail_h = parent.myAvailableHeight;
-      parent_visible_max_screen_x = parent.myVisibleMaxScreenX;
-      parent_visible_max_screen_y = parent.myVisibleMaxScreenY;
-   }
-
-   layout_stack_top++;
-   layout_stack[layout_stack_top].init(direction, start_x, start_y);
-   layout_stack[layout_stack_top].myScrollOffsetX = parent_scroll_x;
-   layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
-   layout_stack[layout_stack_top].myAvailableWidth = parent_avail_w;
-   layout_stack[layout_stack_top].myAvailableHeight = parent_avail_h;
-   layout_stack[layout_stack_top].myVisibleMaxScreenX = parent_visible_max_screen_x;
-   layout_stack[layout_stack_top].myVisibleMaxScreenY = parent_visible_max_screen_y;
+   MonstroVec2 cursor = getCursorPos();
+   beginLayout(cursor.x, cursor.y, direction);
 }
 
 void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
 {
-   if (layout_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1)
-      return;
+   Layout layout = {};
+   layout.init(direction, x, y);
 
-   float parent_scroll_x = 0.0f;
-   float parent_scroll_y = 0.0f;
-   float parent_avail_w = 0.0f;
-   float parent_avail_h = 0.0f;
-   float parent_visible_max_screen_x = 0.0f;
-   float parent_visible_max_screen_y = 0.0f;
-
-   if (layout_stack_top >= 0)
+   // A nested layout inherits its parent's scroll offset and visible area.
+   if (!layouts.empty())
    {
-      Layout &parent = layout_stack[layout_stack_top];
-      parent_scroll_x = parent.myScrollOffsetX;
-      parent_scroll_y = parent.myScrollOffsetY;
-      parent_avail_w = parent.myAvailableWidth;
-      parent_avail_h = parent.myAvailableHeight;
-      parent_visible_max_screen_x = parent.myVisibleMaxScreenX;
-      parent_visible_max_screen_y = parent.myVisibleMaxScreenY;
+      const Layout &outer = layouts.top();
+      layout.myScrollOffsetX = outer.myScrollOffsetX;
+      layout.myScrollOffsetY = outer.myScrollOffsetY;
+      layout.myAvailableWidth = outer.myAvailableWidth;
+      layout.myAvailableHeight = outer.myAvailableHeight;
+      layout.myVisibleMaxScreenX = outer.myVisibleMaxScreenX;
+      layout.myVisibleMaxScreenY = outer.myVisibleMaxScreenY;
    }
-
-   layout_stack_top++;
-   layout_stack[layout_stack_top].init(direction, x, y);
-   layout_stack[layout_stack_top].myScrollOffsetX = parent_scroll_x;
-   layout_stack[layout_stack_top].myScrollOffsetY = parent_scroll_y;
-   layout_stack[layout_stack_top].myAvailableWidth = parent_avail_w;
-   layout_stack[layout_stack_top].myAvailableHeight = parent_avail_h;
-   layout_stack[layout_stack_top].myVisibleMaxScreenX = parent_visible_max_screen_x;
-   layout_stack[layout_stack_top].myVisibleMaxScreenY = parent_visible_max_screen_y;
+   layouts.push(layout);
 }
 
 void Window::endLayout()
 {
-   if (layout_stack_top <= 0)
-      return;
-
-   Layout *finishing = &layout_stack[layout_stack_top];
-   float layout_width = finishing->mySizeX;
-   float layout_height = finishing->mySizeY;
-
-   layout_stack_top--;
-
-   addItem(layout_width, layout_height);
+   Layout finished = layouts.pop();
+   addItem(finished.mySizeX, finished.mySizeY);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1170,14 +1119,19 @@ void Window::makeLastSibling()
 
 void Window::collectDrawCommands(Context *context) const
 {
-   if (active && canvas.draw_command_count > 0)
+   if (active && canvas.commands.myCount > 0)
    {
       uint32_t start = context->final_command_count;
-      for (uint32_t i = 0; i < canvas.draw_command_count; i++)
+      if (context->final_command_count + canvas.commands.myCount > context->config.max_draw_commands)
       {
-         if (context->final_command_count >= MONSTRO_MAX_DRAW_COMMANDS)
-            break;
-         context->final_commands[context->final_command_count++] = canvas.draw_commands[i];
+         MONSTRO_FATAL("draw command overflow at frame %d: merging window '%s' needs %u draw commands for the frame "
+                       "but the frame holds %u. Simplify the UI or raise MonstroContextConfig.max_draw_commands.",
+                       context->frame, name, context->final_command_count + canvas.commands.myCount,
+                       context->config.max_draw_commands);
+      }
+      for (uint32_t i = 0; i < canvas.commands.myCount; i++)
+      {
+         context->final_commands[context->final_command_count++] = canvas.commands.myData[i];
       }
       uint32_t end = context->final_command_count;
       if (end - start > 1)
@@ -1204,11 +1158,11 @@ Window *Context::findWindow(const char *name)
    char window_id[256];
    monstro_copy_id_text(name, window_id, sizeof(window_id));
 
-   for (int i = 0; i < window_count; i++)
+   for (Window &window : windows)
    {
-      if (std::strcmp(windows[i].name, window_id) == 0)
+      if (std::strcmp(window.name, window_id) == 0)
       {
-         return &windows[i];
+         return &window;
       }
    }
    return nullptr;
@@ -1216,11 +1170,10 @@ Window *Context::findWindow(const char *name)
 
 Window *Context::createWindow(const char *name, MonstroWindowFlags flags)
 {
-   if (!name || window_count >= MONSTRO_MAX_WINDOWS)
-      return nullptr;
+   Window *win = &windows.allocate();
 
-   Window *win = &windows[window_count++];
    win->init(this, name, flags);
+   win->canvas.allocate(win->name, config.max_draw_commands, config.max_path_points);
 
    if (current_window)
    {
@@ -1279,7 +1232,7 @@ Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
    {
       Window *result = findHoveredWindowRecursive(root_window, x, y, excludeChildren);
 
-      if (result && popup_stack_top > 0 && popup_stack[popup_stack_top - 1].is_modal)
+      if (result && !popup_stack.empty() && popup_stack.top().is_modal)
       {
          if (!window_belongs_to_modal_popup(result))
          {
@@ -1307,30 +1260,18 @@ void Context::focusWindow(Window *win)
 
 void Context::pushWindow(Window *win)
 {
-   if (!win)
-      return;
-   if (window_stack_top >= MONSTRO_MAX_WINDOWS)
-      return;
-
-   if (window_stack_top > 0 && window_stack[window_stack_top - 1] == win)
+   for (int i = 0; i < window_stack.size(); i++)
    {
-      return;
+      MONSTRO_REQUIRE(window_stack[i] != win, "window '%s' is begun again while it is still open (frame %d)", win->name,
+                      frame);
    }
-
-   window_stack[window_stack_top++] = win;
-   current_window = win;
+   current_window = window_stack.push(win);
 }
 
 void Context::popWindow()
 {
-   if (window_stack_top <= 0)
-   {
-      current_window = nullptr;
-      return;
-   }
-
-   window_stack_top--;
-   current_window = (window_stack_top > 0) ? window_stack[window_stack_top - 1] : nullptr;
+   window_stack.pop();
+   current_window = window_stack.empty() ? nullptr : window_stack.top();
 }
 
 } // namespace monstro

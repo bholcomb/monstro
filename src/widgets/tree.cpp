@@ -151,7 +151,8 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
 
 bool monstro_begin_tree_node_id(MonstroContext *ctx, uint64_t id, const char *label, MonstroTreeFlags flags)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
    if (ctx->current_window->skip_items)
       return false;
@@ -160,7 +161,8 @@ bool monstro_begin_tree_node_id(MonstroContext *ctx, uint64_t id, const char *la
 
 bool monstro_begin_tree_node(MonstroContext *ctx, const char *label, MonstroTreeFlags flags)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
    uint64_t id = ctx->current_window->getChildId(label);
    return monstro_begin_tree_node_id(ctx, id, label, flags);
@@ -168,15 +170,15 @@ bool monstro_begin_tree_node(MonstroContext *ctx, const char *label, MonstroTree
 
 void monstro_end_tree_node(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
    ctx->id_stack.pop();
    monstro_unindent(ctx, 0.0f);
 }
 
 bool monstro_tree_leaf(MonstroContext *ctx, const char *label, MonstroTreeFlags flags)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
    if (ctx->current_window->skip_items)
       return false;
@@ -188,7 +190,8 @@ bool monstro_tree_leaf(MonstroContext *ctx, const char *label, MonstroTreeFlags 
 
 bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_visible)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;

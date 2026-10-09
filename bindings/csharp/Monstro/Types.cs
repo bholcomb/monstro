@@ -344,6 +344,15 @@ public unsafe struct MonstroTextureData
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroContextConfig
+{
+    public uint max_vertices;
+    public uint max_indices;
+    public uint max_draw_commands;
+    public uint max_path_points;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public unsafe struct MonstroStyleText
 {
     public MonstroColor color;

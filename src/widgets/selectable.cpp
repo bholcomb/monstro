@@ -97,9 +97,9 @@ static float resolve_selectable_width(MonstroContext *ctx, monstro::Window *win,
 {
    float resolved = base_outer_width;
 
-   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && ctx->columns_stack_top > 0)
+   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->columns_stack.empty())
    {
-      MonstroColumnsState *columns = &ctx->columns_stack[ctx->columns_stack_top - 1];
+      MonstroColumnsState *columns = &ctx->columns_stack.top();
       if (columns->columns_w > 0.0f)
       {
          resolved = columns->columns_w;
@@ -119,15 +119,16 @@ static float resolve_selectable_width(MonstroContext *ctx, monstro::Window *win,
 
 static float resolve_selectable_x(MonstroContext *ctx, float default_x, MonstroSelectableFlags flags)
 {
-   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && ctx->columns_stack_top > 0)
+   if ((flags & MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS) && !ctx->columns_stack.empty())
    {
-      MonstroColumnsState *columns = &ctx->columns_stack[ctx->columns_stack_top - 1];
+      MonstroColumnsState *columns = &ctx->columns_stack.top();
       return columns->columns_x;
    }
    return default_x;
 }
 
-static void draw_selectable_toggle(monstro::Canvas *canvas, MonstroRect outer, MonstroStyleSelectable *style, bool active)
+static void draw_selectable_toggle(monstro::Canvas *canvas, MonstroRect outer, MonstroStyleSelectable *style,
+                                   bool active)
 {
    float toggle_size = outer.h - style->padding[1] * 2.0f;
    if (toggle_size <= 0.0f)
@@ -159,7 +160,8 @@ static void draw_selectable_toggle(monstro::Canvas *canvas, MonstroRect outer, M
 static bool selectable_impl(MonstroContext *ctx, const char *label, bool *selected, float width, float height,
                             MonstroSelectableFlags flags, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label)
+   monstro::requireWindow(ctx, __func__);
+   if (!label)
       return false;
 
    monstro::Window *win = ctx->current_window;

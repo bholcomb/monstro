@@ -438,7 +438,6 @@ MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext *ctx, MonstroFil
 #endif
                state->result = MONSTRO_FILE_DIALOG_OK;
                state->open = false;
-               monstro_close_current_popup(ctx);
             }
          }
 
@@ -446,7 +445,6 @@ MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext *ctx, MonstroFil
          {
             state->result = MONSTRO_FILE_DIALOG_CANCEL;
             state->open = false;
-            monstro_close_current_popup(ctx);
          }
       }
       monstro_end_layout(ctx);

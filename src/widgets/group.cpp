@@ -2,8 +2,7 @@
 
 void monstro_begin_group(MonstroContext *ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
@@ -15,12 +14,9 @@ void monstro_begin_group(MonstroContext *ctx, MonstroLayoutDirection layout, Mon
 
    monstro_add_item(ctx, pad_x, pad_y);
 
-   if (win->group_stack_top >= MONSTRO_MAX_LAYOUT_STACK_DEPTH - 1)
-      return;
-   win->group_stack_top++;
-   win->group_flags_stack[win->group_stack_top] = flags;
+   win->groups.push(flags);
 
-   win->canvas.pushLayer(win->canvas.layer_stack[win->canvas.layer_stack_top] + 1);
+   win->canvas.pushLayer(win->canvas.layers.top() + 1);
 
    win->beginLayout(layout);
 
@@ -34,17 +30,13 @@ void monstro_begin_group(MonstroContext *ctx, MonstroLayoutDirection layout, Mon
 
 void monstro_end_group(MonstroContext *ctx)
 {
-   if (!ctx || !ctx->current_window)
-      return;
+   monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
    if (win->skip_items)
       return;
-   if (win->group_stack_top < 0)
-      return;
 
-   MonstroGroupFlags flags = win->group_flags_stack[win->group_stack_top];
-   win->group_stack_top--;
+   MonstroGroupFlags flags = win->groups.pop();
 
    MonstroStyle *style = &ctx->style;
    float pad_x = style->window.group_padding[0];

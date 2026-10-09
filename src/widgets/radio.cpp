@@ -4,7 +4,8 @@
 
 bool monstro_radio_button(MonstroContext *ctx, const char *label, int *value, int button_value, const char *tooltip)
 {
-   if (!ctx || !ctx->current_window || !label || !value)
+   monstro::requireWindow(ctx, __func__);
+   if (!label || !value)
       return false;
 
    monstro::Window *win = ctx->current_window;

@@ -3,7 +3,6 @@
 #include "helpers.h"
 #include <algorithm>
 #include <math.h>
-#include <stdexcept>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +32,24 @@ static void ensure_circle_vtx()
 /* Lifecycle                                                                 */
 /* ------------------------------------------------------------------------- */
 
+Canvas::~Canvas()
+{
+   free(commands.myData);
+   free(path.myData);
+}
+
+void Canvas::allocate(const char *owner, uint32_t max_draw_commands, uint32_t max_path_points)
+{
+   owner_name = owner;
+   commands.myData = (MonstroDrawCommand *)malloc(sizeof(MonstroDrawCommand) * max_draw_commands);
+   path.myData = (MonstroVec2 *)malloc(sizeof(MonstroVec2) * max_path_points);
+   MONSTRO_REQUIRE(commands.myData && path.myData,
+                   "out of memory allocating window '%s' (%u draw commands, %u path points)", owner, max_draw_commands,
+                   max_path_points);
+   commands.myCapacity = max_draw_commands;
+   path.myCapacity = max_path_points;
+}
+
 void Canvas::init(DrawBuffer *draw_buffer)
 {
    buffer = draw_buffer;
@@ -41,16 +58,16 @@ void Canvas::init(DrawBuffer *draw_buffer)
 
 void Canvas::clear()
 {
-   draw_command_count = 0;
-   path_count = 0;
+   commands.myCount = 0;
+   path.myCount = 0;
    myLastIndexCount = 0;
 
-   clip_rect_stack[0] = {0, 0, 100000, 100000};
-   clip_rect_stack_top = 0;
-   texture_stack[0] = default_texture_id;
-   texture_stack_top = 0;
-   layer_stack[0] = 0;
-   layer_stack_top = 0;
+   clip_rects.clear();
+   clip_rects.push({0, 0, 100000, 100000});
+   textures.clear();
+   textures.push(default_texture_id);
+   layers.clear();
+   layers.push(0);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -59,21 +76,21 @@ void Canvas::clear()
 
 Reservation Canvas::reserveGeometry(uint32_t vert_count, uint32_t idx_count)
 {
-   Reservation r = buffer->reserve(vert_count, idx_count);
-   myLastIndexCount = buffer->myIndexCount;
+   Reservation r = buffer->reserve(vert_count, idx_count, owner_name);
+   myLastIndexCount = buffer->myIndices.myCount;
    return r;
 }
 
 MonstroDrawCommand *Canvas::getOrCreateDrawCommand(uint64_t texture_id)
 {
-   bool buffer_gap = (buffer->myIndexCount != myLastIndexCount);
+   bool buffer_gap = (buffer->myIndices.myCount != myLastIndexCount);
 
-   if (draw_command_count > 0 && !buffer_gap)
+   if (commands.myCount > 0 && !buffer_gap)
    {
-      MonstroDrawCommand *prev = &draw_commands[draw_command_count - 1];
+      MonstroDrawCommand *prev = &commands.myData[commands.myCount - 1];
 
-      MonstroRect clip = clip_rect_stack[clip_rect_stack_top];
-      int layer = layer_stack[layer_stack_top];
+      MonstroRect clip = clip_rects.top();
+      int layer = layers.top();
 
       if (prev->texture_id == texture_id && prev->layer == layer && prev->clip_rect[0] == clip.x &&
           prev->clip_rect[1] == clip.y && prev->clip_rect[2] == clip.w && prev->clip_rect[3] == clip.h &&
@@ -83,28 +100,33 @@ MonstroDrawCommand *Canvas::getOrCreateDrawCommand(uint64_t texture_id)
       }
    }
 
-   if (draw_command_count >= MONSTRO_MAX_DRAW_COMMANDS)
-      return nullptr;
+   MonstroDrawCommand *cmd = newDrawCommand();
+   cmd->texture_id = texture_id;
+   cmd->index_offset = buffer->myIndices.myCount;
+   return cmd;
+}
 
-   MonstroDrawCommand *cmd = &draw_commands[draw_command_count];
+MonstroDrawCommand *Canvas::newDrawCommand()
+{
+   uint32_t order = commands.myCount;
+   MonstroDrawCommand *cmd =
+       commands.reserve(1, owner_name, buffer->myFrame, "raise MonstroContextConfig.max_draw_commands");
    memset(cmd, 0, sizeof(MonstroDrawCommand));
 
-   MonstroRect clip = clip_rect_stack[clip_rect_stack_top];
+   MonstroRect clip = clip_rects.top();
    cmd->clip_rect[0] = clip.x;
    cmd->clip_rect[1] = clip.y;
    cmd->clip_rect[2] = clip.w;
    cmd->clip_rect[3] = clip.h;
-   cmd->layer = layer_stack[layer_stack_top];
-   cmd->order = draw_command_count;
-   cmd->texture_id = texture_id;
-   cmd->index_offset = buffer->myIndexCount;
-   cmd->index_count = 0;
-   cmd->custom_draw = nullptr;
-   cmd->user_data = nullptr;
-
-   draw_command_count++;
-
+   cmd->layer = layers.top();
+   cmd->order = order;
    return cmd;
+}
+
+void Canvas::pathPush(MonstroVec2 point)
+{
+   *path.reserve(1, owner_name, buffer ? buffer->myFrame : 0,
+                 "draw the path in pieces or raise MonstroContextConfig.max_path_points") = point;
 }
 
 void Canvas::pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12)
@@ -116,20 +138,14 @@ void Canvas::pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, in
 
    if (radius == 0.0f)
    {
-      if (path_count < MONSTRO_MAX_PATH_POINTS)
-      {
-         path[path_count++] = center;
-      }
+      pathPush(center);
    }
    else
    {
       for (int a = a_min_of_12; a <= a_max_of_12; a++)
       {
          MonstroVec2 c = g_circle_vtx[a % 12];
-         if (path_count < MONSTRO_MAX_PATH_POINTS)
-         {
-            path[path_count++] = {center.x + c.x * radius, center.y + c.y * radius};
-         }
+         pathPush({center.x + c.x * radius, center.y + c.y * radius});
       }
    }
 }
@@ -151,14 +167,10 @@ void Canvas::pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCorne
 
    if (r <= 0.0f || rounding_corners == 0)
    {
-      if (path_count < MONSTRO_MAX_PATH_POINTS)
-         path[path_count++] = a;
-      if (path_count < MONSTRO_MAX_PATH_POINTS)
-         path[path_count++] = {b.x, a.y};
-      if (path_count < MONSTRO_MAX_PATH_POINTS)
-         path[path_count++] = b;
-      if (path_count < MONSTRO_MAX_PATH_POINTS)
-         path[path_count++] = {a.x, b.y};
+      pathPush(a);
+      pathPush({b.x, a.y});
+      pathPush(b);
+      pathPush({a.x, b.y});
    }
    else
    {
@@ -179,10 +191,7 @@ void Canvas::pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCorne
 
 void Canvas::pushClipRect(MonstroRect rect)
 {
-   if (clip_rect_stack_top >= MONSTRO_MAX_CLIP_RECT_STACK - 1)
-      return;
-
-   MonstroRect parent = clip_rect_stack[clip_rect_stack_top];
+   MonstroRect parent = clip_rects.top();
    float x1 = (rect.x > parent.x) ? rect.x : parent.x;
    float y1 = (rect.y > parent.y) ? rect.y : parent.y;
    float x2_rect = rect.x + rect.w;
@@ -198,8 +207,7 @@ void Canvas::pushClipRect(MonstroRect rect)
    clipped.w = (x2 > x1) ? (x2 - x1) : 0.0f;
    clipped.h = (y2 > y1) ? (y2 - y1) : 0.0f;
 
-   clip_rect_stack_top++;
-   clip_rect_stack[clip_rect_stack_top] = clipped;
+   clip_rects.push(clipped);
 }
 
 void Canvas::pushClipRectFullscreen()
@@ -208,52 +216,25 @@ void Canvas::pushClipRectFullscreen()
    pushClipRect(rect);
 }
 
-void Canvas::popClipRect()
-{
-   if (clip_rect_stack_top <= 0)
-      return;
-   clip_rect_stack_top--;
-}
+void Canvas::popClipRect() { clip_rects.pop(); }
 
-MonstroRect Canvas::getClipRect() const { return clip_rect_stack[clip_rect_stack_top]; }
+MonstroRect Canvas::getClipRect() const { return clip_rects.top(); }
 
 /* ------------------------------------------------------------------------- */
 /* Layer Stack                                                               */
 /* ------------------------------------------------------------------------- */
 
-void Canvas::pushLayer(int layer)
-{
-   if (layer_stack_top >= MONSTRO_MAX_LAYER_STACK - 1)
-      return;
-   layer_stack_top++;
-   layer_stack[layer_stack_top] = layer;
-}
+void Canvas::pushLayer(int layer) { layers.push(layer); }
 
-void Canvas::popLayer()
-{
-   if (layer_stack_top <= 0)
-      return;
-   layer_stack_top--;
-}
+void Canvas::popLayer() { layers.pop(); }
 
 /* ------------------------------------------------------------------------- */
 /* Texture Stack                                                             */
 /* ------------------------------------------------------------------------- */
 
-void Canvas::pushTexture(uint64_t texture_id)
-{
-   if (texture_stack_top >= MONSTRO_MAX_TEXTURE_STACK - 1)
-      return;
-   texture_stack_top++;
-   texture_stack[texture_stack_top] = texture_id;
-}
+void Canvas::pushTexture(uint64_t texture_id) { textures.push(texture_id); }
 
-void Canvas::popTexture()
-{
-   if (texture_stack_top <= 0)
-      return;
-   texture_stack_top--;
-}
+void Canvas::popTexture() { textures.pop(); }
 
 /* ------------------------------------------------------------------------- */
 /* Primitive Drawing                                                         */
@@ -273,7 +254,7 @@ void Canvas::addLine(MonstroVec2 p1, MonstroVec2 p2, uint32_t color, float thick
    float nx = -dy * thickness * 0.5f;
    float ny = dx * thickness * 0.5f;
 
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -299,7 +280,7 @@ void Canvas::addRect(MonstroRect rect, uint32_t color, float rounding, MonstroCo
    MonstroVec2 a = {rect.x + 0.5f, rect.y + 0.5f};
    MonstroVec2 b = {rect.x + rect.w + 0.5f, rect.y + rect.h + 0.5f};
 
-   path_count = 0;
+   path.myCount = 0;
    pathRect(a, b, rounding, corners);
    pathStroke(color, true, thickness);
 }
@@ -311,13 +292,13 @@ void Canvas::addRectFilled(MonstroRect rect, uint32_t color, float rounding, Mon
 
    if (rounding > 0.0f && corners != MONSTRO_CORNER_NONE)
    {
-      path_count = 0;
+      path.myCount = 0;
       pathRect(a, b, rounding, corners);
       pathFill(color);
    }
    else
    {
-      uint64_t tex = texture_stack[texture_stack_top];
+      uint64_t tex = textures.top();
       MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
       if (!cmd)
          return;
@@ -342,7 +323,7 @@ void Canvas::addRectFilled(MonstroRect rect, uint32_t color, float rounding, Mon
 void Canvas::addRectFilledMultiColor(MonstroRect rect, uint32_t col_ul, uint32_t col_ur, uint32_t col_lr,
                                      uint32_t col_ll)
 {
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -365,7 +346,7 @@ void Canvas::addRectFilledMultiColor(MonstroRect rect, uint32_t col_ul, uint32_t
 
 void Canvas::addTriangleFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint32_t color)
 {
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -394,7 +375,7 @@ void Canvas::addCircleFilled(MonstroVec2 center, float radius, uint32_t color, i
    if (num_segments < 3)
       return;
 
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -443,7 +424,7 @@ void Canvas::addQuad(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2
 
 void Canvas::addQuadFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color)
 {
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -486,7 +467,7 @@ void Canvas::addConvexPolyFilled(const MonstroVec2 *points, int num_points, uint
    if (num_points < 3)
       return;
 
-   uint64_t tex = texture_stack[texture_stack_top];
+   uint64_t tex = textures.top();
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(tex);
    if (!cmd)
       return;
@@ -773,13 +754,13 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
    MonstroVec2 a = {rect.x, rect.y};
    MonstroVec2 b = {rect.x + rect.w, rect.y + rect.h};
 
-   path_count = 0;
+   path.myCount = 0;
    pathRect(a, b, rounding, corners);
 
-   if (path_count < 3)
+   if (path.myCount < 3)
       return;
 
-   int num_points = path_count;
+   int num_points = path.myCount;
 
    MonstroDrawCommand *cmd = getOrCreateDrawCommand(texture_id);
    if (!cmd)
@@ -793,11 +774,11 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
 
    for (int i = 0; i < num_points; i++)
    {
-      float t_x = (path[i].x - rect.x) * inv_w;
-      float t_y = (path[i].y - rect.y) * inv_h;
+      float t_x = (path.myData[i].x - rect.x) * inv_w;
+      float t_y = (path.myData[i].y - rect.y) * inv_h;
       float u = uv_min.x + (uv_max.x - uv_min.x) * t_x;
       float uv = uv_min.y + (uv_max.y - uv_min.y) * t_y;
-      r.vertices[i] = {{path[i].x, path[i].y}, {u, uv}, tint_color};
+      r.vertices[i] = {{path.myData[i].x, path.myData[i].y}, {u, uv}, tint_color};
    }
 
    uint32_t ii = 0;
@@ -809,7 +790,7 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
    }
    cmd->index_count += idx_count;
 
-   path_count = 0;
+   path.myCount = 0;
 }
 
 void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint32_t tint_color)
@@ -883,48 +864,38 @@ void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint3
 
 void Canvas::addCustomDraw(MonstroCustomDrawCallback callback, void *user_data)
 {
-   if (!callback || draw_command_count >= MONSTRO_MAX_DRAW_COMMANDS)
+   if (!callback)
       return;
 
-   MonstroDrawCommand *cmd = &draw_commands[draw_command_count];
+   MonstroDrawCommand *cmd = newDrawCommand();
 
-   MonstroRect clip = clip_rect_stack[clip_rect_stack_top];
+   MonstroRect clip = clip_rects.top();
    cmd->clip_rect[0] = clip.x;
    cmd->clip_rect[1] = clip.y;
    cmd->clip_rect[2] = clip.w;
    cmd->clip_rect[3] = clip.h;
-   cmd->layer = layer_stack[layer_stack_top];
-   cmd->order = draw_command_count;
+   cmd->layer = layers.top();
+   cmd->order = commands.myCount;
    cmd->texture_id = 0;
    cmd->index_offset = 0;
    cmd->index_count = 0;
    cmd->custom_draw = callback;
    cmd->user_data = user_data;
-
-   draw_command_count++;
 }
 
 /* ------------------------------------------------------------------------- */
 /* Path API                                                                  */
 /* ------------------------------------------------------------------------- */
 
-void Canvas::pathClear() { path_count = 0; }
+void Canvas::pathClear() { path.myCount = 0; }
 
 void Canvas::pathMoveTo(MonstroVec2 pos)
 {
-   path_count = 0;
-   if (path_count < MONSTRO_MAX_PATH_POINTS)
-   {
-      path[path_count++] = pos;
-   }
+   path.myCount = 0;
+   pathPush(pos);
 }
 
-void Canvas::pathLineTo(MonstroVec2 pos)
-{
-   if (path_count >= MONSTRO_MAX_PATH_POINTS)
-      return;
-   path[path_count++] = pos;
-}
+void Canvas::pathLineTo(MonstroVec2 pos) { pathPush(pos); }
 
 void Canvas::pathArcTo(MonstroVec2 center, float radius, float a_min, float a_max, int num_segments)
 {
@@ -933,69 +904,63 @@ void Canvas::pathArcTo(MonstroVec2 center, float radius, float a_min, float a_ma
 
    for (int i = 0; i <= num_segments; i++)
    {
-      if (path_count >= MONSTRO_MAX_PATH_POINTS)
-         break;
       float t = (float)i / (float)num_segments;
       float angle = a_min + (a_max - a_min) * t;
       MonstroVec2 pt = {center.x + cosf(angle) * radius, center.y + sinf(angle) * radius};
-      path[path_count++] = pt;
+      pathPush(pt);
    }
 }
 
 void Canvas::pathBezierCubicTo(MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, int num_segments)
 {
-   if (path_count < 1 || num_segments < 1)
+   if (path.myCount < 1 || num_segments < 1)
       return;
 
-   MonstroVec2 p1 = path[path_count - 1];
+   MonstroVec2 p1 = path.myData[path.myCount - 1];
 
    for (int i = 1; i <= num_segments; i++)
    {
-      if (path_count >= MONSTRO_MAX_PATH_POINTS)
-         break;
       float t = (float)i / (float)num_segments;
       float u = 1.0f - t;
       MonstroVec2 pt;
       pt.x = u * u * u * p1.x + 3 * u * u * t * p2.x + 3 * u * t * t * p3.x + t * t * t * p4.x;
       pt.y = u * u * u * p1.y + 3 * u * u * t * p2.y + 3 * u * t * t * p3.y + t * t * t * p4.y;
-      path[path_count++] = pt;
+      pathPush(pt);
    }
 }
 
 void Canvas::pathBezierQuadraticTo(MonstroVec2 p2, MonstroVec2 p3, int num_segments)
 {
-   if (path_count < 1 || num_segments < 1)
+   if (path.myCount < 1 || num_segments < 1)
       return;
 
-   MonstroVec2 p1 = path[path_count - 1];
+   MonstroVec2 p1 = path.myData[path.myCount - 1];
 
    for (int i = 1; i <= num_segments; i++)
    {
-      if (path_count >= MONSTRO_MAX_PATH_POINTS)
-         break;
       float t = (float)i / (float)num_segments;
       float u = 1.0f - t;
       MonstroVec2 pt;
       pt.x = u * u * p1.x + 2 * u * t * p2.x + t * t * p3.x;
       pt.y = u * u * p1.y + 2 * u * t * p2.y + t * t * p3.y;
-      path[path_count++] = pt;
+      pathPush(pt);
    }
 }
 
 void Canvas::pathFill(uint32_t color)
 {
-   if (path_count < 3)
+   if (path.myCount < 3)
       return;
-   addConvexPolyFilled(path, path_count, color);
-   path_count = 0;
+   addConvexPolyFilled(path.myData, path.myCount, color);
+   path.myCount = 0;
 }
 
 void Canvas::pathStroke(uint32_t color, bool closed, float thickness)
 {
-   if (path_count < 2)
+   if (path.myCount < 2)
       return;
-   addPolyline(path, path_count, color, closed, thickness);
-   path_count = 0;
+   addPolyline(path.myData, path.myCount, color, closed, thickness);
+   path.myCount = 0;
 }
 
 } // namespace monstro

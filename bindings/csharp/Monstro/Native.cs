@@ -303,7 +303,13 @@ public static unsafe partial class Native
     public static extern void monstro_shutdown();
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroContextConfig monstro_context_config_default();
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern IntPtr monstro_context_create();
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern IntPtr monstro_context_create_ex(MonstroContextConfig* config);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_context_destroy(IntPtr ctx);
