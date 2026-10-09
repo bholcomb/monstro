@@ -715,3 +715,319 @@ TEST(pressing_an_open_combo_closes_its_list)
    frame(false);
    CHECK(ui.ctx->popup_stack.size() == 0);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Popups, menus and combos draw on top, and the topmost window is hovered   */
+/* ------------------------------------------------------------------------- */
+
+// Window A, begun first, with a popup holding a button; then window B, a later sibling over the popup's spot.
+struct PopupOverSibling
+{
+   Ui ui{true};
+   MonstroRect pick = {};
+   bool pick_hovered = false;
+   bool pick_clicked = false;
+
+   void frame(bool open)
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 200, 150, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (open)
+         monstro_open_popup(ui.ctx, "Menu");
+      if (monstro_is_popup_open(ui.ctx, "Menu"))
+         monstro_set_next_window_pos(ui.ctx, 150, 100, MONSTRO_COND_ALWAYS);
+      if (monstro_begin_popup(ui.ctx, "Menu", MONSTRO_WINDOW_NONE))
+      {
+         pick_clicked = monstro_button(ui.ctx, "Pick", nullptr) || pick_clicked;
+         pick = monstro_get_item_rect(ui.ctx);
+         pick_hovered = monstro_is_item_hovered(ui.ctx);
+         monstro_end_popup(ui.ctx);
+      }
+      monstro_end_window(ui.ctx);
+
+      monstro_set_next_window_pos(ui.ctx, 100, 60, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_label(ui.ctx, "B covers the popup's spot");
+      monstro_end_window(ui.ctx);
+      ui.end();
+   }
+};
+
+TEST(a_popup_draws_above_a_later_window_and_takes_the_mouse)
+{
+   PopupOverSibling t;
+   t.frame(true);
+   monstro::Window *popup = t.ui.ctx->findWindow("popup_Menu");
+   monstro::Window *b = t.ui.ctx->findWindow("B");
+   CHECK(popup && b);
+   // The popup is A's child, and A's children draw after A's later siblings.
+   CHECK(popup->draw_rank > b->draw_rank);
+   CHECK(monstro_rect_contains(b->getRect(), t.pick.x + 2, t.pick.y + 2));
+
+   t.ui.moveMouse(t.pick.x + t.pick.w * 0.5f, t.pick.y + t.pick.h * 0.5f);
+   t.frame(false);
+   CHECK(t.ui.ctx->hovered_window == popup);
+   CHECK(t.pick_hovered);
+
+   t.ui.pressLeft(true);
+   t.frame(false);
+   t.ui.pressLeft(false);
+   t.frame(false);
+   CHECK(t.pick_clicked);
+}
+
+TEST(nested_sub_menus_draw_above_later_windows_and_take_the_mouse)
+{
+   Ui ui(true);
+   MonstroRect recent_item = {};
+   bool recent_hovered = false;
+   auto frame = [&](bool open)
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 200, 150, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "A", nullptr,
+                           (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR));
+      if (monstro_begin_menu_bar(ui.ctx))
+      {
+         if (open)
+            monstro_open_popup(ui.ctx, "File");
+         if (monstro_begin_menu(ui.ctx, "File", true))
+         {
+            monstro_menu_item(ui.ctx, "New", nullptr, true);
+            if (open)
+               monstro_open_popup(ui.ctx, "Recent");
+            if (monstro_begin_menu(ui.ctx, "Recent", true))
+            {
+               monstro_menu_item(ui.ctx, "Mission log", nullptr, true);
+               recent_item = monstro_get_item_rect(ui.ctx);
+               recent_hovered = monstro_is_item_hovered(ui.ctx);
+               monstro_end_menu(ui.ctx);
+            }
+            monstro_end_menu(ui.ctx);
+         }
+         monstro_end_menu_bar(ui.ctx);
+      }
+      monstro_end_window(ui.ctx);
+
+      monstro_set_next_window_pos(ui.ctx, 40, 50, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+
+   frame(true);
+   frame(false);
+   monstro::Window *file = ui.ctx->findWindow("menu_File");
+   monstro::Window *recent = ui.ctx->findWindow("menu_Recent");
+   monstro::Window *b = ui.ctx->findWindow("B");
+   CHECK(file && recent && b);
+   CHECK(file->draw_rank > b->draw_rank && recent->draw_rank > file->draw_rank);
+   CHECK(monstro_rect_contains(b->getRect(), recent_item.x + 2, recent_item.y + 2));
+
+   ui.moveMouse(recent_item.x + recent_item.w * 0.5f, recent_item.y + recent_item.h * 0.5f);
+   frame(false);
+   CHECK(ui.ctx->hovered_window == recent);
+   CHECK(recent_hovered);
+}
+
+TEST(a_combo_list_draws_above_a_later_window_and_takes_the_mouse)
+{
+   Ui ui(true);
+   MonstroRect second = {};
+   bool second_hovered = false;
+   int choice = 0;
+   auto frame = [&](bool open)
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 200, 150, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (open)
+         monstro_open_popup(ui.ctx, "Mode");
+      if (monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr))
+      {
+         bool selected = choice == 0;
+         monstro_selectable(ui.ctx, "Orbit", &selected, MONSTRO_SELECTABLE_NONE, nullptr);
+         selected = choice == 1;
+         if (monstro_selectable(ui.ctx, "Dock", &selected, MONSTRO_SELECTABLE_NONE, nullptr))
+            choice = 1;
+         second = monstro_get_item_rect(ui.ctx);
+         second_hovered = monstro_is_item_hovered(ui.ctx);
+         monstro_end_combo(ui.ctx);
+      }
+      monstro_end_window(ui.ctx);
+
+      monstro_set_next_window_pos(ui.ctx, 60, 40, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+
+   frame(true);
+   monstro::Window *list = ui.ctx->findWindow("popup_Mode");
+   monstro::Window *b = ui.ctx->findWindow("B");
+   CHECK(list && b);
+   CHECK(list->draw_rank > b->draw_rank);
+   CHECK(monstro_rect_contains(b->getRect(), second.x + 2, second.y + 2));
+
+   ui.moveMouse(second.x + second.w * 0.5f, second.y + second.h * 0.5f);
+   frame(false);
+   CHECK(ui.ctx->hovered_window == list);
+   CHECK(second_hovered);
+
+   ui.pressLeft(true);
+   frame(false);
+   ui.pressLeft(false);
+   frame(false);
+   CHECK(choice == 1);
+}
+
+TEST(a_modal_dims_what_is_drawn_below_it)
+{
+   Ui ui(true);
+   bool open = true;
+   for (int f = 0; f < 2; f++)
+   {
+      ui.begin();
+      monstro_begin_window(ui.ctx, "Owner", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (f == 0)
+         monstro_open_popup_ex(ui.ctx, "Confirm", true);
+      if (monstro_begin_popup_modal(ui.ctx, "Confirm", &open, MONSTRO_WINDOW_NONE))
+      {
+         monstro_label(ui.ctx, "Sure?");
+         monstro_end_popup(ui.ctx);
+      }
+      monstro_end_window(ui.ctx);
+      monstro_begin_window(ui.ctx, "Later", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   }
+   monstro::Window *modal = ui.ctx->findWindow("modal_Confirm");
+   monstro::Window *later = ui.ctx->findWindow("Later");
+   CHECK(modal && later && modal->draw_rank > later->draw_rank);
+
+   // The modal's first geometry is the full-screen dim, so it covers every window drawn before it.
+   const MonstroDrawData *data = ui.data;
+   uint32_t dim_color = monstro_color_to_u32(monstro_get_window_style(ui.ctx)->modal_dim_color);
+   bool dim_found = false;
+   for (uint32_t c = 0; c < data->command_count && !dim_found; c++)
+   {
+      const MonstroDrawCommand &cmd = data->commands[c];
+      const MonstroVertex *v = &data->vertices[cmd.vertex_offset];
+      for (uint32_t i = 0; i + 2 < cmd.vertex_count && !dim_found; i++)
+      {
+         if (v[i].color == dim_color && v[i].position[0] == 0.0f && v[i].position[1] == 0.0f &&
+             v[i + 2].position[0] == 800.0f && v[i + 2].position[1] == 600.0f)
+            dim_found = true;
+      }
+   }
+   CHECK(dim_found);
+}
+
+// The middle of two windows' overlap, from the last frame.
+static MonstroVec2 overlap_middle(Ui &ui, const char *over, const char *under)
+{
+   MonstroRect a = ui.ctx->findWindow(over)->getRect();
+   MonstroRect b = ui.ctx->findWindow(under)->getRect();
+   float x0 = a.x > b.x ? a.x : b.x, y0 = a.y > b.y ? a.y : b.y;
+   float x1 = a.x + a.w < b.x + b.w ? a.x + a.w : b.x + b.w;
+   float y1 = a.y + a.h < b.y + b.h ? a.y + a.h : b.y + b.h;
+   CHECK(x1 > x0 && y1 > y0);
+   return {(x0 + x1) * 0.5f, (y0 + y1) * 0.5f};
+}
+
+TEST(a_child_panel_draws_and_hovers_after_its_parents_later_siblings)
+{
+   Ui ui(true);
+   auto frame = [&]()
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 300, 250, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_begin_child(ui.ctx, "Panel", 250, 150, MONSTRO_WINDOW_BACKGROUND);
+      monstro_label(ui.ctx, "inside");
+      monstro_end_child(ui.ctx);
+      monstro_end_window(ui.ctx);
+      monstro_set_next_window_pos(ui.ctx, 150, 100, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 300, 250, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+   frame();
+   monstro::Window *panel = ui.ctx->findWindow("child_A_Panel");
+   monstro::Window *b = ui.ctx->findWindow("B");
+   // A window's children draw after its later siblings, child panels included.
+   CHECK(panel->draw_rank > b->draw_rank);
+   MonstroVec2 point = overlap_middle(ui, "child_A_Panel", "B");
+   ui.moveMouse(point.x, point.y);
+   frame();
+   CHECK(ui.ctx->hovered_window == panel);
+}
+
+TEST(a_tooltip_draws_above_the_windows_begun_before_it)
+{
+   Ui ui(true);
+   MonstroRect tip = {};
+   auto frame = [&]()
+   {
+      ui.begin(0.25f);
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 200, 150, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_button(ui.ctx, "Hover me", "A tooltip long enough to reach over window B");
+      tip = monstro_get_item_rect(ui.ctx);
+      monstro_end_window(ui.ctx);
+      monstro_set_next_window_pos(ui.ctx, 60, 40, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_BACKGROUND);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+   frame();
+   // The mouse rests on A's button where B does not cover it.
+   ui.moveMouse(tip.x + 5.0f, tip.y + tip.h * 0.5f);
+   for (int i = 0; i < 6; i++)
+      frame();
+   monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
+   monstro::Window *b = ui.ctx->findWindow("B");
+   CHECK(tooltip && tooltip->active);
+   CHECK(tooltip->draw_rank > b->draw_rank);
+}
+
+TEST(a_modal_over_a_later_window_takes_the_mouse)
+{
+   Ui ui(true);
+   bool open = true;
+   auto frame = [&](bool opening)
+   {
+      ui.begin();
+      monstro_begin_window(ui.ctx, "Owner", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (opening)
+         monstro_open_popup_ex(ui.ctx, "Confirm", true);
+      if (monstro_begin_popup_modal(ui.ctx, "Confirm", &open, MONSTRO_WINDOW_NONE))
+      {
+         monstro_label(ui.ctx, "Sure? This cannot be undone.");
+         monstro_end_popup(ui.ctx);
+      }
+      monstro_end_window(ui.ctx);
+      monstro_set_next_window_pos(ui.ctx, 250, 200, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Later", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+   frame(true);
+   frame(false);
+   MonstroVec2 point = overlap_middle(ui, "modal_Confirm", "Later");
+   ui.moveMouse(point.x, point.y);
+   frame(false);
+   CHECK(ui.ctx->hovered_window == ui.ctx->findWindow("modal_Confirm"));
+}

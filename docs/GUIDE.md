@@ -344,9 +344,12 @@ Text and solid shapes are drawn from the same texture: every font lives in the
 environment's atlas, and the atlas has a white texel that solid shapes sample.
 So a window's fills and text batch into few commands.
 
-Commands come in draw order: windows in the order they are stacked (a window,
-then its children, then the windows in front of it), and within a window by
-layer, then in the order things were drawn.
+Commands come in draw order: a window, then the windows begun after it at the
+same level (its later siblings, which a click brings forward), then its own
+popups, menus, combo lists and child panels, which so stay on top of the
+windows that follow it.  Within a window, commands go by layer, then in the
+order things were drawn.  Hovering follows the same order: of the windows
+under the mouse, the one drawn on top takes it.
 
 ### Generic rendering loop
 

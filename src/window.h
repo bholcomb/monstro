@@ -87,7 +87,7 @@ struct Window
    void remove();
    void makeLastSibling();
 
-   // Numbers this window and those above it in draw order: itself, its children, then later siblings.
+   // Numbers this window and those after it in draw order: itself, its later siblings, then its children.
    int rankForDrawing(int rank);
    int layoutDepth() const;
    int groupDepth() const;

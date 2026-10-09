@@ -1121,12 +1121,13 @@ void Window::makeLastSibling()
 
 int Window::rankForDrawing(int rank)
 {
-   // Drawn in the order hovering is tested in reverse: a window, its children, then its later siblings.
+   // A window, then its later siblings, then its children: a window's popups, menus and combos draw above
+   // every window that follows it, which keeps them on top.
    draw_rank = rank++;
-   if (child)
-      rank = child->rankForDrawing(rank);
    if (sibling)
       rank = sibling->rankForDrawing(rank);
+   if (child)
+      rank = child->rankForDrawing(rank);
    return rank;
 }
 
@@ -1166,35 +1167,17 @@ Window *Context::createWindow(const char *name, MonstroWindowFlags flags)
    return win;
 }
 
-static Window *findHoveredWindowRecursive(Window *w, float x, float y, bool excludeChildren)
+// Walks the windows in draw order; the last one under the point is drawn on top, so it is the one hovered.
+static void findHoveredInDrawOrder(Window *w, float x, float y, bool excludeChildren, Window **topmost)
 {
-   Window *temp = nullptr;
-
-   if (w->sibling != nullptr)
-   {
-      temp = findHoveredWindowRecursive(w->sibling, x, y, excludeChildren);
-      if (temp != nullptr)
-         return temp;
-   }
-
-   if (w->child != nullptr)
-   {
-      temp = findHoveredWindowRecursive(w->child, x, y, excludeChildren);
-      if (temp != nullptr)
-         return temp;
-   }
-
-   if (!w->active)
-      return nullptr;
-   if (!(w->flags & MONSTRO_WINDOW_INPUTS))
-      return nullptr;
-   if (excludeChildren && (w->flags & MONSTRO_WINDOW_CHILD))
-      return nullptr;
-
-   if (monstro_rect_contains(w->getRect(), x, y))
-      return w;
-
-   return nullptr;
+   bool takes_input =
+       w->active && (w->flags & MONSTRO_WINDOW_INPUTS) && !(excludeChildren && (w->flags & MONSTRO_WINDOW_CHILD));
+   if (takes_input && monstro_rect_contains(w->getRect(), x, y))
+      *topmost = w;
+   if (w->sibling)
+      findHoveredInDrawOrder(w->sibling, x, y, excludeChildren, topmost);
+   if (w->child)
+      findHoveredInDrawOrder(w->child, x, y, excludeChildren, topmost);
 }
 
 static bool window_belongs_to_modal_popup(const Window *w)
@@ -1213,7 +1196,8 @@ Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
 {
    if (root_window != nullptr)
    {
-      Window *result = findHoveredWindowRecursive(root_window, x, y, excludeChildren);
+      Window *result = nullptr;
+      findHoveredInDrawOrder(root_window, x, y, excludeChildren, &result);
 
       if (result && !popup_stack.empty() && popup_stack.top().is_modal)
       {
