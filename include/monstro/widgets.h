@@ -48,6 +48,12 @@ typedef enum MonstroInputTextFlags {
     MONSTRO_INPUT_TEXT_CHARS_NO_BLANK    = 1 << 6
 } MonstroInputTextFlags;
 
+/* A vertical progress bar fills from the bottom up. */
+typedef enum MonstroProgressFlags {
+    MONSTRO_PROGRESS_NONE     = 0,
+    MONSTRO_PROGRESS_VERTICAL = 1 << 0
+} MonstroProgressFlags;
+
 typedef enum MonstroTreeFlags {
     MONSTRO_TREE_NONE         = 0,
     MONSTRO_TREE_DEFAULT_OPEN = 1 << 0,
@@ -184,7 +190,10 @@ bool monstro_knob_ex(MonstroContext* ctx, const char* label, float* value,
 /* Progress Bar                                                              */
 /* ------------------------------------------------------------------------- */
 
+/* overlay is plain text; NULL shows the percentage and "" shows no text. */
 void monstro_progress_bar(MonstroContext* ctx, float fraction, float width, float height, const char* overlay);
+void monstro_progress_bar_ex(MonstroContext* ctx, float fraction, float width, float height, const char* overlay,
+                             MonstroProgressFlags flags);
 
 /* ------------------------------------------------------------------------- */
 /* Text Input                                                                */

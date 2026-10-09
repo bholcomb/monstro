@@ -3,8 +3,10 @@
 
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, float height, const char *overlay)
+void monstro_progress_bar_ex(MonstroContext *ctx, float fraction, float width, float height, const char *overlay,
+                             MonstroProgressFlags flags)
 {
+   bool vertical = (flags & MONSTRO_PROGRESS_VERTICAL) != 0;
    monstro::requireWindow(ctx, __func__);
 
    monstro::Window *win = ctx->current_window;
@@ -18,9 +20,10 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
 
    monstro_add_item(ctx, ps->padding[0], ps->padding[1]);
 
-   float text_h = font ? monstro_font_get_line_height(font) : 16.0f;
-   float bar_w = width > 0.0f ? width : 120.0f;
-   float bar_h = height > 0.0f ? height : text_h + ps->padding[1] * 2.0f;
+   // Across the bar it is as thick as its text; along it, 120 pixels unless given.
+   float thickness = (font ? monstro_font_get_line_height(font) : 16.0f) + ps->padding[1] * 2.0f;
+   float bar_w = width > 0.0f ? width : (vertical ? thickness : 120.0f);
+   float bar_h = height > 0.0f ? height : (vertical ? 120.0f : thickness);
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect bar_rect = {pos.x, pos.y, bar_w, bar_h};
@@ -39,12 +42,14 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
       canvas->addRect(bar_rect, monstro_color_to_u32(ps->border_color), ps->rounding, MONSTRO_CORNER_ALL, ps->border);
    }
 
-   // Filled portion
+   // Filled portion, from the left or from the bottom
    if (t > 0.0f)
    {
-      MonstroRect fill_rect = {bar_rect.x, bar_rect.y, bar_rect.w * t, bar_rect.h};
+      MonstroRect fill_rect =
+          vertical ? MonstroRect{bar_rect.x, bar_rect.y + bar_rect.h * (1.0f - t), bar_rect.w, bar_rect.h * t}
+                   : MonstroRect{bar_rect.x, bar_rect.y, bar_rect.w * t, bar_rect.h};
 
-      MonstroCornerFlags corners = MONSTRO_CORNER_LEFT;
+      MonstroCornerFlags corners = vertical ? MONSTRO_CORNER_BOTTOM : MONSTRO_CORNER_LEFT;
       if (t >= 1.0f)
          corners = MONSTRO_CORNER_ALL;
 
@@ -62,8 +67,8 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
    }
 
    // Overlay text
-   // The overlay is plain text, never a format string; without one the bar shows its percentage.
-   if (font)
+   // The overlay is plain text, never a format string; without one the bar shows its percentage, and "" shows none.
+   if (font && !(overlay && !overlay[0]))
    {
       char percent[16];
       const char *text = overlay;
@@ -78,4 +83,9 @@ void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, floa
    monstro_draw_disabled_overlay(ctx, bar_rect);
    monstro_add_item(ctx, bar_w, bar_h);
    monstro_set_last_item(ctx, 0, bar_rect, false, false, false, false);
+}
+
+void monstro_progress_bar(MonstroContext *ctx, float fraction, float width, float height, const char *overlay)
+{
+   monstro_progress_bar_ex(ctx, fraction, width, height, overlay, MONSTRO_PROGRESS_NONE);
 }

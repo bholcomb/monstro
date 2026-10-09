@@ -363,3 +363,54 @@ TEST(a_relative_knob_does_not_jump_where_it_is_pressed)
    CHECK(near(value, 6.0f));
    t.release();
 }
+
+/* ------------------------------------------------------------------------- */
+/* Progress bars                                                             */
+/* ------------------------------------------------------------------------- */
+
+// The vertices a progress bar adds to a frame of its own, and their colours.
+static uint32_t progress_vertices(Ui &ui, float fraction, const char *overlay, MonstroProgressFlags flags,
+                                  float *fill_top = nullptr, float *fill_bottom = nullptr)
+{
+   ui.begin();
+   begin_screen(ui);
+   monstro_set_cursor_screen_pos(ui.ctx, 100, 100);
+   uint32_t first = ui.vertexCount();
+   monstro_progress_bar_ex(ui.ctx, fraction, 20.0f, 100.0f, overlay, flags);
+   MonstroRect r = monstro_get_item_rect(ui.ctx);
+   monstro_end_window(ui.ctx);
+   const MonstroDrawData *data = ui.end();
+   const MonstroStyleProgress *ps = monstro_get_progress_style(ui.ctx);
+   uint32_t fill = monstro_color_to_u32(ps->cursor_normal.data.color);
+   if (fill_top && fill_bottom)
+   {
+      *fill_top = 1e9f;
+      *fill_bottom = -1e9f;
+      for (uint32_t i = first; i < data->vertex_count; i++)
+         if (data->vertices[i].color == fill)
+         {
+            *fill_top = std::fmin(*fill_top, data->vertices[i].position[1] - r.y);
+            *fill_bottom = std::fmax(*fill_bottom, data->vertices[i].position[1] - r.y);
+         }
+   }
+   return data->vertex_count - first;
+}
+
+TEST(a_vertical_progress_bar_fills_from_the_bottom)
+{
+   Ui ui;
+   float top = 0, bottom = 0;
+   progress_vertices(ui, 0.25f, "", MONSTRO_PROGRESS_VERTICAL, &top, &bottom);
+   // Measured from the top of the bar, 100 high.
+   CHECK(near(top, 75.0f, 0.5f) && near(bottom, 100.0f, 0.5f));
+}
+
+TEST(a_progress_bar_shows_no_text_when_its_overlay_is_empty)
+{
+   Ui ui;
+   uint32_t with_percentage = progress_vertices(ui, 0.5f, nullptr, MONSTRO_PROGRESS_NONE);
+   uint32_t without_text = progress_vertices(ui, 0.5f, "", MONSTRO_PROGRESS_NONE);
+   uint32_t with_overlay = progress_vertices(ui, 0.5f, "fuel", MONSTRO_PROGRESS_NONE);
+   // "50%" is three glyphs and "fuel" four, four vertices each.
+   CHECK(with_percentage == without_text + 12 && with_overlay == without_text + 16);
+}
