@@ -536,3 +536,33 @@ TEST(modal_closed_by_escape_leaves_the_parent_open)
    }
    CHECK(!open);
 }
+
+FATAL_TEST(an_out_of_range_mouse_button_aborts, "monstro_is_mouse_down: mouse button 7 is outside 0..4")
+{
+   Ui ui(false);
+   monstro_is_mouse_down(ui.ctx, (MonstroMouseButton)7);
+}
+
+FATAL_TEST(a_negative_mouse_button_aborts, "monstro_set_mouse_button: mouse button -1 is outside 0..4")
+{
+   Ui ui(false);
+   monstro_set_mouse_button(ui.ctx, (MonstroMouseButton)-1, true);
+}
+
+FATAL_TEST(an_out_of_range_key_aborts, "monstro_is_key_pressed: key 999 is outside 0..")
+{
+   Ui ui(false);
+   monstro_is_key_pressed(ui.ctx, (MonstroKey)999, true);
+}
+
+FATAL_TEST(a_negative_key_aborts, "monstro_set_key: key -1 is outside 0..")
+{
+   Ui ui(false);
+   monstro_set_key(ui.ctx, (MonstroKey)-1, true);
+}
+
+FATAL_TEST(an_out_of_range_item_click_button_aborts, "monstro_is_item_clicked: mouse button 5 is outside 0..4")
+{
+   Ui ui(false);
+   monstro_is_item_clicked(ui.ctx, MONSTRO_MOUSE_BUTTON_COUNT);
+}

@@ -8,45 +8,18 @@ namespace monstro
 /* MouseState                                                                */
 /* ------------------------------------------------------------------------- */
 
-void MouseState::setButton(MonstroMouseButton button, bool is_down)
-{
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return;
-   buttons[button].down = is_down;
-}
+void MouseState::setButton(MonstroMouseButton button, bool is_down) { buttons[button].down = is_down; }
 
-bool MouseState::isDown(MonstroMouseButton button) const
-{
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
-   return buttons[button].down;
-}
+bool MouseState::isDown(MonstroMouseButton button) const { return buttons[button].down; }
 
-bool MouseState::isPressed(MonstroMouseButton button) const
-{
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
-   return buttons[button].pressed;
-}
+bool MouseState::isPressed(MonstroMouseButton button) const { return buttons[button].pressed; }
 
-bool MouseState::isReleased(MonstroMouseButton button) const
-{
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
-   return buttons[button].released;
-}
+bool MouseState::isReleased(MonstroMouseButton button) const { return buttons[button].released; }
 
-bool MouseState::isDoubleClicked(MonstroMouseButton button) const
-{
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
-   return buttons[button].double_clicked;
-}
+bool MouseState::isDoubleClicked(MonstroMouseButton button) const { return buttons[button].double_clicked; }
 
 bool MouseState::isDragging(MonstroMouseButton button) const
 {
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
    if (!buttons[button].down)
       return false;
 
@@ -58,8 +31,6 @@ bool MouseState::isDragging(MonstroMouseButton button) const
 MonstroVec2 MouseState::getDragDelta(MonstroMouseButton button) const
 {
    MonstroVec2 result = {0.0f, 0.0f};
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return result;
 
    if (buttons[button].down)
    {
@@ -71,8 +42,6 @@ MonstroVec2 MouseState::getDragDelta(MonstroMouseButton button) const
 
 bool MouseState::isClicked(MonstroMouseButton button, float rep_delay, float rep_rate, float dt) const
 {
-   if (button < 0 || button >= MONSTRO_MOUSE_BUTTON_COUNT)
-      return false;
    if (buttons[button].pressed)
       return true;
 
@@ -169,12 +138,7 @@ void MouseState::endFrame()
 /* KeyboardState                                                             */
 /* ------------------------------------------------------------------------- */
 
-void KeyboardState::setKey(MonstroKey key, bool is_down)
-{
-   if (key < 0 || key >= MONSTRO_KEY_COUNT)
-      return;
-   keys[key].down = is_down;
-}
+void KeyboardState::setKey(MonstroKey key, bool is_down) { keys[key].down = is_down; }
 
 void KeyboardState::addInputText(const char *text)
 {
@@ -193,26 +157,11 @@ void KeyboardState::addInputText(const char *text)
    input_text[input_text_len] = '\0';
 }
 
-bool KeyboardState::isDown(MonstroKey key) const
-{
-   if (key < 0 || key >= MONSTRO_KEY_COUNT)
-      return false;
-   return keys[key].down;
-}
+bool KeyboardState::isDown(MonstroKey key) const { return keys[key].down; }
 
-bool KeyboardState::isPressed(MonstroKey key) const
-{
-   if (key < 0 || key >= MONSTRO_KEY_COUNT)
-      return false;
-   return keys[key].pressed;
-}
+bool KeyboardState::isPressed(MonstroKey key) const { return keys[key].pressed; }
 
-bool KeyboardState::isReleased(MonstroKey key) const
-{
-   if (key < 0 || key >= MONSTRO_KEY_COUNT)
-      return false;
-   return keys[key].released;
-}
+bool KeyboardState::isReleased(MonstroKey key) const { return keys[key].released; }
 
 void KeyboardState::newFrame(float dt)
 {
@@ -257,7 +206,7 @@ void monstro_set_mouse_pos(MonstroContext *ctx, float x, float y)
 
 void monstro_set_mouse_button(MonstroContext *ctx, MonstroMouseButton button, bool down)
 {
-   monstro::requireContext(ctx, __func__);
+   monstro::requireMouseButton(ctx, __func__, button);
    ctx->mouse.setButton(button, down);
 }
 
@@ -269,7 +218,7 @@ void monstro_set_mouse_wheel(MonstroContext *ctx, float x, float y)
 
 void monstro_set_key(MonstroContext *ctx, MonstroKey key, bool down)
 {
-   monstro::requireContext(ctx, __func__);
+   monstro::requireKey(ctx, __func__, key);
    ctx->keyboard.setKey(key, down);
 }
 
@@ -293,12 +242,12 @@ void monstro_set_mouse_cursor(MonstroContext *ctx, MonstroMouseCursor cursor)
 
 bool monstro_is_mouse_down(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return monstro::requireContext(ctx, __func__)->mouse.isDown(button);
+   return monstro::requireMouseButton(ctx, __func__, button)->mouse.isDown(button);
 }
 
 bool monstro_is_mouse_clicked(MonstroContext *ctx, MonstroMouseButton button, bool repeat)
 {
-   monstro::requireContext(ctx, __func__);
+   monstro::requireMouseButton(ctx, __func__, button);
    if (!repeat)
       return ctx->mouse.isPressed(button);
    return ctx->mouse.isClicked(button, ctx->keyboard.repeat_delay, ctx->keyboard.repeat_rate, ctx->delta_time);
@@ -306,12 +255,12 @@ bool monstro_is_mouse_clicked(MonstroContext *ctx, MonstroMouseButton button, bo
 
 bool monstro_is_mouse_released(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return monstro::requireContext(ctx, __func__)->mouse.isReleased(button);
+   return monstro::requireMouseButton(ctx, __func__, button)->mouse.isReleased(button);
 }
 
 bool monstro_is_mouse_double_clicked(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return monstro::requireContext(ctx, __func__)->mouse.isDoubleClicked(button);
+   return monstro::requireMouseButton(ctx, __func__, button)->mouse.isDoubleClicked(button);
 }
 
 MonstroVec2 monstro_get_mouse_pos(MonstroContext *ctx)
@@ -332,23 +281,23 @@ float monstro_get_mouse_wheel_h(MonstroContext *ctx) { return monstro::requireCo
 
 bool monstro_is_mouse_dragging(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return monstro::requireContext(ctx, __func__)->mouse.isDragging(button);
+   return monstro::requireMouseButton(ctx, __func__, button)->mouse.isDragging(button);
 }
 
 MonstroVec2 monstro_get_mouse_drag_delta(MonstroContext *ctx, MonstroMouseButton button)
 {
-   monstro::requireContext(ctx, __func__);
+   monstro::requireMouseButton(ctx, __func__, button);
    return ctx->mouse.getDragDelta(button);
 }
 
 bool monstro_is_key_down(MonstroContext *ctx, MonstroKey key)
 {
-   return monstro::requireContext(ctx, __func__)->keyboard.isDown(key);
+   return monstro::requireKey(ctx, __func__, key)->keyboard.isDown(key);
 }
 
 bool monstro_is_key_pressed(MonstroContext *ctx, MonstroKey key, bool repeat)
 {
-   monstro::requireContext(ctx, __func__);
+   monstro::requireKey(ctx, __func__, key);
    if (ctx->keyboard.isPressed(key))
       return true;
    if (repeat && ctx->keyboard.isDown(key))
@@ -369,7 +318,7 @@ bool monstro_is_key_pressed(MonstroContext *ctx, MonstroKey key, bool repeat)
 
 bool monstro_is_key_released(MonstroContext *ctx, MonstroKey key)
 {
-   return monstro::requireContext(ctx, __func__)->keyboard.isReleased(key);
+   return monstro::requireKey(ctx, __func__, key)->keyboard.isReleased(key);
 }
 
 MonstroModFlags monstro_get_key_mods(MonstroContext *ctx)

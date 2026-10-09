@@ -42,6 +42,22 @@ Context *requireContext(Context *ctx, const char *function, std::initializer_lis
    return ctx;
 }
 
+Context *requireMouseButton(Context *ctx, const char *function, MonstroMouseButton button)
+{
+   requireContext(ctx, function);
+   MONSTRO_REQUIRE(button >= 0 && button < MONSTRO_MOUSE_BUTTON_COUNT, "%s: mouse button %d is outside 0..%d", function,
+                   (int)button, MONSTRO_MOUSE_BUTTON_COUNT - 1);
+   return ctx;
+}
+
+Context *requireKey(Context *ctx, const char *function, MonstroKey key)
+{
+   requireContext(ctx, function);
+   MONSTRO_REQUIRE(key >= 0 && key < MONSTRO_KEY_COUNT, "%s: key %d is outside 0..%d", function, (int)key,
+                   MONSTRO_KEY_COUNT - 1);
+   return ctx;
+}
+
 Window *requireWindow(Context *ctx, const char *function, std::initializer_list<RequiredArg> args)
 {
    MONSTRO_REQUIRE(ctx, "%s: the context must not be null", function);
@@ -664,7 +680,8 @@ bool monstro_is_item_active(MonstroContext *ctx) { return requireContext(ctx, __
 
 bool monstro_is_item_clicked(MonstroContext *ctx, MonstroMouseButton button)
 {
-   return requireContext(ctx, __func__)->last_item_hovered && monstro_is_mouse_clicked(ctx, button, false);
+   monstro::requireMouseButton(ctx, __func__, button);
+   return ctx->last_item_hovered && monstro_is_mouse_clicked(ctx, button, false);
 }
 
 bool monstro_is_item_edited(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_edited; }

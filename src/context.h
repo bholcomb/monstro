@@ -137,6 +137,9 @@ struct Context
 
 // The context an API function works on: it must not be null, nor any of args.
 Context *requireContext(Context *ctx, const char *function, std::initializer_list<RequiredArg> args = {});
+// The context, for an API function given a mouse button or key: it must be one Monstro tracks.
+Context *requireMouseButton(Context *ctx, const char *function, MonstroMouseButton button);
+Context *requireKey(Context *ctx, const char *function, MonstroKey key);
 // The window an API function draws into: the context must be valid and inside a frame, and args not null.
 Window *requireWindow(Context *ctx, const char *function, std::initializer_list<RequiredArg> args = {});
 
