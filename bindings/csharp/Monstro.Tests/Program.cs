@@ -1,5 +1,6 @@
 // Console checks against the real native library, like Mobius.Tests.
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -57,31 +58,46 @@ unsafe class Program
         }
         finally { NativeLibrary.Free(library); }
 
-        Native.monstro_init();
-        using (var ui = new MonstroContext())
+        // Opaque C pointers are distinct handle types, never a bare IntPtr.
+        var handleTypes = new[] { typeof(MonstroEnv), typeof(MonstroContext), typeof(MonstroFont), typeof(MonstroTheme), typeof(MonstroCanvas), typeof(MonstroFileDialogState) };
+        Check("typed handles", handleTypes.All(h => h.IsValueType && Marshal.SizeOf(h) == IntPtr.Size));
+        var nativeMethods = typeof(Native).GetMethods().Where(m => m.GetCustomAttribute<DllImportAttribute>() != null).ToArray();
+        Check("no IntPtr in the C API mirror", nativeMethods.All(m => m.ReturnType != typeof(IntPtr) && m.GetParameters().All(p => p.ParameterType != typeof(IntPtr))));
+        Check("init returns an environment", typeof(Native).GetMethod("monstro_init")!.ReturnType == typeof(MonstroEnv));
+        Check("context create takes an environment", typeof(Native).GetMethod("monstro_context_create")!.GetParameters()[0].ParameterType == typeof(MonstroEnv));
+
+        using (var env = new Env())
+        using (var ui = env.CreateContext())
         {
-            Throws<InvalidOperationException>("draw before frame", () => ui.GetDrawData());
             Throws<InvalidOperationException>("widget before frame", () => ui.Button("early"));
-            Throws<InvalidOperationException>("end before begin", ui.EndFrame);
+            Throws<InvalidOperationException>("end before begin", () => ui.EndFrame());
             Throws<ArgumentOutOfRangeException>("non-finite dimensions", () => ui.BeginFrame(float.NaN, 480, 0.01f));
             for (int frame = 0; frame < 2; frame++)
             {
                 ui.BeginFrame(640, 480, 1.0f / 60);
                 Throws<InvalidOperationException>("double begin", () => ui.BeginFrame(640, 480, 0.01f));
-                Throws<InvalidOperationException>("read during frame", () => ui.GetDrawData());
                 ui.DrawTriangle(new() { x = 10, y = 10 }, new() { x = 100, y = 10 }, new() { x = 10, y = 100 }, 0xffffffff);
-                ui.EndFrame();
-                var data = ui.GetDrawData();
+                DrawData data = ui.EndFrame();
                 Check("frame resets vertex/index buffers", data.Vertices.Length == 3 && data.Indices.Length == 3);
                 Check("triangle position by-value struct", data.Vertices[0].position[0] == 10 && data.Vertices[0].position[1] == 10);
-                Check("draw commands", data.Commands.Length == 1 && data.Commands[0].index_count == 3);
-                Check("indices reference vertices", data.Indices.All(i => i < data.Vertices.Length));
+                var commands = data.Commands;
+                Check("draw commands", commands.Length == 1 && commands[0].index_count == 3 && commands[0].vertex_count == 3);
+                bool inRange = true;
+                foreach (uint index in data.Indices) inRange &= index < commands[0].vertex_count;
+                Check("indices count from the command's vertex offset", inRange);
+                Check("a frame unlike the last is changed", data.Changed);
                 if (frame == 0)
                 {
+                    DrawDataCopy copy = data.Copy();
                     ui.BeginFrame(640, 480, 0);
-                    ui.EndFrame();
-                    Check("empty frame", ui.GetDrawData().Indices.Length == 0);
-                    Check("copied data survives next frame", data.Indices.Length == 3 && data.Vertices[0].position[0] == 10);
+                    Check("the view is stale once its canvas builds another frame", !data.IsValid);
+                    bool threw = false;
+                    try { _ = data.Vertices.Length; }
+                    catch (InvalidOperationException) { threw = true; }
+                    Check("a stale view throws", threw);
+                    DrawData empty = ui.EndFrame();
+                    Check("empty frame", empty.Indices.Length == 0 && empty.FrameId == copy.FrameId + 1);
+                    Check("copied data survives the next frame", copy.Indices.Length == 3 && copy.Vertices[0].position[0] == 10);
                 }
             }
 
@@ -95,18 +111,29 @@ unsafe class Program
             ui.AddInputText("héλlo 🚀");
             Check("UTF-8 input/result", Native.Utf8(Native.monstro_get_input_text(ui.Handle)) == "héλlo 🚀");
 
-            var font = ui.LoadFont(args[1], 18);
-            Check("font atlas", font.Width > 0 && font.Height > 0 && font.Pixels.Length == font.Width * font.Height);
-            Check("font format", font.Format == MonstroTextureFormat.R8);
-            font.SetTexture(123);
-            Check("font texture ID", Native.monstro_font_get_atlas_texture(font.Handle) == 123);
-            MonstroVec2 measured = Native.monstro_font_measure_text(font.Handle, "café", 0);
+            ulong versionBefore = env.Atlas.Version;
+            Font font = env.LoadFont("sans", args[1], 18);
+            Font fromBytes = env.LoadFont("sans-bytes", File.ReadAllBytes(args[1]), 14);
+            AtlasView atlas = env.Atlas;
+            Check("one RGBA8 atlas", atlas.Format == MonstroTextureFormat.Rgba8 && atlas.Pixels.Length == atlas.Width * atlas.Height * 4);
+            Check("atlas version follows loads", atlas.Version > versionBefore);
+            Check("default font is the first loaded", env.DefaultFont is Font d && d.Handle == font.Handle);
+            Check("font lookup", env.FindFont("sans-bytes", 14) is Font f && f.Handle == fromBytes.Handle && fromBytes.Name == "sans-bytes");
+            env.AtlasTexture = 123;
+            Check("atlas texture ID", env.AtlasTexture == 123);
+            MonstroVec2 measured = font.Measure("café");
             Check("UTF-8 font measurement", measured.x > 0 && measured.y > 0);
             MonstroGlyph glyph;
             Check("glyph output struct", Native.monstro_font_get_glyph(font.Handle, (uint)'A', &glyph) && glyph.advance[0] > 0);
-            Throws<InvalidOperationException>("font failure", () => ui.LoadFont("no-such-font.ttf", 18));
+            Throws<InvalidOperationException>("font failure", () => env.LoadFont("missing", "no-such-font.ttf", 18));
+
+            MonstroSettings settings = env.Settings;
+            settings.key_repeat_delay = 0.5f;
+            env.Settings = settings;
+            Check("settings round trip", env.Settings.key_repeat_delay == 0.5f);
 
             ui.BeginFrame(640, 480, 1.0f / 60);
+            Throws<InvalidOperationException>("environment read-only during a frame", () => env.LoadFont("late", args[1], 12));
             ui.SetNextWindowPosition(10, 10);
             ui.SetNextWindowSize(300, 350);
             if (ui.BeginWindow("héllo"))
@@ -127,10 +154,10 @@ unsafe class Program
             }
             ui.EndWindow();
             Native.monstro_draw_custom(Native.monstro_get_window_canvas(ui.Handle), &DrawCallback, (void*)42);
-            ui.EndFrame();
-            var draw = ui.GetDrawData();
+            DrawData draw = ui.EndFrame();
             Check("widgets generate geometry", draw.Vertices.Length > 3 && draw.Indices.Length > 3);
-            Check("font texture in draw commands", draw.Commands.Any(c => c.texture_id == 123));
+            Check("text and fills batch on the atlas", draw.Commands.ToArray().Count(c => c.texture_id == 123) >= 1 &&
+                                                       draw.Commands.ToArray().All(c => c.custom_draw != null || c.texture_id == 123));
             GC.Collect();
             foreach (var command in draw.Commands)
             {
@@ -140,52 +167,123 @@ unsafe class Program
             }
             Check("Cdecl custom draw callback", _callbacks == 1);
 
-            MonstroStyle original = *Native.monstro_get_style(ui.Handle);
-            MonstroStyle styled = original;
+            MonstroStyle styled = ui.Style;
             styled.button.normal.type = MonstroStyleItemType.Color;
             styled.button.normal.data.color = Native.MONSTRO_COLOR_RED;
-            Native.monstro_set_style(ui.Handle, &styled);
-            Check("style union write/read", Native.monstro_get_style(ui.Handle)->button.normal.data.color.r == 1);
-            Native.monstro_set_style(ui.Handle, &original);
+            styled.button.rounding = 7;
+            Theme hud = env.RegisterTheme("hud", styled);
+            Check("style union through a theme", hud.Style.button.normal.data.color.r == 1 && hud.Name == "hud");
+            Throws<ArgumentException>("theme names are unique", () => env.RegisterTheme("hud", styled));
+            using (var other = env.CreateContext())
+            {
+                ui.Theme = hud;
+                other.Theme = hud;
+                ui.BeginFrame(640, 480, 0.01f);
+                Throws<InvalidOperationException>("theme between frames", () => ui.Theme = hud);
+                MonstroStyleButton pushed = ui.Style.button;
+                pushed.rounding = 33;
+                ui.PushButtonStyle(pushed);
+                Check("push changes the frame's copy", ui.Style.button.rounding == 33);
+                Check("push leaves the shared theme", hud.Style.button.rounding == 7);
+                ui.PopStyle();
+                ui.Label("shared");
+                DrawDataCopy uiFrame = ui.EndFrame().Copy();
+                other.BeginFrame(640, 480, 0.01f);
+                Check("push leaves the next context", other.Style.button.rounding == 7);
+                other.Label("shared");
+                DrawData otherFrame = other.EndFrame();
+                Check("two contexts share the font atlas", otherFrame.ContentHash == uiFrame.ContentHash);
+                Throws<InvalidOperationException>("environment disposal waits for its contexts", env.Dispose);
+            }
 
             ui.Dispose();
             ui.Dispose();
             Throws<ObjectDisposedException>("disposed context", () => { _ = ui.Handle; });
-            Throws<ObjectDisposedException>("disposed font owner", () => font.SetTexture(123));
         }
-        using (var other = new MonstroContext())
-        { other.BeginFrame(100, 100, 0.01f); other.EndFrame(); Check("independent context", other.GetDrawData().Indices.Length == 0); }
-        using (var edit = new MonstroContext())
+
+        // Host buffers: the same frame into the canvas's own buffers and into split host streams.
         {
-            edit.LoadFont(args[1], 18);
+            MonstroEnvConfig config = Native.monstro_env_config_default();
+            config.vertex_layout.buffer_count = 2;
+            config.vertex_layout.stride[0] = 8;
+            config.vertex_layout.stride[1] = 12;
+            config.vertex_layout.position = new() { buffer = 0, offset = 0 };
+            config.vertex_layout.color = new() { buffer = 1, offset = 0 };
+            config.vertex_layout.texcoord = new() { buffer = 1, offset = 4 };
+            using var env = new Env(config);
+            env.LoadFont("sans", args[1], 16);
+            using var ui = env.CreateContext();
+            void Draw()
+            {
+                ui.SetNextWindowPosition(20, 20);
+                ui.SetNextWindowSize(300, 200);
+                ui.BeginWindow("Host");
+                ui.Label("streams");
+                ui.Button("Go");
+                ui.EndWindow();
+            }
+            ui.BeginFrame(400, 300, 0.01f);
+            Draw();
+            DrawDataCopy own = ui.EndFrame().Copy();
+            byte[] positions = new byte[4096 * 8];
+            byte[] attributes = new byte[4096 * 12];
+            uint[] indices = new uint[4096 * 3];
+            Array.Fill(positions, (byte)0xcd);
+            Array.Fill(attributes, (byte)0xcd);
+            var buffers = new FrameBuffers(new Memory<byte>[] { positions, attributes }, indices);
+            ui.BeginFrame(400, 300, 0.01f, buffers);
+            Draw();
+            DrawData host = ui.EndFrame();
+            Check("host frame equals the own frame", host.ContentHash == own.ContentHash && !host.Changed && host.DrawnIntoHostVertexBuffers &&
+                                                     host.DrawnIntoHostIndices && host.Vertices.IsEmpty && host.IndexCount == own.Indices.Length);
+            bool same = indices.AsSpan(0, own.Indices.Length).SequenceEqual(own.Indices);
+            for (int i = 0; i < own.Vertices.Length; i++)
+            {
+                MonstroVertex v = own.Vertices[i];
+                same &= BitConverter.ToSingle(positions, i * 8) == v.position[0] && BitConverter.ToSingle(positions, i * 8 + 4) == v.position[1];
+                same &= BitConverter.ToUInt32(attributes, i * 12) == v.color;
+                same &= BitConverter.ToSingle(attributes, i * 12 + 4) == v.texcoord[0] && BitConverter.ToSingle(attributes, i * 12 + 8) == v.texcoord[1];
+            }
+            Check("split host streams hold the same vertices", same);
+            Throws<ArgumentException>("streams must match the layout", () => ui.BeginFrame(400, 300, 0.01f, new FrameBuffers(new Memory<byte>[] { positions }, default)));
+
+            using var second = env.CreateContext();
+            ui.BeginFrame(400, 300, 0.01f);
+            Throws<InvalidOperationException>("one canvas is lent at a time", () => second.BeginFrame(400, 300, 0.01f));
+            ui.EndFrame();
+        }
+
+        using (var edit = new Env())
+        using (var ctx = edit.CreateContext())
+        {
+            edit.LoadFont("sans", args[1], 18);
             string text = "A";
-            edit.BeginFrame(400, 100, 0.01f);
-            edit.InputText("edit", ref text, 64);
-            MonstroRect rect = Native.monstro_get_item_rect(edit.Handle);
-            edit.EndFrame();
-            edit.SetMousePosition(rect.x + rect.w - 10, rect.y + rect.h / 2);
-            edit.SetMouseButton(MonstroMouseButton.Left, true);
-            edit.BeginFrame(400, 100, 0.01f);
-            edit.InputText("edit", ref text, 64);
-            Check("text activated", edit.WantTextInput);
-            edit.EndFrame();
-            edit.SetMouseButton(MonstroMouseButton.Left, false);
+            ctx.BeginFrame(400, 100, 0.01f);
+            ctx.InputText("edit", ref text, 64);
+            MonstroRect rect = Native.monstro_get_item_rect(ctx.Handle);
+            ctx.EndFrame();
+            ctx.SetMousePosition(rect.x + rect.w - 10, rect.y + rect.h / 2);
+            ctx.SetMouseButton(MonstroMouseButton.Left, true);
+            ctx.BeginFrame(400, 100, 0.01f);
+            ctx.InputText("edit", ref text, 64);
+            Check("text activated", ctx.WantTextInput);
+            ctx.EndFrame();
+            ctx.SetMouseButton(MonstroMouseButton.Left, false);
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-            edit.AddInputText("é");
-            edit.BeginFrame(400, 100, 0.01f);
-            Check("active UTF-8 edit after GC", edit.InputText("edit", ref text, 64) && text == "Aé");
-            edit.EndFrame();
+            ctx.AddInputText("é");
+            ctx.BeginFrame(400, 100, 0.01f);
+            Check("active UTF-8 edit after GC", ctx.InputText("edit", ref text, 64) && text == "Aé");
+            ctx.EndFrame();
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
-            edit.AddInputText("🚀");
-            edit.BeginFrame(400, 100, 0.01f);
-            Check("active edit takes a new buffer each frame", edit.InputText("edit", ref text, 128) && text == "Aé🚀");
-            edit.EndFrame();
+            ctx.AddInputText("🚀");
+            ctx.BeginFrame(400, 100, 0.01f);
+            Check("active edit takes a new buffer each frame", ctx.InputText("edit", ref text, 128) && text == "Aé🚀");
+            ctx.EndFrame();
         }
         Check("color helpers", Native.monstro_color_to_u32(Native.monstro_color_from_u32(0xaabbccdd)) == 0xaabbccdd);
         Check("color clamping", Native.monstro_color_to_u32(new() { r = 2, g = -1, b = float.NaN, a = 0.5f }) == 0x800000ff);
 
         Check("rect boundary", Native.monstro_rect_contains(new() { w = 10, h = 10 }, 0, 0) && !Native.monstro_rect_contains(new() { w = 10, h = 10 }, 10, 5));
-        Native.monstro_shutdown();
         Console.WriteLine($"C# binding: {(_failures == 0 ? "PASS" : "FAIL")} ({_checks} checks, {_failures} failures)");
         return _failures == 0 ? 0 : 1;
     }

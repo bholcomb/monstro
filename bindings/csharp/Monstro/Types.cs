@@ -6,6 +6,90 @@ using System.Runtime.InteropServices;
 
 namespace Monstro;
 
+/// <summary>A native MonstroCanvas*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroCanvas : IEquatable<MonstroCanvas>
+{
+    public readonly IntPtr Handle;
+    public MonstroCanvas(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroCanvas other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroCanvas other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroCanvas a, MonstroCanvas b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroCanvas a, MonstroCanvas b) => a.Handle != b.Handle;
+}
+
+/// <summary>A native MonstroContext*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroContext : IEquatable<MonstroContext>
+{
+    public readonly IntPtr Handle;
+    public MonstroContext(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroContext other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroContext other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroContext a, MonstroContext b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroContext a, MonstroContext b) => a.Handle != b.Handle;
+}
+
+/// <summary>A native MonstroEnv*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroEnv : IEquatable<MonstroEnv>
+{
+    public readonly IntPtr Handle;
+    public MonstroEnv(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroEnv other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroEnv other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroEnv a, MonstroEnv b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroEnv a, MonstroEnv b) => a.Handle != b.Handle;
+}
+
+/// <summary>A native MonstroFileDialogState*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroFileDialogState : IEquatable<MonstroFileDialogState>
+{
+    public readonly IntPtr Handle;
+    public MonstroFileDialogState(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroFileDialogState other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroFileDialogState other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroFileDialogState a, MonstroFileDialogState b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroFileDialogState a, MonstroFileDialogState b) => a.Handle != b.Handle;
+}
+
+/// <summary>A native MonstroFont*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroFont : IEquatable<MonstroFont>
+{
+    public readonly IntPtr Handle;
+    public MonstroFont(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroFont other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroFont other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroFont a, MonstroFont b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroFont a, MonstroFont b) => a.Handle != b.Handle;
+}
+
+/// <summary>A native MonstroTheme*: a typed handle, never null unless IsNull says so.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public readonly struct MonstroTheme : IEquatable<MonstroTheme>
+{
+    public readonly IntPtr Handle;
+    public MonstroTheme(IntPtr handle) => Handle = handle;
+    public bool IsNull => Handle == IntPtr.Zero;
+    public bool Equals(MonstroTheme other) => Handle == other.Handle;
+    public override bool Equals(object? obj) => obj is MonstroTheme other && Equals(other);
+    public override int GetHashCode() => Handle.GetHashCode();
+    public static bool operator ==(MonstroTheme a, MonstroTheme b) => a.Handle == b.Handle;
+    public static bool operator !=(MonstroTheme a, MonstroTheme b) => a.Handle != b.Handle;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct MonstroVec2
 {
@@ -85,7 +169,7 @@ public enum MonstroWindowFlags
     Popup = 16777216,
     Modal = 33554432,
     ChildMenu = 67108864,
-    Default = 2194475,
+    Default = 97323,
     RootDefault = 1056772,
 }
 
@@ -262,13 +346,56 @@ public unsafe struct MonstroVertex
 public unsafe struct MonstroDrawCommand
 {
     public fixed float clip_rect[4];
-    public int layer;
-    public uint order;
     public ulong texture_id;
+    public uint vertex_offset;
+    public uint vertex_count;
     public uint index_offset;
     public uint index_count;
+    public int layer;
     public delegate* unmanaged[Cdecl]<IntPtr, float*, int, void> custom_draw;
     public void* user_data;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroDrawData
+{
+    public MonstroVertex* vertices;
+    public uint vertex_count;
+    public uint* indices;
+    public uint index_count;
+    public MonstroDrawCommand* commands;
+    public uint command_count;
+    public fixed float display_size[2];
+    public ulong content_hash;
+    public byte changed;
+    public ulong atlas_version;
+    public ulong frame_id;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroVertexAttribute
+{
+    public uint buffer;
+    public uint offset;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroVertexLayout
+{
+    public uint buffer_count;
+    public fixed uint stride[4];
+    public MonstroVertexAttribute position;
+    public MonstroVertexAttribute texcoord;
+    public MonstroVertexAttribute color;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroFrameBuffers
+{
+    public fixed ulong vertex_buffers[4];
+    public uint vertex_capacity;
+    public uint* indices;
+    public uint index_capacity;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -341,15 +468,44 @@ public unsafe struct MonstroTextureData
     public MonstroTextureFormat format;
     public nuint data_size;
     public void* data;
+    public ulong version;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroEnvConfig
+{
+    public uint canvas_count;
+    public uint max_vertices;
+    public uint max_indices;
+    public uint max_draw_commands;
+    public uint max_path_points;
+    public uint atlas_width;
+    public uint atlas_height;
+    public uint max_fonts;
+    public uint max_themes;
+    public uint max_icons;
+    public MonstroVertexLayout vertex_layout;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct MonstroSettings
+{
+    public float double_click_time;
+    public float double_click_distance;
+    public float drag_threshold;
+    public float key_repeat_delay;
+    public float key_repeat_rate;
+    public float tooltip_delay;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct MonstroContextConfig
 {
-    public uint max_vertices;
-    public uint max_indices;
-    public uint max_draw_commands;
-    public uint max_path_points;
+    public uint max_windows;
+    public uint max_tree_nodes;
+    public uint max_tab_bars;
+    public uint max_tables;
+    public uint max_popups;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -747,7 +903,7 @@ public unsafe struct MonstroStyleWindow
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct MonstroStyle
 {
-    public IntPtr font;
+    public MonstroFont font;
     public MonstroStyleText text;
     public MonstroStyleButton button;
     public MonstroStyleButton contextual_button;

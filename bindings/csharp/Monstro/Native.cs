@@ -297,338 +297,323 @@ public static unsafe partial class Native
     public static readonly MonstroColor MONSTRO_COLOR_GRAY_50 = new() { r = 0.5f, g = 0.5f, b = 0.5f, a = 0.5f };
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_init();
+    public static extern MonstroEnvConfig monstro_env_config_default();
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_shutdown();
+    public static extern MonstroEnv monstro_init(MonstroEnvConfig* config);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_shutdown(MonstroEnv env);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroEnvConfig monstro_env_get_config(MonstroEnv env);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroSettings monstro_env_get_settings(MonstroEnv env);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_env_set_settings(MonstroEnv env, MonstroSettings* settings);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern MonstroContextConfig monstro_context_config_default();
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_context_create();
+    public static extern MonstroContext monstro_context_create(MonstroEnv env, MonstroContextConfig* config);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_context_create_ex(MonstroContextConfig* config);
+    public static extern void monstro_context_destroy(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_context_destroy(IntPtr ctx);
+    public static extern MonstroEnv monstro_context_get_env(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_context_get_draw_buffer(IntPtr ctx);
+    public static extern void monstro_set_display_size(MonstroContext ctx, float width, float height);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_context_get_draw_commands(IntPtr ctx, MonstroDrawCommand** out_commands, uint* out_count);
+    public static extern void monstro_get_display_size(MonstroContext ctx, float* out_width, float* out_height);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_buffer_get_vertex_buffer(IntPtr buf, MonstroVertex** out_data, nuint* out_byte_size);
+    public static extern void monstro_begin_frame(MonstroContext ctx, float delta_time);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_buffer_get_index_buffer(IntPtr buf, uint** out_data, uint* out_count);
+    public static extern void monstro_begin_frame_into(MonstroContext ctx, float delta_time, MonstroFrameBuffers* buffers);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_buffer_set_vertex_buffer(IntPtr buf, MonstroVertex* buffer, nuint capacity_in_vertices);
+    public static extern MonstroDrawData* monstro_end_frame(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_buffer_set_index_buffer(IntPtr buf, uint* buffer, nuint capacity_in_indices);
+    public static extern MonstroDrawData* monstro_draw_data_copy(MonstroDrawData* data);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_context_set_default_font(IntPtr ctx, IntPtr font);
+    public static extern void monstro_draw_data_free(MonstroDrawData* copy);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_context_get_default_font(IntPtr ctx);
+    public static extern float monstro_get_delta_time(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_display_size(IntPtr ctx, float width, float height);
+    public static extern float monstro_get_time(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_get_display_size(IntPtr ctx, float* out_width, float* out_height);
+    public static extern void monstro_push_id(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_frame(IntPtr ctx, float delta_time);
+    public static extern void monstro_pop_id(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_frame(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_delta_time(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_time(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_id(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_pop_id(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern ulong monstro_get_id(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
+    public static extern ulong monstro_get_id(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_window(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, byte* p_open, MonstroWindowFlags flags);
+    public static extern bool monstro_begin_window(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, byte* p_open, MonstroWindowFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_window(IntPtr ctx);
+    public static extern void monstro_end_window(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_next_window_pos(IntPtr ctx, float x, float y, MonstroCondition cond);
+    public static extern void monstro_set_next_window_pos(MonstroContext ctx, float x, float y, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_next_window_size(IntPtr ctx, float width, float height, MonstroCondition cond);
+    public static extern void monstro_set_next_window_size(MonstroContext ctx, float width, float height, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_next_window_focus(IntPtr ctx);
+    public static extern void monstro_set_next_window_focus(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_pos(IntPtr ctx, float x, float y, MonstroCondition cond);
+    public static extern void monstro_set_window_pos(MonstroContext ctx, float x, float y, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_size(IntPtr ctx, float width, float height, MonstroCondition cond);
+    public static extern void monstro_set_window_size(MonstroContext ctx, float width, float height, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_focus(IntPtr ctx);
+    public static extern void monstro_set_window_focus(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_layout(IntPtr ctx, MonstroLayoutDirection direction);
+    public static extern void monstro_set_window_layout(MonstroContext ctx, MonstroLayoutDirection direction);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_title(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title);
+    public static extern void monstro_set_window_title(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_pos_named(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float x, float y, MonstroCondition cond);
+    public static extern void monstro_set_window_pos_named(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float x, float y, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_size_named(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float width, float height, MonstroCondition cond);
+    public static extern void monstro_set_window_size_named(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float width, float height, MonstroCondition cond);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_focus_named(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
+    public static extern void monstro_set_window_focus_named(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_layout_named(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, MonstroLayoutDirection direction);
+    public static extern void monstro_set_window_layout_named(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, MonstroLayoutDirection direction);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_title_named(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title);
+    public static extern void monstro_set_window_title_named(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroRect monstro_get_window_rect(IntPtr ctx);
+    public static extern MonstroRect monstro_get_window_rect(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_window_pos(IntPtr ctx);
+    public static extern MonstroVec2 monstro_get_window_pos(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_window_size(IntPtr ctx);
+    public static extern MonstroVec2 monstro_get_window_size(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_get_window_canvas(IntPtr ctx);
+    public static extern MonstroCanvas monstro_get_window_canvas(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_scroll_x(IntPtr ctx);
+    public static extern float monstro_get_scroll_x(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_scroll_y(IntPtr ctx);
+    public static extern float monstro_get_scroll_y(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_scroll_x(IntPtr ctx, float scroll_x);
+    public static extern void monstro_set_scroll_x(MonstroContext ctx, float scroll_x);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_scroll_y(IntPtr ctx, float scroll_y);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_window_collapsed(IntPtr ctx);
+    public static extern void monstro_set_scroll_y(MonstroContext ctx, float scroll_y);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_window_focused(IntPtr ctx);
+    public static extern bool monstro_is_window_collapsed(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_window_hovered(IntPtr ctx);
+    public static extern bool monstro_is_window_focused(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_child(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height, MonstroWindowFlags flags);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_child(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_layout(IntPtr ctx, MonstroLayoutDirection direction);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_layout_at(IntPtr ctx, float x, float y, MonstroLayoutDirection direction);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_layout(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_add_item(IntPtr ctx, float width, float height);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_last_item(IntPtr ctx, ulong id, MonstroRect rect, [MarshalAs(UnmanagedType.U1)] bool hovered, [MarshalAs(UnmanagedType.U1)] bool active, [MarshalAs(UnmanagedType.U1)] bool clicked, [MarshalAs(UnmanagedType.U1)] bool edited);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_cursor_pos(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_cursor_pos(IntPtr ctx, float x, float y);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_cursor_screen_pos(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_cursor_screen_pos(IntPtr ctx, float x, float y);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_content_region_avail(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_indent(IntPtr ctx, float indent_width);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_unindent(IntPtr ctx, float indent_width);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_spacer(IntPtr ctx, float size);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_dummy(IntPtr ctx, float width, float height);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_percent(IntPtr ctx, float percent, MonstroLayoutDirection direction);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_columns(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int count);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_columns_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int count, float* widths);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_next_column(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_columns(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_double_click_distance(IntPtr ctx, float distance);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_mouse_drag_threshold(IntPtr ctx, float threshold);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_key_repeat_delay(IntPtr ctx, float delay);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_key_repeat_rate(IntPtr ctx, float rate);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_double_click_distance(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_mouse_drag_threshold(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_key_repeat_delay(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_key_repeat_rate(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_mouse_pos(IntPtr ctx, float x, float y);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_mouse_button(IntPtr ctx, MonstroMouseButton button, [MarshalAs(UnmanagedType.U1)] bool down);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_mouse_wheel(IntPtr ctx, float wheel_x, float wheel_y);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_key(IntPtr ctx, MonstroKey key, [MarshalAs(UnmanagedType.U1)] bool down);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_key_mods(IntPtr ctx, MonstroModFlags mods);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_add_input_text(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? utf8_text);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_mouse_pos(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_mouse_delta(IntPtr ctx);
+    public static extern bool monstro_is_window_hovered(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_mouse_down(IntPtr ctx, MonstroMouseButton button);
+    public static extern bool monstro_begin_child(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height, MonstroWindowFlags flags);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_child(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_begin_layout(MonstroContext ctx, MonstroLayoutDirection direction);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_begin_layout_at(MonstroContext ctx, float x, float y, MonstroLayoutDirection direction);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_layout(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_add_item(MonstroContext ctx, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_last_item(MonstroContext ctx, ulong id, MonstroRect rect, [MarshalAs(UnmanagedType.U1)] bool hovered, [MarshalAs(UnmanagedType.U1)] bool active, [MarshalAs(UnmanagedType.U1)] bool clicked, [MarshalAs(UnmanagedType.U1)] bool edited);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_cursor_pos(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_cursor_pos(MonstroContext ctx, float x, float y);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_cursor_screen_pos(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_cursor_screen_pos(MonstroContext ctx, float x, float y);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_content_region_avail(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_indent(MonstroContext ctx, float indent_width);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_unindent(MonstroContext ctx, float indent_width);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_spacer(MonstroContext ctx, float size);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_dummy(MonstroContext ctx, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern float monstro_percent(MonstroContext ctx, float percent, MonstroLayoutDirection direction);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_begin_columns(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int count);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_begin_columns_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int count, float* widths);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_next_column(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_columns(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_mouse_pos(MonstroContext ctx, float x, float y);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_mouse_button(MonstroContext ctx, MonstroMouseButton button, [MarshalAs(UnmanagedType.U1)] bool down);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_mouse_wheel(MonstroContext ctx, float wheel_x, float wheel_y);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_key(MonstroContext ctx, MonstroKey key, [MarshalAs(UnmanagedType.U1)] bool down);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_set_key_mods(MonstroContext ctx, MonstroModFlags mods);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_add_input_text(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? utf8_text);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_mouse_pos(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_mouse_delta(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_mouse_clicked(IntPtr ctx, MonstroMouseButton button, [MarshalAs(UnmanagedType.U1)] bool repeat);
+    public static extern bool monstro_is_mouse_down(MonstroContext ctx, MonstroMouseButton button);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_mouse_released(IntPtr ctx, MonstroMouseButton button);
+    public static extern bool monstro_is_mouse_clicked(MonstroContext ctx, MonstroMouseButton button, [MarshalAs(UnmanagedType.U1)] bool repeat);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_mouse_double_clicked(IntPtr ctx, MonstroMouseButton button);
+    public static extern bool monstro_is_mouse_released(MonstroContext ctx, MonstroMouseButton button);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_mouse_dragging(IntPtr ctx, MonstroMouseButton button);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_mouse_drag_delta(IntPtr ctx, MonstroMouseButton button);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_mouse_wheel(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_mouse_wheel_h(IntPtr ctx);
+    public static extern bool monstro_is_mouse_double_clicked(MonstroContext ctx, MonstroMouseButton button);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_key_down(IntPtr ctx, MonstroKey key);
+    public static extern bool monstro_is_mouse_dragging(MonstroContext ctx, MonstroMouseButton button);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_mouse_drag_delta(MonstroContext ctx, MonstroMouseButton button);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern float monstro_get_mouse_wheel(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern float monstro_get_mouse_wheel_h(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_key_pressed(IntPtr ctx, MonstroKey key, [MarshalAs(UnmanagedType.U1)] bool repeat);
+    public static extern bool monstro_is_key_down(MonstroContext ctx, MonstroKey key);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_key_released(IntPtr ctx, MonstroKey key);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroModFlags monstro_get_key_mods(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern byte* monstro_get_input_text(IntPtr ctx);
+    public static extern bool monstro_is_key_pressed(MonstroContext ctx, MonstroKey key, [MarshalAs(UnmanagedType.U1)] bool repeat);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_want_capture_mouse(IntPtr ctx);
+    public static extern bool monstro_is_key_released(MonstroContext ctx, MonstroKey key);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroModFlags monstro_get_key_mods(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern byte* monstro_get_input_text(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_want_capture_keyboard(IntPtr ctx);
+    public static extern bool monstro_want_capture_mouse(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_want_text_input(IntPtr ctx);
+    public static extern bool monstro_want_capture_keyboard(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_mouse_cursor(IntPtr ctx, MonstroMouseCursor cursor);
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_want_text_input(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroMouseCursor monstro_get_mouse_cursor(IntPtr ctx);
+    public static extern void monstro_set_mouse_cursor(MonstroContext ctx, MonstroMouseCursor cursor);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyle* monstro_get_style(IntPtr ctx);
+    public static extern MonstroMouseCursor monstro_get_mouse_cursor(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_style(IntPtr ctx, MonstroStyle* style);
+    public static extern MonstroTheme monstro_theme_register(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, MonstroStyle* style);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroTheme monstro_theme_find(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroStyle* monstro_theme_get_style(MonstroTheme theme);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern byte* monstro_theme_get_name(MonstroTheme theme);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_context_set_theme(MonstroContext ctx, MonstroTheme theme);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroTheme monstro_context_get_theme(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern void monstro_style_set_default(MonstroStyle* style);
@@ -640,709 +625,634 @@ public static unsafe partial class Native
     public static extern void monstro_style_set_light(MonstroStyle* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleText* monstro_get_text_style(IntPtr ctx);
+    public static extern MonstroStyle* monstro_get_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleButton* monstro_get_button_style(IntPtr ctx);
+    public static extern MonstroStyleText* monstro_get_text_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleButton* monstro_get_contextual_button_style(IntPtr ctx);
+    public static extern MonstroStyleButton* monstro_get_button_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleButton* monstro_get_menu_button_style(IntPtr ctx);
+    public static extern MonstroStyleButton* monstro_get_contextual_button_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleToggle* monstro_get_option_style(IntPtr ctx);
+    public static extern MonstroStyleButton* monstro_get_menu_button_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleToggle* monstro_get_checkbox_style(IntPtr ctx);
+    public static extern MonstroStyleToggle* monstro_get_option_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleSelectable* monstro_get_selectable_style(IntPtr ctx);
+    public static extern MonstroStyleToggle* monstro_get_checkbox_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleSlider* monstro_get_slider_style(IntPtr ctx);
+    public static extern MonstroStyleSelectable* monstro_get_selectable_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleKnob* monstro_get_knob_style(IntPtr ctx);
+    public static extern MonstroStyleSlider* monstro_get_slider_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleProgress* monstro_get_progress_style(IntPtr ctx);
+    public static extern MonstroStyleKnob* monstro_get_knob_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleProperty* monstro_get_property_style(IntPtr ctx);
+    public static extern MonstroStyleProgress* monstro_get_progress_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleEdit* monstro_get_edit_style(IntPtr ctx);
+    public static extern MonstroStyleProperty* monstro_get_property_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleTree* monstro_get_tree_style(IntPtr ctx);
+    public static extern MonstroStyleEdit* monstro_get_edit_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleTab* monstro_get_tab_style(IntPtr ctx);
+    public static extern MonstroStyleTree* monstro_get_tree_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleTable* monstro_get_table_style(IntPtr ctx);
+    public static extern MonstroStyleTab* monstro_get_tab_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleCombo* monstro_get_combo_style(IntPtr ctx);
+    public static extern MonstroStyleTable* monstro_get_table_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleMenu* monstro_get_menu_style(IntPtr ctx);
+    public static extern MonstroStyleCombo* monstro_get_combo_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleSeparator* monstro_get_separator_style(IntPtr ctx);
+    public static extern MonstroStyleMenu* monstro_get_menu_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleTooltip* monstro_get_tooltip_style(IntPtr ctx);
+    public static extern MonstroStyleSeparator* monstro_get_separator_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleChart* monstro_get_chart_style(IntPtr ctx);
+    public static extern MonstroStyleTooltip* monstro_get_tooltip_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleScrollbar* monstro_get_scrollh_style(IntPtr ctx);
+    public static extern MonstroStyleChart* monstro_get_chart_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleScrollbar* monstro_get_scrollv_style(IntPtr ctx);
+    public static extern MonstroStyleScrollbar* monstro_get_scrollh_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroStyleWindow* monstro_get_window_style(IntPtr ctx);
+    public static extern MonstroStyleScrollbar* monstro_get_scrollv_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_text_style(IntPtr ctx, MonstroStyleText* style);
+    public static extern MonstroStyleWindow* monstro_get_window_style(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern void monstro_push_text_style(MonstroContext ctx, MonstroStyleText* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_contextual_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern void monstro_push_button_style(MonstroContext ctx, MonstroStyleButton* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_menu_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern void monstro_push_contextual_button_style(MonstroContext ctx, MonstroStyleButton* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_option_style(IntPtr ctx, MonstroStyleToggle* style);
+    public static extern void monstro_push_menu_button_style(MonstroContext ctx, MonstroStyleButton* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_checkbox_style(IntPtr ctx, MonstroStyleToggle* style);
+    public static extern void monstro_push_option_style(MonstroContext ctx, MonstroStyleToggle* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_selectable_style(IntPtr ctx, MonstroStyleSelectable* style);
+    public static extern void monstro_push_checkbox_style(MonstroContext ctx, MonstroStyleToggle* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_slider_style(IntPtr ctx, MonstroStyleSlider* style);
+    public static extern void monstro_push_selectable_style(MonstroContext ctx, MonstroStyleSelectable* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_knob_style(IntPtr ctx, MonstroStyleKnob* style);
+    public static extern void monstro_push_slider_style(MonstroContext ctx, MonstroStyleSlider* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_progress_style(IntPtr ctx, MonstroStyleProgress* style);
+    public static extern void monstro_push_knob_style(MonstroContext ctx, MonstroStyleKnob* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_property_style(IntPtr ctx, MonstroStyleProperty* style);
+    public static extern void monstro_push_progress_style(MonstroContext ctx, MonstroStyleProgress* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_edit_style(IntPtr ctx, MonstroStyleEdit* style);
+    public static extern void monstro_push_property_style(MonstroContext ctx, MonstroStyleProperty* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_tree_style(IntPtr ctx, MonstroStyleTree* style);
+    public static extern void monstro_push_edit_style(MonstroContext ctx, MonstroStyleEdit* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_tab_style(IntPtr ctx, MonstroStyleTab* style);
+    public static extern void monstro_push_tree_style(MonstroContext ctx, MonstroStyleTree* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_table_style(IntPtr ctx, MonstroStyleTable* style);
+    public static extern void monstro_push_tab_style(MonstroContext ctx, MonstroStyleTab* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_combo_style(IntPtr ctx, MonstroStyleCombo* style);
+    public static extern void monstro_push_table_style(MonstroContext ctx, MonstroStyleTable* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_menu_style(IntPtr ctx, MonstroStyleMenu* style);
+    public static extern void monstro_push_combo_style(MonstroContext ctx, MonstroStyleCombo* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_separator_style(IntPtr ctx, MonstroStyleSeparator* style);
+    public static extern void monstro_push_menu_style(MonstroContext ctx, MonstroStyleMenu* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_tooltip_style(IntPtr ctx, MonstroStyleTooltip* style);
+    public static extern void monstro_push_separator_style(MonstroContext ctx, MonstroStyleSeparator* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_chart_style(IntPtr ctx, MonstroStyleChart* style);
+    public static extern void monstro_push_tooltip_style(MonstroContext ctx, MonstroStyleTooltip* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_scrollh_style(IntPtr ctx, MonstroStyleScrollbar* style);
+    public static extern void monstro_push_chart_style(MonstroContext ctx, MonstroStyleChart* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_scrollv_style(IntPtr ctx, MonstroStyleScrollbar* style);
+    public static extern void monstro_push_scrollh_style(MonstroContext ctx, MonstroStyleScrollbar* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_window_style(IntPtr ctx, MonstroStyleWindow* style);
+    public static extern void monstro_push_scrollv_style(MonstroContext ctx, MonstroStyleScrollbar* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_text_style(IntPtr ctx, MonstroStyleText* style);
+    public static extern void monstro_push_window_style(MonstroContext ctx, MonstroStyleWindow* style);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern void monstro_pop_style(MonstroContext ctx, int count);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_contextual_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern MonstroFont monstro_font_load_ttf(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, void* ttf_data, nuint ttf_data_size, float pixel_size, uint first_code_point, uint code_point_count);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_menu_button_style(IntPtr ctx, MonstroStyleButton* style);
+    public static extern MonstroFont monstro_font_load_ttf_from_file(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, [MarshalAs(UnmanagedType.LPUTF8Str)] string? path, float pixel_size, uint first_code_point, uint code_point_count);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_option_style(IntPtr ctx, MonstroStyleToggle* style);
+    public static extern MonstroFont monstro_font_load_bitmap(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, void* image_data, uint image_width, uint image_height, uint grid_cols, uint grid_rows, uint first_code_point, float font_size_px);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_checkbox_style(IntPtr ctx, MonstroStyleToggle* style);
+    public static extern MonstroFont monstro_font_load_bitmap_from_file(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, [MarshalAs(UnmanagedType.LPUTF8Str)] string? path, uint grid_cols, uint grid_rows, uint first_code_point, float font_size_px);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_selectable_style(IntPtr ctx, MonstroStyleSelectable* style);
+    public static extern MonstroFont monstro_font_find(MonstroEnv env, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float size);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_slider_style(IntPtr ctx, MonstroStyleSlider* style);
+    public static extern void monstro_env_set_default_font(MonstroEnv env, MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_knob_style(IntPtr ctx, MonstroStyleKnob* style);
+    public static extern MonstroFont monstro_env_get_default_font(MonstroEnv env);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_progress_style(IntPtr ctx, MonstroStyleProgress* style);
+    public static extern MonstroTextureData monstro_env_get_atlas(MonstroEnv env);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_property_style(IntPtr ctx, MonstroStyleProperty* style);
+    public static extern void monstro_env_set_atlas_texture(MonstroEnv env, ulong texture_id);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_edit_style(IntPtr ctx, MonstroStyleEdit* style);
+    public static extern ulong monstro_env_get_atlas_texture(MonstroEnv env);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_tree_style(IntPtr ctx, MonstroStyleTree* style);
+    public static extern MonstroVec2 monstro_font_measure_text(MonstroFont font, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text_utf8, float wrap_width);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_tab_style(IntPtr ctx, MonstroStyleTab* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_table_style(IntPtr ctx, MonstroStyleTable* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_combo_style(IntPtr ctx, MonstroStyleCombo* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_menu_style(IntPtr ctx, MonstroStyleMenu* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_separator_style(IntPtr ctx, MonstroStyleSeparator* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_tooltip_style(IntPtr ctx, MonstroStyleTooltip* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_chart_style(IntPtr ctx, MonstroStyleChart* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_scrollh_style(IntPtr ctx, MonstroStyleScrollbar* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_scrollv_style(IntPtr ctx, MonstroStyleScrollbar* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_window_style(IntPtr ctx, MonstroStyleWindow* style);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_pop_style(IntPtr ctx, int count);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_manager_create();
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_font_manager_destroy(IntPtr manager);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_context_get_font_manager(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_load_ttf(IntPtr manager, void* ttf_data, nuint ttf_data_size, float pixel_size, uint first_code_point, uint code_point_count, MonstroTextureData* out_atlas_data);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_load_ttf_from_file(IntPtr manager, [MarshalAs(UnmanagedType.LPUTF8Str)] string? path, float pixel_size, uint first_code_point, uint code_point_count, MonstroTextureData* out_atlas_data);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_load_bitmap(IntPtr manager, void* image_data, uint image_width, uint image_height, uint grid_cols, uint grid_rows, uint cell_width, uint cell_height, uint first_code_point, float font_size_px, MonstroTextureData* out_atlas_data);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_load_bitmap_from_file(IntPtr manager, [MarshalAs(UnmanagedType.LPUTF8Str)] string? path, uint grid_cols, uint grid_rows, uint first_code_point, float font_size_px, MonstroTextureData* out_atlas_data);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_font_destroy(IntPtr font);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_font_set_atlas_texture(IntPtr font, ulong texture_id);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern ulong monstro_font_get_atlas_texture(IntPtr font);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_font_add(IntPtr manager, IntPtr font, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float size);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_font_find(IntPtr manager, [MarshalAs(UnmanagedType.LPUTF8Str)] string? name, float size);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_font_measure_text(IntPtr font, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text_utf8, float wrap_width);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_font_measure_text_wrapped(IntPtr font, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text_utf8, float wrap_width);
+    public static extern MonstroVec2 monstro_font_measure_text_wrapped(MonstroFont font, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text_utf8, float wrap_width);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_font_get_glyph(IntPtr font, uint code_point, MonstroGlyph* out_glyph);
+    public static extern bool monstro_font_get_glyph(MonstroFont font, uint code_point, MonstroGlyph* out_glyph);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern uint monstro_font_get_glyph_count(IntPtr font);
+    public static extern uint monstro_font_get_glyph_count(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_font_get_size(IntPtr font);
+    public static extern byte* monstro_font_get_name(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_font_get_line_height(IntPtr font);
+    public static extern float monstro_font_get_size(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_font_get_ascent(IntPtr font);
+    public static extern float monstro_font_get_line_height(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_font_get_descent(IntPtr font);
+    public static extern float monstro_font_get_ascent(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_font_get_atlas_size(IntPtr font, uint* out_width, uint* out_height);
+    public static extern float monstro_font_get_descent(MonstroFont font);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_register_icon_atlas(IntPtr ctx, uint first_id, ulong texture_id, int icon_width, int icon_height, int atlas_width, int atlas_height, int cols, int rows);
+    public static extern void monstro_register_icon_atlas(MonstroEnv env, uint first_id, ulong texture_id, int icon_width, int icon_height, int atlas_width, int atlas_height, int cols, int rows);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_register_icon(IntPtr ctx, uint id, ulong texture_id, MonstroVec2 uv_min, MonstroVec2 uv_max);
+    public static extern void monstro_register_icon(MonstroEnv env, uint id, ulong texture_id, MonstroVec2 uv_min, MonstroVec2 uv_max);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_register_icon_font(IntPtr ctx, IntPtr font, uint first_codepoint, int count);
+    public static extern void monstro_register_icon_font(MonstroEnv env, MonstroFont font, uint first_codepoint, int count);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_get_icon(IntPtr ctx, uint id, ulong* out_texture_id, MonstroVec2* out_uv_min, MonstroVec2* out_uv_max);
+    public static extern bool monstro_get_icon(MonstroEnv env, uint id, ulong* out_texture_id, MonstroVec2* out_uv_min, MonstroVec2* out_uv_max);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_icon(IntPtr ctx, uint icon_id, float size);
+    public static extern void monstro_icon(MonstroContext ctx, uint icon_id, float size);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern byte* monstro_icon_str(uint id, byte* buf, nuint buf_size);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_push_clip_rect(IntPtr canvas, MonstroRect rect);
+    public static extern void monstro_push_clip_rect(MonstroCanvas canvas, MonstroRect rect);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_pop_clip_rect(IntPtr canvas);
+    public static extern void monstro_pop_clip_rect(MonstroCanvas canvas);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_line(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, uint color, float thickness);
+    public static extern void monstro_draw_line(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, uint color, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_rect(IntPtr canvas, MonstroRect rect, uint color, float rounding, MonstroCornerFlags corners, float thickness);
+    public static extern void monstro_draw_rect(MonstroCanvas canvas, MonstroRect rect, uint color, float rounding, MonstroCornerFlags corners, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_rect_filled(IntPtr canvas, MonstroRect rect, uint color, float rounding, MonstroCornerFlags corners);
+    public static extern void monstro_draw_rect_filled(MonstroCanvas canvas, MonstroRect rect, uint color, float rounding, MonstroCornerFlags corners);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_rect_filled_multi_color(IntPtr canvas, MonstroRect rect, uint col_ul, uint col_ur, uint col_lr, uint col_ll);
+    public static extern void monstro_draw_rect_filled_multi_color(MonstroCanvas canvas, MonstroRect rect, uint col_ul, uint col_ur, uint col_lr, uint col_ll);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_triangle(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color, float thickness);
+    public static extern void monstro_draw_triangle(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_triangle_filled(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color);
+    public static extern void monstro_draw_triangle_filled(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_circle(IntPtr canvas, MonstroVec2 center, float radius, uint color, int num_segments, float thickness);
+    public static extern void monstro_draw_circle(MonstroCanvas canvas, MonstroVec2 center, float radius, uint color, int num_segments, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_circle_filled(IntPtr canvas, MonstroVec2 center, float radius, uint color, int num_segments);
+    public static extern void monstro_draw_circle_filled(MonstroCanvas canvas, MonstroVec2 center, float radius, uint color, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_quad(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color, float thickness);
+    public static extern void monstro_draw_quad(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_quad_filled(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color);
+    public static extern void monstro_draw_quad_filled(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_polyline(IntPtr canvas, MonstroVec2* points, int count, uint color, [MarshalAs(UnmanagedType.U1)] bool closed, float thickness);
+    public static extern void monstro_draw_polyline(MonstroCanvas canvas, MonstroVec2* points, int count, uint color, [MarshalAs(UnmanagedType.U1)] bool closed, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_convex_poly_filled(IntPtr canvas, MonstroVec2* points, int count, uint color);
+    public static extern void monstro_draw_convex_poly_filled(MonstroCanvas canvas, MonstroVec2* points, int count, uint color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_bezier_cubic(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color, float thickness, int num_segments);
+    public static extern void monstro_draw_bezier_cubic(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint color, float thickness, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_bezier_quadratic(IntPtr canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color, float thickness, int num_segments);
+    public static extern void monstro_draw_bezier_quadratic(MonstroCanvas canvas, MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint color, float thickness, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_text(IntPtr canvas, IntPtr font, MonstroVec2 pos, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
+    public static extern void monstro_draw_text(MonstroCanvas canvas, MonstroFont font, MonstroVec2 pos, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_text_aligned(IntPtr canvas, IntPtr font, MonstroRect rect, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, MonstroAlign align);
+    public static extern void monstro_draw_text_aligned(MonstroCanvas canvas, MonstroFont font, MonstroRect rect, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, MonstroAlign align);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_text_wrapped(IntPtr canvas, IntPtr font, MonstroVec2 pos, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float wrap_width);
+    public static extern void monstro_draw_text_wrapped(MonstroCanvas canvas, MonstroFont font, MonstroVec2 pos, uint color, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float wrap_width);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_image(IntPtr canvas, ulong texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint tint_color);
+    public static extern void monstro_draw_image(MonstroCanvas canvas, ulong texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint tint_color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_image_rounded(IntPtr canvas, ulong texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint tint_color, float rounding, MonstroCornerFlags corners);
+    public static extern void monstro_draw_image_rounded(MonstroCanvas canvas, ulong texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint tint_color, float rounding, MonstroCornerFlags corners);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_nine_patch(IntPtr canvas, MonstroNinePatch* patch, MonstroRect rect, uint tint_color);
+    public static extern void monstro_draw_nine_patch(MonstroCanvas canvas, MonstroNinePatch* patch, MonstroRect rect, uint tint_color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_custom(IntPtr canvas, delegate* unmanaged[Cdecl]<IntPtr, float*, int, void> callback, void* user_data);
+    public static extern void monstro_draw_custom(MonstroCanvas canvas, delegate* unmanaged[Cdecl]<IntPtr, float*, int, void> callback, void* user_data);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_clear(IntPtr canvas);
+    public static extern void monstro_path_clear(MonstroCanvas canvas);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_move_to(IntPtr canvas, MonstroVec2 pos);
+    public static extern void monstro_path_move_to(MonstroCanvas canvas, MonstroVec2 pos);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_line_to(IntPtr canvas, MonstroVec2 pos);
+    public static extern void monstro_path_line_to(MonstroCanvas canvas, MonstroVec2 pos);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_arc_to(IntPtr canvas, MonstroVec2 center, float radius, float a_min, float a_max, int num_segments);
+    public static extern void monstro_path_arc_to(MonstroCanvas canvas, MonstroVec2 center, float radius, float a_min, float a_max, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_bezier_cubic_to(IntPtr canvas, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, int num_segments);
+    public static extern void monstro_path_bezier_cubic_to(MonstroCanvas canvas, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_bezier_quadratic_to(IntPtr canvas, MonstroVec2 p2, MonstroVec2 p3, int num_segments);
+    public static extern void monstro_path_bezier_quadratic_to(MonstroCanvas canvas, MonstroVec2 p2, MonstroVec2 p3, int num_segments);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_fill(IntPtr canvas, uint color);
+    public static extern void monstro_path_fill(MonstroCanvas canvas, uint color);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_path_stroke(IntPtr canvas, uint color, [MarshalAs(UnmanagedType.U1)] bool closed, float thickness);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_item_hovered(IntPtr ctx);
+    public static extern void monstro_path_stroke(MonstroCanvas canvas, uint color, [MarshalAs(UnmanagedType.U1)] bool closed, float thickness);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_item_active(IntPtr ctx);
+    public static extern bool monstro_is_item_hovered(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_item_clicked(IntPtr ctx, MonstroMouseButton button);
+    public static extern bool monstro_is_item_active(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_item_edited(IntPtr ctx);
+    public static extern bool monstro_is_item_clicked(MonstroContext ctx, MonstroMouseButton button);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_item_deactivated_after_edit(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroRect monstro_get_item_rect(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_item_rect_min(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_item_rect_max(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroVec2 monstro_get_item_rect_size(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_disabled(IntPtr ctx, [MarshalAs(UnmanagedType.U1)] bool disabled);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_disabled(IntPtr ctx);
+    public static extern bool monstro_is_item_edited(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_disabled(IntPtr ctx);
+    public static extern bool monstro_is_item_deactivated_after_edit(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroRect monstro_get_item_rect(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_item_rect_min(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_item_rect_max(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroVec2 monstro_get_item_rect_size(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_begin_disabled(MonstroContext ctx, [MarshalAs(UnmanagedType.U1)] bool disabled);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_disabled(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_button_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float width, float height, MonstroButtonFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_is_disabled(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_button(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_button_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float width, float height, MonstroButtonFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_button_sized(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_button(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_image_button_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, ulong texture_id, float width, float height, MonstroButtonFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_button_sized(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_image_button(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, ulong texture_id, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_image_button_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, ulong texture_id, float width, float height, MonstroButtonFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_invisible_button_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height, MonstroButtonFlags flags);
+    public static extern bool monstro_image_button(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, ulong texture_id, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_invisible_button(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_label(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_label_sized(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float width, float height);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_label_wrapped(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float wrap_width);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_label_colored(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, MonstroColor color);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_image(IntPtr ctx, ulong texture_id, float width, float height);
+    public static extern bool monstro_invisible_button_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height, MonstroButtonFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_checkbox(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* @value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_invisible_button(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_label(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_label_sized(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_label_wrapped(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, float wrap_width);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_label_colored(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text, MonstroColor color);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_image(MonstroContext ctx, ulong texture_id, float width, float height);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_radio_button(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int button_value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_checkbox(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* @value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_slider_float(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_radio_button(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int button_value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_slider_int(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int min, int max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_slider_float(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_slider_float_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float width, float height, MonstroSliderFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_slider_int(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int min, int max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_slider_int_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int min, int max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float width, float height, MonstroSliderFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_slider_float_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float width, float height, MonstroSliderFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_knob(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_slider_int_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int min, int max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float width, float height, MonstroSliderFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_knob_sized(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float diameter, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_progress_bar(IntPtr ctx, float fraction, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? overlay);
+    public static extern bool monstro_knob(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_input_text(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* buf, nuint buf_size, MonstroInputTextFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_knob_sized(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float min, float max, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, float diameter, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_progress_bar(MonstroContext ctx, float fraction, float width, float height, [MarshalAs(UnmanagedType.LPUTF8Str)] string? overlay);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_input_text_multiline(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* buf, nuint buf_size, float width, float height, MonstroInputTextFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_input_text(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* buf, nuint buf_size, MonstroInputTextFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_input_int(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int step, int step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_input_text_multiline(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* buf, nuint buf_size, float width, float height, MonstroInputTextFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_input_float(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float step, float step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_input_int(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* @value, int step, int step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_input_double(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, double* @value, double step, double step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_input_float(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, float* @value, float step, float step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_selectable(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, MonstroSelectableFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_input_double(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, double* @value, double step, double step_fast, [MarshalAs(UnmanagedType.LPUTF8Str)] string? format, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_selectable_sized(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, float width, float height, MonstroSelectableFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_selectable(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, MonstroSelectableFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_combo(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.LPUTF8Str)] string? preview_value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_combo(IntPtr ctx);
+    public static extern bool monstro_selectable_sized(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, float width, float height, MonstroSelectableFlags flags, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_combo(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* current_item, byte** items, int items_count, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+    public static extern bool monstro_begin_combo(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.LPUTF8Str)] string? preview_value, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_combo(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_menu_bar(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_menu_bar(IntPtr ctx);
+    public static extern bool monstro_combo(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, int* current_item, byte** items, int items_count, [MarshalAs(UnmanagedType.LPUTF8Str)] string? tooltip);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_menu(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.U1)] bool enabled);
+    public static extern bool monstro_begin_menu_bar(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_menu(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_menu_item(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, [MarshalAs(UnmanagedType.U1)] bool enabled);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_open_popup(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_open_popup_ex(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.U1)] bool modal);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_close_current_popup(IntPtr ctx);
+    public static extern void monstro_end_menu_bar(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_popup(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroWindowFlags extra_flags);
+    public static extern bool monstro_begin_menu(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.U1)] bool enabled);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_menu(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_popup_modal(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_open, MonstroWindowFlags flags);
+    public static extern bool monstro_menu_item(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* selected, [MarshalAs(UnmanagedType.U1)] bool enabled);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_open_popup(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_open_popup_ex(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, [MarshalAs(UnmanagedType.U1)] bool modal);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_close_current_popup(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_popup_context_item(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button);
+    public static extern bool monstro_begin_popup(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroWindowFlags extra_flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_popup_context_window(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button, [MarshalAs(UnmanagedType.U1)] bool also_over_items);
+    public static extern bool monstro_begin_popup_modal(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_open, MonstroWindowFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_popup_context_void(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_popup(IntPtr ctx);
+    public static extern bool monstro_begin_popup_context_item(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_is_popup_open(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id);
+    public static extern bool monstro_begin_popup_context_window(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button, [MarshalAs(UnmanagedType.U1)] bool also_over_items);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_tree_node(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
+    public static extern bool monstro_begin_popup_context_void(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroMouseButton mouse_button);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_popup(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_tree_node_id(IntPtr ctx, ulong id, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_tree_node(IntPtr ctx);
+    public static extern bool monstro_is_popup_open(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_tree_leaf(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
+    public static extern bool monstro_begin_tree_node(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_collapsing_header(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_visible);
+    public static extern bool monstro_begin_tree_node_id(MonstroContext ctx, ulong id, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern float monstro_get_tree_indent(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_set_tree_indent(IntPtr ctx, float indent);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_begin_group(IntPtr ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_group(IntPtr ctx);
+    public static extern void monstro_end_tree_node(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_tab_bar(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, MonstroTabBarFlags flags);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_tab_bar(IntPtr ctx);
+    public static extern bool monstro_tree_leaf(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTreeFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_tab_item(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_open);
+    public static extern bool monstro_collapsing_header(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_visible);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_tab_item(IntPtr ctx);
+    public static extern float monstro_get_tree_indent(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_begin_table(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int column_count, MonstroTableFlags flags, float width, float height);
+    public static extern void monstro_set_tree_indent(MonstroContext ctx, float indent);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_end_table(IntPtr ctx);
+    public static extern void monstro_begin_group(MonstroContext ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_table_setup_column(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTableColumnFlags flags, float init_width);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_table_headers_row(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_table_next_row(IntPtr ctx);
+    public static extern void monstro_end_group(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_table_next_column(IntPtr ctx);
+    public static extern bool monstro_begin_tab_bar(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, MonstroTabBarFlags flags);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_tab_bar(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_table_set_column_index(IntPtr ctx, int column);
+    public static extern bool monstro_begin_tab_item(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, byte* p_open);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_tooltip(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_separator(IntPtr ctx);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_separator_text(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
+    public static extern void monstro_end_tab_item(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_color_picker(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroColor* color, MonstroColorPickerFlags flags);
+    public static extern bool monstro_begin_table(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? str_id, int column_count, MonstroTableFlags flags, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_end_table(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_table_setup_column(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroTableColumnFlags flags, float init_width);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_table_headers_row(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_table_next_row(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_color_button(IntPtr ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroColor color, float width, float height);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern IntPtr monstro_file_dialog_create();
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_file_dialog_destroy(IntPtr state);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_file_dialog_open(IntPtr state, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title, [MarshalAs(UnmanagedType.LPUTF8Str)] string? start_path, [MarshalAs(UnmanagedType.LPUTF8Str)] string? filter, MonstroFileDialogMode mode);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroFileDialogResult monstro_file_dialog_draw(IntPtr ctx, IntPtr state);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern byte* monstro_file_dialog_get_path(IntPtr state);
+    public static extern bool monstro_table_next_column(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     [return: MarshalAs(UnmanagedType.U1)]
-    public static extern bool monstro_file_dialog_is_open(IntPtr state);
+    public static extern bool monstro_table_set_column_index(MonstroContext ctx, int column);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_tooltip(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_separator(MonstroContext ctx);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_separator_text(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? text);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_color_picker(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroColor* color, MonstroColorPickerFlags flags);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_color_button(MonstroContext ctx, [MarshalAs(UnmanagedType.LPUTF8Str)] string? label, MonstroColor color, float width, float height);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroFileDialogState monstro_file_dialog_create();
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_file_dialog_destroy(MonstroFileDialogState state);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern void monstro_file_dialog_open(MonstroFileDialogState state, [MarshalAs(UnmanagedType.LPUTF8Str)] string? title, [MarshalAs(UnmanagedType.LPUTF8Str)] string? start_path, [MarshalAs(UnmanagedType.LPUTF8Str)] string? filter, MonstroFileDialogMode mode);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext ctx, MonstroFileDialogState state);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    public static extern byte* monstro_file_dialog_get_path(MonstroFileDialogState state);
+
+    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.U1)]
+    public static extern bool monstro_file_dialog_is_open(MonstroFileDialogState state);
 }

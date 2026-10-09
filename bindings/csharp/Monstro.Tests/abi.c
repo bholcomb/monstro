@@ -4,6 +4,12 @@
 #include <string.h>
 
 size_t monstro_binding_sizeof(const char *name) {
+    if (!strcmp(name, "MonstroCanvas")) return sizeof(MonstroCanvas *);
+    if (!strcmp(name, "MonstroContext")) return sizeof(MonstroContext *);
+    if (!strcmp(name, "MonstroEnv")) return sizeof(MonstroEnv *);
+    if (!strcmp(name, "MonstroFileDialogState")) return sizeof(MonstroFileDialogState *);
+    if (!strcmp(name, "MonstroFont")) return sizeof(MonstroFont *);
+    if (!strcmp(name, "MonstroTheme")) return sizeof(MonstroTheme *);
     if (!strcmp(name, "MonstroVec2")) return sizeof(MonstroVec2);
     if (!strcmp(name, "MonstroRect")) return sizeof(MonstroRect);
     if (!strcmp(name, "MonstroColor")) return sizeof(MonstroColor);
@@ -18,6 +24,10 @@ size_t monstro_binding_sizeof(const char *name) {
     if (!strcmp(name, "MonstroMouseCursor")) return sizeof(MonstroMouseCursor);
     if (!strcmp(name, "MonstroVertex")) return sizeof(MonstroVertex);
     if (!strcmp(name, "MonstroDrawCommand")) return sizeof(MonstroDrawCommand);
+    if (!strcmp(name, "MonstroDrawData")) return sizeof(MonstroDrawData);
+    if (!strcmp(name, "MonstroVertexAttribute")) return sizeof(MonstroVertexAttribute);
+    if (!strcmp(name, "MonstroVertexLayout")) return sizeof(MonstroVertexLayout);
+    if (!strcmp(name, "MonstroFrameBuffers")) return sizeof(MonstroFrameBuffers);
     if (!strcmp(name, "MonstroNinePatch")) return sizeof(MonstroNinePatch);
     if (!strcmp(name, "MonstroSprite")) return sizeof(MonstroSprite);
     if (!strcmp(name, "MonstroStyleItemType")) return sizeof(MonstroStyleItemType);
@@ -26,6 +36,8 @@ size_t monstro_binding_sizeof(const char *name) {
     if (!strcmp(name, "MonstroTextureFormat")) return sizeof(MonstroTextureFormat);
     if (!strcmp(name, "MonstroGlyph")) return sizeof(MonstroGlyph);
     if (!strcmp(name, "MonstroTextureData")) return sizeof(MonstroTextureData);
+    if (!strcmp(name, "MonstroEnvConfig")) return sizeof(MonstroEnvConfig);
+    if (!strcmp(name, "MonstroSettings")) return sizeof(MonstroSettings);
     if (!strcmp(name, "MonstroContextConfig")) return sizeof(MonstroContextConfig);
     if (!strcmp(name, "MonstroStyleText")) return sizeof(MonstroStyleText);
     if (!strcmp(name, "MonstroStyleButton")) return sizeof(MonstroStyleButton);
@@ -63,6 +75,12 @@ size_t monstro_binding_sizeof(const char *name) {
     return (size_t)-1;
 }
 size_t monstro_binding_offsetof(const char *type, const char *field) {
+    if (!strcmp(type, "MonstroCanvas") && !strcmp(field, "Handle")) return 0;
+    if (!strcmp(type, "MonstroContext") && !strcmp(field, "Handle")) return 0;
+    if (!strcmp(type, "MonstroEnv") && !strcmp(field, "Handle")) return 0;
+    if (!strcmp(type, "MonstroFileDialogState") && !strcmp(field, "Handle")) return 0;
+    if (!strcmp(type, "MonstroFont") && !strcmp(field, "Handle")) return 0;
+    if (!strcmp(type, "MonstroTheme") && !strcmp(field, "Handle")) return 0;
     if (!strcmp(type, "MonstroVec2") && !strcmp(field, "x")) return offsetof(MonstroVec2, x);
     if (!strcmp(type, "MonstroVec2") && !strcmp(field, "y")) return offsetof(MonstroVec2, y);
     if (!strcmp(type, "MonstroRect") && !strcmp(field, "x")) return offsetof(MonstroRect, x);
@@ -77,13 +95,36 @@ size_t monstro_binding_offsetof(const char *type, const char *field) {
     if (!strcmp(type, "MonstroVertex") && !strcmp(field, "texcoord")) return offsetof(MonstroVertex, texcoord);
     if (!strcmp(type, "MonstroVertex") && !strcmp(field, "color")) return offsetof(MonstroVertex, color);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "clip_rect")) return offsetof(MonstroDrawCommand, clip_rect);
-    if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "layer")) return offsetof(MonstroDrawCommand, layer);
-    if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "order")) return offsetof(MonstroDrawCommand, order);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "texture_id")) return offsetof(MonstroDrawCommand, texture_id);
+    if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "vertex_offset")) return offsetof(MonstroDrawCommand, vertex_offset);
+    if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "vertex_count")) return offsetof(MonstroDrawCommand, vertex_count);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "index_offset")) return offsetof(MonstroDrawCommand, index_offset);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "index_count")) return offsetof(MonstroDrawCommand, index_count);
+    if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "layer")) return offsetof(MonstroDrawCommand, layer);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "custom_draw")) return offsetof(MonstroDrawCommand, custom_draw);
     if (!strcmp(type, "MonstroDrawCommand") && !strcmp(field, "user_data")) return offsetof(MonstroDrawCommand, user_data);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "vertices")) return offsetof(MonstroDrawData, vertices);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "vertex_count")) return offsetof(MonstroDrawData, vertex_count);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "indices")) return offsetof(MonstroDrawData, indices);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "index_count")) return offsetof(MonstroDrawData, index_count);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "commands")) return offsetof(MonstroDrawData, commands);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "command_count")) return offsetof(MonstroDrawData, command_count);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "display_size")) return offsetof(MonstroDrawData, display_size);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "content_hash")) return offsetof(MonstroDrawData, content_hash);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "changed")) return offsetof(MonstroDrawData, changed);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "atlas_version")) return offsetof(MonstroDrawData, atlas_version);
+    if (!strcmp(type, "MonstroDrawData") && !strcmp(field, "frame_id")) return offsetof(MonstroDrawData, frame_id);
+    if (!strcmp(type, "MonstroVertexAttribute") && !strcmp(field, "buffer")) return offsetof(MonstroVertexAttribute, buffer);
+    if (!strcmp(type, "MonstroVertexAttribute") && !strcmp(field, "offset")) return offsetof(MonstroVertexAttribute, offset);
+    if (!strcmp(type, "MonstroVertexLayout") && !strcmp(field, "buffer_count")) return offsetof(MonstroVertexLayout, buffer_count);
+    if (!strcmp(type, "MonstroVertexLayout") && !strcmp(field, "stride")) return offsetof(MonstroVertexLayout, stride);
+    if (!strcmp(type, "MonstroVertexLayout") && !strcmp(field, "position")) return offsetof(MonstroVertexLayout, position);
+    if (!strcmp(type, "MonstroVertexLayout") && !strcmp(field, "texcoord")) return offsetof(MonstroVertexLayout, texcoord);
+    if (!strcmp(type, "MonstroVertexLayout") && !strcmp(field, "color")) return offsetof(MonstroVertexLayout, color);
+    if (!strcmp(type, "MonstroFrameBuffers") && !strcmp(field, "vertex_buffers")) return offsetof(MonstroFrameBuffers, vertex_buffers);
+    if (!strcmp(type, "MonstroFrameBuffers") && !strcmp(field, "vertex_capacity")) return offsetof(MonstroFrameBuffers, vertex_capacity);
+    if (!strcmp(type, "MonstroFrameBuffers") && !strcmp(field, "indices")) return offsetof(MonstroFrameBuffers, indices);
+    if (!strcmp(type, "MonstroFrameBuffers") && !strcmp(field, "index_capacity")) return offsetof(MonstroFrameBuffers, index_capacity);
     if (!strcmp(type, "MonstroNinePatch") && !strcmp(field, "texture_id")) return offsetof(MonstroNinePatch, texture_id);
     if (!strcmp(type, "MonstroNinePatch") && !strcmp(field, "uv_min")) return offsetof(MonstroNinePatch, uv_min);
     if (!strcmp(type, "MonstroNinePatch") && !strcmp(field, "uv_max")) return offsetof(MonstroNinePatch, uv_max);
@@ -112,10 +153,29 @@ size_t monstro_binding_offsetof(const char *type, const char *field) {
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "format")) return offsetof(MonstroTextureData, format);
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "data_size")) return offsetof(MonstroTextureData, data_size);
     if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "data")) return offsetof(MonstroTextureData, data);
-    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_vertices")) return offsetof(MonstroContextConfig, max_vertices);
-    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_indices")) return offsetof(MonstroContextConfig, max_indices);
-    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_draw_commands")) return offsetof(MonstroContextConfig, max_draw_commands);
-    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_path_points")) return offsetof(MonstroContextConfig, max_path_points);
+    if (!strcmp(type, "MonstroTextureData") && !strcmp(field, "version")) return offsetof(MonstroTextureData, version);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "canvas_count")) return offsetof(MonstroEnvConfig, canvas_count);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_vertices")) return offsetof(MonstroEnvConfig, max_vertices);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_indices")) return offsetof(MonstroEnvConfig, max_indices);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_draw_commands")) return offsetof(MonstroEnvConfig, max_draw_commands);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_path_points")) return offsetof(MonstroEnvConfig, max_path_points);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "atlas_width")) return offsetof(MonstroEnvConfig, atlas_width);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "atlas_height")) return offsetof(MonstroEnvConfig, atlas_height);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_fonts")) return offsetof(MonstroEnvConfig, max_fonts);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_themes")) return offsetof(MonstroEnvConfig, max_themes);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "max_icons")) return offsetof(MonstroEnvConfig, max_icons);
+    if (!strcmp(type, "MonstroEnvConfig") && !strcmp(field, "vertex_layout")) return offsetof(MonstroEnvConfig, vertex_layout);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "double_click_time")) return offsetof(MonstroSettings, double_click_time);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "double_click_distance")) return offsetof(MonstroSettings, double_click_distance);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "drag_threshold")) return offsetof(MonstroSettings, drag_threshold);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "key_repeat_delay")) return offsetof(MonstroSettings, key_repeat_delay);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "key_repeat_rate")) return offsetof(MonstroSettings, key_repeat_rate);
+    if (!strcmp(type, "MonstroSettings") && !strcmp(field, "tooltip_delay")) return offsetof(MonstroSettings, tooltip_delay);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_windows")) return offsetof(MonstroContextConfig, max_windows);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_tree_nodes")) return offsetof(MonstroContextConfig, max_tree_nodes);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_tab_bars")) return offsetof(MonstroContextConfig, max_tab_bars);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_tables")) return offsetof(MonstroContextConfig, max_tables);
+    if (!strcmp(type, "MonstroContextConfig") && !strcmp(field, "max_popups")) return offsetof(MonstroContextConfig, max_popups);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "color")) return offsetof(MonstroStyleText, color);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "background")) return offsetof(MonstroStyleText, background);
     if (!strcmp(type, "MonstroStyleText") && !strcmp(field, "padding")) return offsetof(MonstroStyleText, padding);
