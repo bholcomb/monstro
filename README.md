@@ -13,7 +13,8 @@ A C API immediate mode UI library with a C++ internal implementation.
 - Interaction a host can rely on: one hovered item (the one on top), no hover
   where an item is clipped away, activated and deactivated edges, IDs that
   survive live labels, and queued input so no click is lost between frames
-  (see the [guide](docs/GUIDE.md#interaction-rules))
+  and a tap fires in the next frame (see the
+  [guide](docs/GUIDE.md#interaction-rules))
 - Fails hard and loudly on misuse and exhausted capacities instead of throwing
   or silently dropping output (see the [guide](docs/GUIDE.md#errors-and-limits))
 

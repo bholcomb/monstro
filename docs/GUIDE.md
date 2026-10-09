@@ -202,8 +202,8 @@ Monstro through setter functions.
 | Window resize | `monstro_set_display_size(ctx, w, h)` |
 
 Input is queued, not sampled: each call records a change, and the next frames
-take the changes in order, so a press and release between two frames still
-click.  Calling a setter with the state it already has records nothing, so
+take the changes in order, so a press and release between two frames click in
+the next frame.  Calling a setter with the state it already has records nothing, so
 forwarding events from callbacks and polling the whole state once a frame both
 work.  See [Input between frames](#input-between-frames).
 
@@ -708,12 +708,15 @@ depth).  Within a window, items drawn later cover items drawn earlier, so of
 two overlapping buttons only the second lights up and fires.  A disabled item
 is never hovered but still covers what is under it.
 
-Monstro learns which item is on top as the frame is built, so it keeps the
-answer from the previous frame: where the mouse has just arrived and nothing
-is known yet, the first item under it is hovered for that frame.  Input is
-taken so that a press always lands after the frame that saw the mouse arrive
-(see [Input between frames](#input-between-frames)), so a press always goes
-to the item on top.
+Monstro learns which item is on top only as the frame is built, after the
+items under it have been drawn, so it takes the answer from the previous
+frame: every item is recorded with the rect where it shows, and when a frame
+begins, the last item recorded under the mouse in the window on top is the
+one on top there, wherever the mouse has moved since.  A press that arrives
+with a move goes to that item in the same frame.  An item drawn for the first
+time is not in the record yet; where nothing on top is known, the first item
+under the mouse is hovered for that frame.  The record holds `max_items` items
+a frame; a frame that draws more stops the program.
 
 ### Clipping
 
@@ -729,15 +732,17 @@ or scrollbar, a resize grip), edited (a text or number field) or open (a
 combo).  While a held item is active, no other item hovers or activates:
 dragging a slider across a button leaves the button dark, and releasing over
 it does not click it.  A held item lets go when the button is released,
-wherever the mouse is, or when it is disabled.
+wherever the mouse is, or when it is disabled.  A tap holds an item for one
+frame: it becomes active and lets go in that frame.
 
 ### Activated and deactivated
 
 `monstro_is_item_activated` holds in the frame an item becomes active and
 `monstro_is_item_deactivated` in the frame it stops;
 `monstro_is_item_deactivated_after_edit` holds when it stops and its value
-changed at any point while it was active.  A host that sends one command per
-change, rather than one per frame, acts on these edges:
+changed at any point while it was active.  A tap reports both in its frame.
+A host that sends one command per change, rather than one per frame, acts on
+these edges:
 
 ```c
 monstro_slider_float(ctx, "throttle##Throttle", &throttle, 0.0f, 1.0f, "%.2f", NULL);
@@ -769,13 +774,31 @@ context; windows of different contexts never meet.
 
 The input setters queue changes (up to `max_input_events`), and each frame
 takes them in order until one would change something that frame already
-changed: the same button or key again, a press after a move, or a move after
-a press.  The rest wait for the following frames.  So a press and release
-between two frames are seen in two frames and click; a tap on a touch screen
-that moves, presses and releases between two frames is seen in three -- the
-move, so the item on top at the new position is known, then the press on it,
-then the release.  Every change reaches the UI in the order it happened, at
-the cost of a frame or two of latency for changes that arrive together.
+changed.  A press is taken with the move before it, and a release with the
+press before it, so a click, or a tap on a touch screen that moves, presses
+and releases between two frames, is seen in the next frame as the button
+pressed and released (and not down), and the item tapped fires in that frame.
+An item that follows the mouse while held is held for that frame and let go
+at its end: a slider jumps to where it was tapped and reports activated and
+deactivated after edit together.
+
+The rest wait for the following frames: a move after a button change, so the
+button changes where the mouse was; a release then a press of the same
+button, so a held item lets go first; a second tap; and a key's second
+change.  A double tap between two frames is seen as two taps in two frames,
+and still double-clicks.  Every change reaches the UI in the order it
+happened.
+
+Which item a tap lands on comes from the last frame, the usual immediate-mode
+caveat: it goes to the item the last frame showed on top at that point, which
+is what the user saw when they tapped.  Where that changed since -- the host
+scrolled or moved things between frames, or a wheel movement taken with the
+tap scrolls the panel under it -- the tap can land on nothing for that frame.
+The frame a button is pressed in may also carry the move that brought the
+mouse there: drags by movement (window resize and move, scrollbars, table
+column grips, knobs) start from where it pressed, but
+`monstro_get_mouse_delta` includes that move, so a custom widget that drags
+by the delta skips the frame of the press, as the node example does.
 
 Wheel movements are summed, moves in a row are merged, and setting a state
 that is already current queues nothing.  Modifiers and typed text are not
@@ -865,8 +888,9 @@ MonstroContext* ctx = monstro_context_create(env, &config);
 | `max_tables` | 8 |
 | `max_popups`: popups open at once | 8 |
 | `max_input_events`: input events waiting for a frame | 64 |
+| `max_items`: items drawn in a frame where they show, recorded to find the one on top | 512 |
 
-A default context holds about 32 KB; a default environment about 7.4 MB
+A default context holds about 48 KB; a default environment about 7.4 MB
 (a 2.9 MB canvas and a 4 MB atlas).
 
 The remaining limits are nesting depths and per-frame scratch, fixed for now:
@@ -2357,7 +2381,7 @@ left open; see Errors and Limits.
 
 **One environment, many contexts.** Load fonts and register themes and icons
 once, in one environment, and give each UI (each screen, panel or tool window)
-its own context.  A context costs about 32 KB with the default capacities, so
+its own context.  A context costs about 48 KB with the default capacities, so
 contexts are cheap; the canvas and atlas are paid once.
 
 **Render a frame before building the next.** Draw data lives in the canvas
