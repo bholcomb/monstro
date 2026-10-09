@@ -188,3 +188,112 @@ TEST(turned_text_is_the_aligned_text_turned_about_its_pivot)
       CHECK(near(unturned.position[0], upright.position[0]) && near(unturned.position[1], upright.position[1]));
    }
 }
+
+/* ------------------------------------------------------------------------- */
+/* Vertical sliders                                                          */
+/* ------------------------------------------------------------------------- */
+
+// A screen with one control placed at (100, 100), drawn by draw each frame.
+template <typename Draw> struct OneControl
+{
+   Ui ui;
+   Draw draw;
+   MonstroRect rect = {};
+   bool changed = false, activated = false, deactivated = false;
+
+   explicit OneControl(Draw d) : draw(d) {}
+
+   void frame()
+   {
+      ui.begin();
+      begin_screen(ui);
+      monstro_set_cursor_screen_pos(ui.ctx, 100, 100);
+      changed = draw(ui.ctx);
+      rect = monstro_get_item_rect(ui.ctx);
+      activated = monstro_is_item_activated(ui.ctx);
+      deactivated = monstro_is_item_deactivated(ui.ctx);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   }
+
+   void press(float x, float y)
+   {
+      ui.moveMouse(x, y);
+      ui.pressLeft(true);
+      frame();
+   }
+
+   void release()
+   {
+      ui.pressLeft(false);
+      frame();
+   }
+
+   // Pressed and released between two frames, then one frame.
+   void tap(float x, float y)
+   {
+      ui.moveMouse(x, y);
+      ui.pressLeft(true);
+      ui.pressLeft(false);
+      frame();
+   }
+};
+
+template <typename Draw> static OneControl<Draw> one_control(Draw draw) { return OneControl<Draw>(draw); }
+
+TEST(a_vertical_slider_runs_from_its_minimum_at_the_bottom_to_its_maximum_at_the_top)
+{
+   float value = 0.0f;
+   auto t = one_control(
+       [&](MonstroContext *ctx)
+       {
+          return monstro_slider_float_ex(ctx, "lift##", &value, 0.0f, 100.0f, nullptr, 30.0f, 200.0f,
+                                         MONSTRO_SLIDER_VERTICAL, nullptr);
+       });
+   t.frame();
+   // No shown label: the slider is its bar alone, at the cursor (below the slider's padding).
+   MonstroRect r = t.rect;
+   CHECK(r.x == 100 && r.w == 30 && r.h == 200);
+
+   // Held a quarter of the way down, then dragged to the bottom.
+   t.press(r.x + 15, r.y + 50);
+   CHECK(t.changed && t.activated && near(value, 75.0f));
+   t.ui.moveMouse(r.x + 15, r.y + 300);
+   t.frame();
+   CHECK(near(value, 0.0f));
+   t.release();
+   CHECK(t.deactivated && near(value, 0.0f));
+
+   // A tap sets the value where it lands and starts and ends in its frame.
+   t.tap(r.x + 15, r.y + 100);
+   CHECK(t.changed && t.activated && t.deactivated && near(value, 50.0f));
+   t.frame();
+   CHECK(!t.changed && near(value, 50.0f));
+}
+
+TEST(a_vertical_slider_fills_from_the_bottom)
+{
+   float value = 25.0f;
+   uint32_t first = 0;
+   const MonstroDrawData *data = nullptr;
+   Ui ui;
+   ui.begin();
+   begin_screen(ui);
+   monstro_set_cursor_screen_pos(ui.ctx, 100, 100);
+   first = ui.vertexCount();
+   monstro_slider_float_ex(ui.ctx, "lift##", &value, 0.0f, 100.0f, nullptr, 30.0f, 200.0f, MONSTRO_SLIDER_VERTICAL,
+                           nullptr);
+   MonstroRect r = monstro_get_item_rect(ui.ctx);
+   monstro_end_window(ui.ctx);
+   data = ui.end();
+   // The filled part is drawn in the slider's fill colour, over the bottom quarter.
+   uint32_t fill = monstro_color_to_u32(monstro_get_slider_style(ui.ctx)->bar_filled);
+   float top = 1e9f, bottom = -1e9f;
+   for (uint32_t i = first; i < data->vertex_count; i++)
+      if (data->vertices[i].color == fill)
+      {
+         top = std::fmin(top, data->vertices[i].position[1]);
+         bottom = std::fmax(bottom, data->vertices[i].position[1]);
+      }
+   CHECK(near(top, r.y + 150.0f, 0.5f) && near(bottom, r.y + 200.0f, 0.5f));
+}

@@ -22,6 +22,7 @@ typedef enum MonstroSelectableFlags {
     MONSTRO_SELECTABLE_HAS_TOGGLE       = 1 << 6
 } MonstroSelectableFlags;
 
+/* A vertical slider runs from its minimum at the bottom to its maximum at the top. */
 typedef enum MonstroSliderFlags {
     MONSTRO_SLIDER_NONE     = 0,
     MONSTRO_SLIDER_VERTICAL = 1 << 0
