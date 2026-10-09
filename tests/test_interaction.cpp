@@ -418,6 +418,21 @@ TEST(a_tap_on_overlapping_buttons_fires_only_the_one_on_top)
    CHECK(t.over_clicks == 1 && t.under_clicks == 0);
 }
 
+FATAL_TEST(drawing_more_items_than_the_record_holds_aborts, "item record full: capacity 8, needed 9",
+           "raise MonstroContextConfig.max_items")
+{
+   MonstroContextConfig config = monstro_context_config_default();
+   config.max_items = 8;
+   Ui ui(true, &config);
+   ui.begin();
+   for (int i = 0; i < 9; i++)
+   {
+      char label[16];
+      std::snprintf(label, sizeof(label), "b%d", i);
+      monstro_button(ui.ctx, label, nullptr);
+   }
+}
+
 /* ------------------------------------------------------------------------- */
 /* Clipping                                                                  */
 /* ------------------------------------------------------------------------- */
