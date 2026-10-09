@@ -61,7 +61,7 @@ static void execute_command(Console *con, const char *line)
 
    if (con->history_count < CONSOLE_MAX_HISTORY)
    {
-      strncpy(con->history[con->history_count], line, CONSOLE_MAX_CMD_LEN - 1);
+      snprintf(con->history[con->history_count], CONSOLE_MAX_CMD_LEN, "%s", line);
       con->history_count++;
    }
    con->history_pos = -1;
@@ -71,18 +71,12 @@ static void execute_command(Console *con, const char *line)
    char cmd_name[64] = {};
    const char *args = nullptr;
    const char *sp = strchr(line, ' ');
+   size_t len = sp ? (size_t)(sp - line) : strlen(line);
+   if (len >= sizeof(cmd_name))
+      len = sizeof(cmd_name) - 1;
+   memcpy(cmd_name, line, len);
    if (sp)
-   {
-      size_t len = (size_t)(sp - line);
-      if (len >= sizeof(cmd_name))
-         len = sizeof(cmd_name) - 1;
-      memcpy(cmd_name, line, len);
       args = sp + 1;
-   }
-   else
-   {
-      strncpy(cmd_name, line, sizeof(cmd_name) - 1);
-   }
 
    for (int i = 0; i < con->command_count; i++)
    {
