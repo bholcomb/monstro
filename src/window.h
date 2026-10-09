@@ -35,7 +35,7 @@ struct Window
    int group_base = 0;
    int clip_base = 0;
    int layer_base = 0;
-   int draw_rank = 0; // position in the frame's draw order, set at the end of the frame
+   int draw_rank = 0; // position in the draw order; see Context::rankWindowsForDrawing
 
    MonstroVec2 pos = {0.0f, 0.0f};
    MonstroVec2 size = {0.0f, 0.0f};
@@ -87,8 +87,6 @@ struct Window
    void remove();
    void makeLastSibling();
 
-   // Numbers this window and those after it in draw order: itself, its later siblings, then its children.
-   int rankForDrawing(int rank);
    int layoutDepth() const;
    int groupDepth() const;
    Canvas &canvas() const;

@@ -1119,16 +1119,67 @@ void Window::makeLastSibling()
    }
 }
 
-int Window::rankForDrawing(int rank)
+/*
+ * Draw order. A window draws, then the windows begun after it at the same
+ * level (its later siblings), then its popups, menus and combo lists, so those
+ * stay above the windows that follow it. Child panels (begin_child) are part
+ * of their parent: they draw right after it, at its depth, so a window in
+ * front covers them. Tooltips draw last, over everything.
+ */
+static bool is_panel(const Window *w) { return (w->flags & MONSTRO_WINDOW_CHILD) != 0; }
+
+static bool is_tooltip(const Window *w) { return (w->flags & MONSTRO_WINDOW_TOOLTIP) != 0; }
+
+// A window's child panels, and theirs, right after it.
+static int rank_panels(Window *w, int rank)
 {
-   // A window, then its later siblings, then its children: a window's popups, menus and combos draw above
-   // every window that follows it, which keeps them on top.
-   draw_rank = rank++;
-   if (sibling)
-      rank = sibling->rankForDrawing(rank);
-   if (child)
-      rank = child->rankForDrawing(rank);
+   for (Window *c = w->child; c; c = c->sibling)
+   {
+      if (is_panel(c))
+      {
+         c->draw_rank = rank++;
+         rank = rank_panels(c, rank);
+      }
+   }
    return rank;
+}
+
+static int rank_chain(Window *first, int rank);
+
+// The popups of a window and of its child panels.
+static int rank_popups(Window *w, int rank)
+{
+   rank = rank_chain(w->child, rank);
+   for (Window *c = w->child; c; c = c->sibling)
+   {
+      if (is_panel(c))
+         rank = rank_popups(c, rank);
+   }
+   return rank;
+}
+
+// A sibling chain, panels and tooltips aside: a window and its panels, its later siblings, then its popups.
+static int rank_chain(Window *first, int rank)
+{
+   Window *w = first;
+   while (w && (is_panel(w) || is_tooltip(w)))
+      w = w->sibling;
+   if (!w)
+      return rank;
+   w->draw_rank = rank++;
+   rank = rank_panels(w, rank);
+   rank = rank_chain(w->sibling, rank);
+   return rank_popups(w, rank);
+}
+
+void Context::rankWindowsForDrawing()
+{
+   int rank = rank_chain(root_window, 0);
+   for (Window &w : windows)
+   {
+      if (is_tooltip(&w))
+         w.draw_rank = rank++;
+   }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1167,19 +1218,6 @@ Window *Context::createWindow(const char *name, MonstroWindowFlags flags)
    return win;
 }
 
-// Walks the windows in draw order; the last one under the point is drawn on top, so it is the one hovered.
-static void findHoveredInDrawOrder(Window *w, float x, float y, bool excludeChildren, Window **topmost)
-{
-   bool takes_input =
-       w->active && (w->flags & MONSTRO_WINDOW_INPUTS) && !(excludeChildren && (w->flags & MONSTRO_WINDOW_CHILD));
-   if (takes_input && monstro_rect_contains(w->getRect(), x, y))
-      *topmost = w;
-   if (w->sibling)
-      findHoveredInDrawOrder(w->sibling, x, y, excludeChildren, topmost);
-   if (w->child)
-      findHoveredInDrawOrder(w->child, x, y, excludeChildren, topmost);
-}
-
 static bool window_belongs_to_modal_popup(const Window *w)
 {
    const Window *current = w;
@@ -1196,8 +1234,16 @@ Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
 {
    if (root_window != nullptr)
    {
+      // Of the windows under the point, the one drawn on top is hovered.
+      rankWindowsForDrawing();
       Window *result = nullptr;
-      findHoveredInDrawOrder(root_window, x, y, excludeChildren, &result);
+      for (Window &w : windows)
+      {
+         bool takes_input =
+             w.active && (w.flags & MONSTRO_WINDOW_INPUTS) && !(excludeChildren && (w.flags & MONSTRO_WINDOW_CHILD));
+         if (takes_input && monstro_rect_contains(w.getRect(), x, y) && (!result || w.draw_rank > result->draw_rank))
+            result = &w;
+      }
 
       if (result && !popup_stack.empty() && popup_stack.top().is_modal)
       {

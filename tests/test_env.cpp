@@ -935,7 +935,7 @@ static MonstroVec2 overlap_middle(Ui &ui, const char *over, const char *under)
    return {(x0 + x1) * 0.5f, (y0 + y1) * 0.5f};
 }
 
-TEST(a_child_panel_draws_and_hovers_after_its_parents_later_siblings)
+TEST(a_child_panel_stays_at_its_parents_depth)
 {
    Ui ui(true);
    auto frame = [&]()
@@ -955,44 +955,109 @@ TEST(a_child_panel_draws_and_hovers_after_its_parents_later_siblings)
       ui.end();
    };
    frame();
+   monstro::Window *a = ui.ctx->findWindow("A");
    monstro::Window *panel = ui.ctx->findWindow("child_A_Panel");
    monstro::Window *b = ui.ctx->findWindow("B");
-   // A window's children draw after its later siblings, child panels included.
-   CHECK(panel->draw_rank > b->draw_rank);
+   // The panel draws right after its parent, so B, in front of A, covers it.
+   CHECK(panel->draw_rank == a->draw_rank + 1);
+   CHECK(b->draw_rank > panel->draw_rank);
    MonstroVec2 point = overlap_middle(ui, "child_A_Panel", "B");
    ui.moveMouse(point.x, point.y);
    frame();
-   CHECK(ui.ctx->hovered_window == panel);
+   CHECK(ui.ctx->hovered_window == b);
 }
 
-TEST(a_tooltip_draws_above_the_windows_begun_before_it)
+TEST(a_combo_in_a_child_panel_still_draws_over_later_windows)
 {
    Ui ui(true);
-   MonstroRect tip = {};
-   auto frame = [&]()
+   ui.begin();
+   monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+   monstro_set_next_window_size(ui.ctx, 300, 250, MONSTRO_COND_ALWAYS);
+   monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+   monstro_begin_child(ui.ctx, "Panel", 250, 150, MONSTRO_WINDOW_BACKGROUND);
+   monstro_open_popup(ui.ctx, "Mode");
+   if (monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr))
+   {
+      bool selected = true;
+      monstro_selectable(ui.ctx, "Orbit", &selected, MONSTRO_SELECTABLE_NONE, nullptr);
+      monstro_end_combo(ui.ctx);
+   }
+   monstro_end_child(ui.ctx);
+   monstro_end_window(ui.ctx);
+   monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
+   monstro_end_window(ui.ctx);
+   ui.end();
+   monstro::Window *list = ui.ctx->findWindow("popup_Mode");
+   monstro::Window *b = ui.ctx->findWindow("B");
+   CHECK(list && list->draw_rank > b->draw_rank);
+}
+
+// A tooltip from a button in A's popup, which is drawn over B; then the same from a modal.
+static void tooltip_frames(Ui &ui, bool modal)
+{
+   MonstroRect button = {};
+   bool open = true;
+   for (int f = 0; f < 8; f++)
    {
       ui.begin(0.25f);
       monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
       monstro_set_next_window_size(ui.ctx, 200, 150, MONSTRO_COND_ALWAYS);
       monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
-      monstro_button(ui.ctx, "Hover me", "A tooltip long enough to reach over window B");
-      tip = monstro_get_item_rect(ui.ctx);
+      if (f == 0)
+         monstro_open_popup_ex(ui.ctx, "Menu", modal);
+      bool begun = false;
+      if (modal)
+      {
+         begun = monstro_begin_popup_modal(ui.ctx, "Menu", &open, MONSTRO_WINDOW_NONE);
+      }
+      else
+      {
+         if (monstro_is_popup_open(ui.ctx, "Menu"))
+            monstro_set_next_window_pos(ui.ctx, 150, 100, MONSTRO_COND_ALWAYS);
+         begun = monstro_begin_popup(ui.ctx, "Menu", MONSTRO_WINDOW_NONE);
+      }
+      if (begun)
+      {
+         monstro_button(ui.ctx, "Hover me for a tip", "A long tooltip that spills over the popup and beyond");
+         button = monstro_get_item_rect(ui.ctx);
+         monstro_end_popup(ui.ctx);
+      }
       monstro_end_window(ui.ctx);
-      monstro_set_next_window_pos(ui.ctx, 60, 40, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_pos(ui.ctx, 100, 60, MONSTRO_COND_ALWAYS);
       monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
-      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_BACKGROUND);
+      monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
       monstro_end_window(ui.ctx);
       ui.end();
-   };
-   frame();
-   // The mouse rests on A's button where B does not cover it.
-   ui.moveMouse(tip.x + 5.0f, tip.y + tip.h * 0.5f);
-   for (int i = 0; i < 6; i++)
-      frame();
-   monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
-   monstro::Window *b = ui.ctx->findWindow("B");
-   CHECK(tooltip && tooltip->active);
-   CHECK(tooltip->draw_rank > b->draw_rank);
+      ui.moveMouse(button.x + 5.0f, button.y + button.h * 0.5f);
+   }
+}
+
+TEST(a_tooltip_draws_over_everything)
+{
+   {
+      Ui ui(true);
+      tooltip_frames(ui, false);
+      monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
+      monstro::Window *popup = ui.ctx->findWindow("popup_Menu");
+      monstro::Window *b = ui.ctx->findWindow("B");
+      CHECK(tooltip && tooltip->active && popup && b);
+      CHECK(popup->draw_rank > b->draw_rank);
+      CHECK(tooltip->draw_rank > popup->draw_rank);
+      // Every command after the first of the tooltip's belongs to it: nothing draws over it.
+      const MonstroDrawData *data = ui.data;
+      CHECK(ui.ctx->canvas == nullptr);
+      monstro::Canvas &c = ui.env->canvases[0];
+      bool tooltip_last = c.command_count > 0 && c.recorded[c.command_count - 1].owner == tooltip;
+      CHECK(tooltip_last && data->command_count == c.command_count);
+   }
+   {
+      Ui ui(true);
+      tooltip_frames(ui, true);
+      monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
+      monstro::Window *modal = ui.ctx->findWindow("modal_Menu");
+      CHECK(tooltip && tooltip->active && modal);
+      CHECK(tooltip->draw_rank > modal->draw_rank);
+   }
 }
 
 TEST(a_modal_over_a_later_window_takes_the_mouse)

@@ -65,6 +65,8 @@ struct Context
    Window *findWindow(const char *name);
    Window *createWindow(const char *name, MonstroWindowFlags flags);
    Window *findHoveredWindow(float x, float y, bool excludeChildren = false);
+   // Numbers every window in draw order, which hover testing follows too.
+   void rankWindowsForDrawing();
    void focusWindow(Window *window);
    void pushWindow(Window *win);
    void popWindow();

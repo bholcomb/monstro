@@ -187,7 +187,7 @@ const MonstroDrawData *Context::endFrame()
    popWindow();
    requireBalanced("monstro_end_frame");
 
-   root_window->rankForDrawing(0);
+   rankWindowsForDrawing();
    const MonstroDrawData *data = canvas->finish(last_content_hash);
    last_content_hash = data->content_hash;
    canvas->draw_data.display_size[0] = display_width;

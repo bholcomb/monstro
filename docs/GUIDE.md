@@ -340,10 +340,12 @@ So a window's fills and text batch into few commands.
 
 Commands come in draw order: a window, then the windows begun after it at the
 same level (its later siblings, which a click brings forward), then its own
-popups, menus, combo lists and child panels, which so stay on top of the
-windows that follow it.  Within a window, commands go by layer, then in the
-order things were drawn.  Hovering follows the same order: of the windows
-under the mouse, the one drawn on top takes it.
+popups, menus and combo lists, which so stay on top of the windows that follow
+it.  Child panels (`monstro_begin_child`) are part of their window: they draw
+right after it, so a window in front covers them.  Tooltips draw last, over
+everything.  Within a window, commands go by layer, then in the order things
+were drawn.  Hovering follows the same order: of the windows under the mouse,
+the one drawn on top takes it (tooltips never take the mouse).
 
 ### Generic rendering loop
 
