@@ -1,6 +1,7 @@
 # Build outputs
 build/
 bin/
+obj/
 dist/
 *.o
 *.d

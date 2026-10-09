@@ -47,6 +47,11 @@ while (running) {
 monstro_destroy_context(ctx);
 ```
 
+## .NET bindings
+
+The .NET 8 binding is in [`bindings/csharp/`](bindings/csharp/README.md), with a
+one-to-one C API mirror, a disposable UI context wrapper, and native-backed tests.
+
 ## License
 
-MIT
+[MIT](LICENSE)

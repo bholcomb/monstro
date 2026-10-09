@@ -191,6 +191,10 @@ Layout *Context::getCurrentLayout()
 extern "C"
 {
 
+// Contexts own their resources; the C API needs no process-wide setup or teardown.
+void monstro_init(void) {}
+void monstro_shutdown(void) {}
+
 MonstroContext *monstro_context_create(void)
 {
    MonstroContext *ctx = new (std::nothrow) MonstroContext();

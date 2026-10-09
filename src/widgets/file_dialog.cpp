@@ -203,8 +203,7 @@ static void refresh_directory(MonstroFileDialogState *state)
          break;
 
       FileEntry *e = &state->entries[state->entry_count];
-      strncpy(e->name, ent->d_name, sizeof(e->name) - 1);
-      e->name[sizeof(e->name) - 1] = '\0';
+      snprintf(e->name, sizeof(e->name), "%s", ent->d_name);
 
       char full[MAX_PATH_LEN];
       snprintf(full, sizeof(full), "%s/%s", state->current_path, ent->d_name);
