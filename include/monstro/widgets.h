@@ -294,6 +294,16 @@ void monstro_end_tab_bar(MonstroContext* ctx);
 bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open);
 void monstro_end_tab_item(MonstroContext* ctx);
 
+/*
+ * Page tabs: a row of count tabs sharing width x height evenly (width 0 fills
+ * the available width, height 0 fits the text), with tab *selected lit. The
+ * selection is the host's, as a slider's value is: pass it every frame, and a
+ * click on another tab writes that tab's index and returns true. Each tab's
+ * ID is its label's within str_id. *selected must be a tab's index.
+ */
+bool monstro_page_tabs(MonstroContext* ctx, const char* str_id, const char* const labels[], int count,
+                       int* selected, float width, float height);
+
 /* ------------------------------------------------------------------------- */
 /* Table                                                                     */
 /* ------------------------------------------------------------------------- */

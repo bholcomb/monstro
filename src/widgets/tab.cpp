@@ -218,3 +218,81 @@ void monstro_end_tab_item(MonstroContext *ctx)
    MONSTRO_REQUIRE(!ctx->canvas->tab_bars.empty(), "monstro_end_tab_item outside a tab bar (window '%s')", win->name);
    ctx->canvas->tab_bars.top()->content_active = false;
 }
+
+bool monstro_page_tabs(MonstroContext *ctx, const char *str_id, const char *const labels[], int count, int *selected,
+                       float width, float height)
+{
+   monstro::Window *win =
+       monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id), MONSTRO_ARG(labels), MONSTRO_ARG(selected)});
+   MONSTRO_REQUIRE(count >= 1, "%s '%s': count is %d; page tabs need at least one tab", __func__, str_id, count);
+   MONSTRO_REQUIRE(*selected >= 0 && *selected < count, "%s '%s': selected is %d; there are %d tabs", __func__, str_id,
+                   *selected, count);
+   for (int i = 0; i < count; i++)
+      MONSTRO_REQUIRE(labels[i], "%s '%s': label %d is null", __func__, str_id, i);
+   if (win->skip_items)
+      return false;
+
+   MonstroStyle *style = &ctx->style();
+   MonstroStyleTab *ts = &style->tab;
+   MonstroStyleButton *tab_btn = &ts->tab_maximize_button;
+   MonstroFont *font = style->font;
+   monstro::Canvas *canvas = ctx->canvas;
+
+   uint64_t strip_id = win->getChildId(str_id);
+   float bar_w = width;
+   if (bar_w <= 0.0f)
+   {
+      monstro::Layout *layout = win->getCurrentLayout();
+      bar_w = layout && layout->myAvailableWidth > 0.0f ? layout->myAvailableWidth : 120.0f * (float)count;
+   }
+   float bar_h = height > 0.0f ? height : (font ? monstro_font_get_line_height(font) : 16.0f) + ts->padding[1] * 2.0f;
+
+   MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
+   MonstroRect bar_rect = {pos.x, pos.y, bar_w, bar_h};
+   canvas->addRectFilled(bar_rect, monstro_color_to_u32(ts->background.data.color), 0, MONSTRO_CORNER_NONE);
+
+   // The tabs share the width evenly, with the tab spacing between them.
+   float tab_w = (bar_w - ts->spacing[0] * (float)(count - 1)) / (float)count;
+   int was_selected = *selected;
+   int hovered = -1;
+   ctx->ids().push(str_id);
+   for (int i = 0; i < count; i++)
+   {
+      uint64_t tab_id = win->getItemId(labels[i]);
+      MonstroRect tab_rect = {pos.x + (tab_w + ts->spacing[0]) * (float)i, pos.y, tab_w, bar_h};
+      if (ctx->hoverItem(tab_id, tab_rect))
+      {
+         hovered = i;
+         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
+            *selected = i;
+      }
+   }
+   ctx->ids().pop();
+
+   // Drawn once the selection is known, so a click lights its tab in the frame it lands.
+   for (int i = 0; i < count; i++)
+   {
+      MonstroRect tab_rect = {pos.x + (tab_w + ts->spacing[0]) * (float)i, pos.y, tab_w, bar_h};
+      bool lit = i == *selected;
+      const MonstroStyleItem *bg = lit ? &tab_btn->active : (i == hovered ? &tab_btn->hover : &tab_btn->normal);
+      MonstroColor text = lit ? tab_btn->text_active : (i == hovered ? tab_btn->text_hover : tab_btn->text_normal);
+      canvas->addRectFilled(tab_rect, monstro_color_to_u32(bg->data.color), ts->rounding, MONSTRO_CORNER_TOP);
+      if (lit && ts->border > 0.0f)
+      {
+         uint32_t accent = monstro_color_to_u32(ts->border_color);
+         if ((accent & 0xFF000000) == 0)
+            accent = monstro_color_to_u32(tab_btn->active.data.color);
+         canvas->addLine({tab_rect.x, tab_rect.y + tab_rect.h}, {tab_rect.x + tab_rect.w, tab_rect.y + tab_rect.h},
+                         accent, ts->border);
+      }
+      if (font)
+         canvas->addTextEx(font, tab_rect, monstro_color_to_u32(text), monstro_display_text(labels[i]),
+                           tab_btn->text_alignment);
+   }
+
+   bool changed = *selected != was_selected;
+   monstro_add_item(ctx, bar_w, bar_h);
+   monstro_draw_disabled_overlay(ctx, bar_rect);
+   monstro_set_last_item(ctx, strip_id, bar_rect, hovered >= 0, false, changed, changed);
+   return changed;
+}

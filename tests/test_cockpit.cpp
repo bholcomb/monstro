@@ -414,3 +414,144 @@ TEST(a_progress_bar_shows_no_text_when_its_overlay_is_empty)
    // "50%" is three glyphs and "fuel" four, four vertices each.
    CHECK(with_percentage == without_text + 12 && with_overlay == without_text + 16);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Page tabs                                                                 */
+/* ------------------------------------------------------------------------- */
+
+struct PageTabs
+{
+   Ui ui;
+   const char *labels[3] = {"flt##FLT", "sys##SYS", "cargo##CARGO"};
+   int page = 0;  // the host's page, as the simulation has it
+   int shown = 0; // the selection passed in, and what the tabs wrote back
+   bool clicked = false;
+   MonstroRect strip = {};
+   const MonstroDrawData *data = nullptr;
+   uint32_t first = 0;
+
+   void frame()
+   {
+      ui.begin();
+      begin_screen(ui);
+      monstro_set_cursor_screen_pos(ui.ctx, 0, 448);
+      shown = page;
+      first = ui.vertexCount();
+      clicked = monstro_page_tabs(ui.ctx, "pages", labels, 3, &shown, 512, 64);
+      strip = monstro_get_item_rect(ui.ctx);
+      monstro_end_window(ui.ctx);
+      data = ui.end();
+   }
+
+   MonstroRect tab(int i) const
+   {
+      float spacing = monstro_get_tab_style(ui.ctx)->spacing[0];
+      float w = (strip.w - spacing * 2) / 3;
+      return {strip.x + (w + spacing) * i, strip.y, w, strip.h};
+   }
+
+   // The tab whose background is drawn lit; every lit vertex must lie on it.
+   int lit() const
+   {
+      uint32_t active = monstro_color_to_u32(monstro_get_tab_style(ui.ctx)->tab_maximize_button.active.data.color);
+      int found = -1;
+      for (uint32_t i = first; i < data->vertex_count; i++)
+      {
+         if (data->vertices[i].color != active)
+            continue;
+         float x = data->vertices[i].position[0];
+         int at = -1;
+         for (int t = 0; t < 3; t++)
+            if (x >= tab(t).x - 0.5f && x <= tab(t).x + tab(t).w + 0.5f)
+               at = t;
+         if (at < 0 || (found >= 0 && found != at))
+            return -2;
+         found = at;
+      }
+      return found;
+   }
+
+   void tap(int i)
+   {
+      MonstroVec2 p = middle(tab(i));
+      ui.moveMouse(p.x, p.y);
+      ui.pressLeft(true);
+      ui.pressLeft(false);
+      frame();
+   }
+};
+
+TEST(page_tabs_light_the_tab_the_host_selects)
+{
+   PageTabs t;
+   t.frame();
+   CHECK(t.strip.x == 0 && t.strip.y == 448 && t.strip.w == 512 && t.strip.h == 64);
+   CHECK(t.lit() == 0 && !t.clicked);
+   // The page changes in the simulation; the tabs follow it, with no click.
+   t.page = 2;
+   t.frame();
+   CHECK(t.lit() == 2 && !t.clicked && t.shown == 2);
+}
+
+TEST(page_tabs_report_the_tab_clicked_and_keep_the_hosts_selection)
+{
+   PageTabs t;
+   t.page = 1;
+   t.frame();
+   MonstroVec2 p = middle(t.tab(0));
+   t.ui.moveMouse(p.x, p.y);
+   t.ui.pressLeft(true);
+   t.frame();
+   // The click is reported, and the clicked tab lights in its frame.
+   CHECK(t.clicked && t.shown == 0 && t.lit() == 0);
+   // Until the host changes its page, it passes its own selection, and that is what shows.
+   t.frame();
+   CHECK(!t.clicked && t.shown == 1 && t.lit() == 1);
+   t.ui.pressLeft(false);
+   t.frame();
+   CHECK(!t.clicked && t.lit() == 1);
+   // A click on the tab already selected changes nothing.
+   p = middle(t.tab(1));
+   t.ui.moveMouse(p.x, p.y);
+   t.ui.pressLeft(true);
+   t.frame();
+   CHECK(!t.clicked && t.shown == 1);
+   t.ui.pressLeft(false);
+   t.frame();
+}
+
+TEST(a_tap_on_a_page_tab_selects_it_in_the_next_frame)
+{
+   PageTabs t;
+   t.frame();
+   t.tap(2);
+   CHECK(t.clicked && t.shown == 2);
+   t.page = t.shown;
+   t.frame();
+   CHECK(!t.clicked && t.lit() == 2);
+}
+
+TEST(page_tab_ids_are_their_labels_ids)
+{
+   PageTabs t;
+   t.frame();
+   MonstroVec2 p = middle(t.tab(1));
+   t.ui.moveMouse(p.x, p.y);
+   t.ui.pressLeft(true);
+   t.frame();
+   CHECK(t.clicked && t.shown == 1);
+   // A live label keeps its tab's ID: the hover stays on the tab as its text changes.
+   uint64_t hovered = t.ui.ctx->hovered_id;
+   t.labels[1] = "sys##SYS 2";
+   t.frame();
+   CHECK(t.ui.ctx->hovered_id == hovered && hovered != 0);
+   t.ui.pressLeft(false);
+   t.frame();
+}
+
+FATAL_TEST(page_tabs_with_a_selection_out_of_range_abort, "monstro_page_tabs 'pages': selected is 3; there are 3 tabs")
+{
+   PageTabs t;
+   t.page = 3;
+   t.frame();
+}
