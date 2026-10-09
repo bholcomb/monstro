@@ -55,25 +55,23 @@ struct OneButton
    }
 };
 
-TEST(a_press_and_release_between_frames_still_clicks)
+TEST(a_press_and_release_between_frames_click_in_the_next_frame)
 {
    OneButton t;
    t.frame();
    MonstroVec2 p = middle(t.rect);
    t.ui.moveMouse(p.x, p.y);
    t.frame();
-   // Both changes happen before the next frame: the press is taken first, the release a frame later.
+   // Both changes happen before the next frame, which sees the button pressed and released.
    t.ui.pressLeft(true);
    t.ui.pressLeft(false);
-   t.frame();
-   CHECK(t.clicks == 0 && monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
    t.frame();
    CHECK(t.clicks == 1 && !monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
    t.frame();
    CHECK(t.clicks == 1);
 }
 
-TEST(a_tap_between_frames_moves_and_presses_then_releases)
+TEST(a_tap_between_frames_fires_a_button_in_the_next_frame)
 {
    OneButton t;
    t.frame();
@@ -84,10 +82,163 @@ TEST(a_tap_between_frames_moves_and_presses_then_releases)
    CHECK(t.ui.ctx->input_events.size() == 3);
    t.frame();
    MonstroVec2 mouse = monstro_get_mouse_pos(t.ui.ctx);
-   CHECK(mouse.x == p.x && mouse.y == p.y && monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
-   CHECK(t.clicks == 0 && t.edges.activated);
+   CHECK(mouse.x == p.x && mouse.y == p.y && !monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
+   CHECK(monstro_is_mouse_clicked(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT, false) &&
+         monstro_is_mouse_released(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
+   CHECK(t.clicks == 1 && t.ui.ctx->input_events.empty() && t.ui.ctx->active_id == 0);
    t.frame();
-   CHECK(t.clicks == 1 && t.ui.ctx->input_events.empty());
+   CHECK(t.clicks == 1);
+}
+
+// Everything that acts on a click, in one window; each tap below lands on one of them.
+struct EveryKind
+{
+   Ui ui;
+   enum Kind
+   {
+      CHECKBOX,
+      RADIO,
+      SELECTABLE,
+      TREE_NODE,
+      TAB,
+      COMBO,
+      MENU,
+      MENU_ITEM,
+      KINDS
+   };
+   MonstroRect rects[KINDS] = {};
+   bool checked = false, selected = false, tree_open = false, second_tab = false, combo_open = false, menu_open = false;
+   int radio = 0, quits = 0;
+
+   void frame()
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 500, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Panel", nullptr,
+                           (MonstroWindowFlags)(MONSTRO_WINDOW_DEFAULT | MONSTRO_WINDOW_MENU_BAR));
+      if (monstro_begin_menu_bar(ui.ctx))
+      {
+         menu_open = monstro_begin_menu(ui.ctx, "File", true);
+         if (menu_open)
+         {
+            if (monstro_menu_item(ui.ctx, "Quit", nullptr, true))
+               quits++;
+            rects[MENU_ITEM] = monstro_get_item_rect(ui.ctx);
+            monstro_end_menu(ui.ctx);
+         }
+         else
+         {
+            rects[MENU] = monstro_get_item_rect(ui.ctx);
+         }
+         monstro_end_menu_bar(ui.ctx);
+      }
+      monstro_checkbox(ui.ctx, "Armed", &checked, nullptr);
+      rects[CHECKBOX] = monstro_get_item_rect(ui.ctx);
+      monstro_radio_button(ui.ctx, "Port", &radio, 0, nullptr);
+      monstro_radio_button(ui.ctx, "Starboard", &radio, 1, nullptr);
+      rects[RADIO] = monstro_get_item_rect(ui.ctx);
+      monstro_selectable(ui.ctx, "Contact", &selected, MONSTRO_SELECTABLE_NONE, nullptr);
+      rects[SELECTABLE] = monstro_get_item_rect(ui.ctx);
+      tree_open = monstro_begin_tree_node(ui.ctx, "Cargo", MONSTRO_TREE_NONE);
+      rects[TREE_NODE] = monstro_get_item_rect(ui.ctx);
+      if (tree_open)
+         monstro_end_tree_node(ui.ctx);
+      if (monstro_begin_tab_bar(ui.ctx, "tabs", MONSTRO_TAB_BAR_NONE))
+      {
+         if (monstro_begin_tab_item(ui.ctx, "Helm", nullptr))
+            monstro_end_tab_item(ui.ctx);
+         second_tab = monstro_begin_tab_item(ui.ctx, "Comms", nullptr);
+         rects[TAB] = ui.ctx->drawn_items.top().rect; // tabs do not set the item rect
+         if (second_tab)
+            monstro_end_tab_item(ui.ctx);
+         monstro_end_tab_bar(ui.ctx);
+      }
+      combo_open = monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr);
+      rects[COMBO] = monstro_get_item_rect(ui.ctx);
+      if (combo_open)
+         monstro_end_combo(ui.ctx);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   }
+
+   // A tap at the middle of the item's rect (at the right end of a combo, where its box is), then one frame.
+   void tap(Kind kind)
+   {
+      MonstroRect r = rects[kind];
+      float x = kind == COMBO ? r.x + r.w - 10 : r.x + r.w * 0.5f;
+      ui.moveMouse(x, r.y + r.h * 0.5f);
+      ui.pressLeft(true);
+      ui.pressLeft(false);
+      frame();
+   }
+};
+
+TEST(a_tap_fires_everything_that_acts_on_a_click_in_the_next_frame)
+{
+   EveryKind t;
+   t.frame();
+   // A menu or combo list opened by a tap shows from the next frame, as when opened by a held press.
+   t.tap(EveryKind::MENU);
+   CHECK(t.ui.ctx->popup_stack.size() == 1);
+   t.frame();
+   CHECK(t.menu_open);
+   t.frame(); // the menu fits itself to its items
+   t.tap(EveryKind::MENU_ITEM);
+   CHECK(t.quits == 1);
+   t.frame();
+   CHECK(!t.menu_open && t.quits == 1);
+   t.tap(EveryKind::CHECKBOX);
+   CHECK(t.checked);
+   t.tap(EveryKind::RADIO);
+   CHECK(t.radio == 1);
+   t.tap(EveryKind::SELECTABLE);
+   CHECK(t.selected);
+   t.tap(EveryKind::TREE_NODE);
+   CHECK(t.tree_open);
+   t.frame(); // the tree node's children move what is below it
+   t.tap(EveryKind::TAB);
+   CHECK(t.second_tab);
+   t.tap(EveryKind::COMBO);
+   CHECK(t.ui.ctx->popup_stack.size() == 1);
+   t.frame();
+   CHECK(t.combo_open);
+}
+
+TEST(a_double_tap_between_frames_is_two_taps_in_two_frames)
+{
+   OneButton t;
+   t.frame();
+   MonstroVec2 p = middle(t.rect);
+   t.ui.moveMouse(p.x, p.y);
+   for (int i = 0; i < 2; i++)
+   {
+      t.ui.pressLeft(true);
+      t.ui.pressLeft(false);
+   }
+   t.frame();
+   CHECK(t.clicks == 1 && t.ui.ctx->input_events.size() == 2);
+   t.frame();
+   CHECK(t.clicks == 2 && t.ui.ctx->input_events.empty());
+   CHECK(monstro_is_mouse_double_clicked(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
+}
+
+TEST(a_release_and_press_between_frames_take_a_frame_each)
+{
+   OneButton t;
+   t.frame();
+   MonstroVec2 p = middle(t.rect);
+   t.ui.moveMouse(p.x, p.y);
+   t.ui.pressLeft(true);
+   t.frame();
+   CHECK(t.ui.ctx->active_id != 0);
+   // Released and pressed again: the release clicks, then the press holds the button again.
+   t.ui.pressLeft(false);
+   t.ui.pressLeft(true);
+   t.frame();
+   CHECK(t.clicks == 1 && !monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
+   t.frame();
+   CHECK(t.clicks == 1 && t.edges.activated && monstro_is_mouse_down(t.ui.ctx, MONSTRO_MOUSE_BUTTON_LEFT));
 }
 
 TEST(a_grip_pressed_where_the_mouse_just_moved_does_not_jump)
@@ -260,7 +411,9 @@ TEST(a_tap_on_overlapping_buttons_fires_only_the_one_on_top)
    t.ui.moveMouse(t.over_rect.x + 10, t.over_rect.y + 10);
    t.ui.pressLeft(true);
    t.ui.pressLeft(false);
-   for (int i = 0; i < 4; i++)
+   t.frame();
+   CHECK(t.over_clicks == 1 && t.under_clicks == 0);
+   for (int i = 0; i < 3; i++)
       t.frame();
    CHECK(t.over_clicks == 1 && t.under_clicks == 0);
 }
@@ -303,6 +456,45 @@ TEST(an_item_is_not_hovered_where_it_is_clipped_away)
    ui.moveMouse(rect.x + 30, rect.y + 20);
    frame(ui, draw);
    CHECK(hovered);
+}
+
+TEST(a_tap_where_an_item_is_clipped_away_does_not_reach_it)
+{
+   Ui ui;
+   MonstroRect rect = {};
+   int clicks = 0, behind_clicks = 0;
+   auto draw = [&]()
+   {
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 300, 200, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+      MonstroVec2 at = monstro_get_cursor_pos(ui.ctx);
+      // A button behind, then one over it of which only the left half is drawn.
+      if (monstro_button_sized(ui.ctx, "Behind", 120, 40, nullptr))
+         behind_clicks++;
+      monstro_set_cursor_pos(ui.ctx, at.x, at.y);
+      MonstroVec2 screen = monstro_get_cursor_screen_pos(ui.ctx);
+      MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+      monstro_push_clip_rect(canvas, {screen.x, screen.y, 60, 40});
+      if (monstro_button_sized(ui.ctx, "Half", 120, 40, nullptr))
+         clicks++;
+      rect = monstro_get_item_rect(ui.ctx);
+      monstro_pop_clip_rect(canvas);
+      monstro_end_window(ui.ctx);
+   };
+   frame(ui, draw);
+   // A tap where the half button is clipped away reaches the button behind it.
+   ui.moveMouse(rect.x + 90, rect.y + 20);
+   ui.pressLeft(true);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(clicks == 0 && behind_clicks == 1);
+   // A tap where it shows reaches it, and not the button behind.
+   ui.moveMouse(rect.x + 30, rect.y + 20);
+   ui.pressLeft(true);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(clicks == 1 && behind_clicks == 1);
 }
 
 // A child panel scrolled so that its first button is half above its top.
@@ -519,11 +711,51 @@ TEST(a_button_press_activates_and_its_release_deactivates_without_an_edit)
    t.ui.moveMouse(t.rect.x + 5, t.rect.y + 5);
    t.frame();
    t.ui.pressLeft(true);
-   t.ui.pressLeft(false);
    t.frame();
    CHECK(t.edges.activated && !t.edges.deactivated);
+   t.ui.pressLeft(false);
    t.frame();
    CHECK(t.edges.deactivated && !t.edges.after_edit && !t.edges.activated && t.clicks == 1);
+   // A tap reports both in its frame.
+   t.ui.pressLeft(true);
+   t.ui.pressLeft(false);
+   t.frame();
+   CHECK(t.edges.activated && t.edges.deactivated && !t.edges.after_edit && t.clicks == 2);
+   t.frame();
+   CHECK(t.edges.none());
+}
+
+TEST(a_tap_on_a_slider_sets_it_and_reports_both_edges_in_its_frame)
+{
+   Ui ui;
+   float value = 0.5f;
+   MonstroRect slider = {};
+   Edges e;
+   auto draw = [&]()
+   {
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 300, 200, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_slider_float_ex(ui.ctx, "Throttle", &value, 0.0f, 1.0f, "%.2f", 120, 0, MONSTRO_SLIDER_NONE, nullptr);
+      slider = monstro_get_item_rect(ui.ctx);
+      e.read(ui.ctx);
+      monstro_end_window(ui.ctx);
+   };
+   frame(ui, draw);
+   // The bar is the slider's right 120 pixels; a quarter of the way along it.
+   MonstroRect bar = slider;
+   bar.x = slider.x + slider.w - 120.0f;
+   bar.w = 120.0f;
+   CHECK(bar.x > slider.x);
+   ui.moveMouse(bar.x + bar.w * 0.25f, bar.y + bar.h * 0.5f);
+   ui.pressLeft(true);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(value > 0.2f && value < 0.3f);
+   CHECK(e.activated && e.deactivated && e.after_edit && e.edited);
+   CHECK(ui.ctx->active_id == 0);
+   frame(ui, draw);
+   CHECK(e.none() && !e.active && value > 0.2f && value < 0.3f);
 }
 
 TEST(a_text_field_reports_its_edit_when_editing_ends)

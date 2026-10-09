@@ -121,6 +121,7 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
    }
    active_id_prev_frame = active_id;
    active_id_is_alive = false;
+   released_id = 0;
 
    takeInputEvents();
    mouse.newFrame(dt, time);
@@ -248,7 +249,12 @@ void Context::requireBalanced(const char *where) const
                    c.columns.size(), c.tab_bars.size(), c.table.state ? "yes" : "no");
 }
 
-void Context::setActiveId(uint64_t id) { active_id = id; }
+void Context::setActiveId(uint64_t id)
+{
+   if (active_id != 0 && active_id != id)
+      released_id = active_id;
+   active_id = id;
+}
 
 static MonstroRect intersect(MonstroRect a, MonstroRect b)
 {
@@ -712,7 +718,10 @@ void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, b
    };
    const ActiveItem *before = find(ctx->active_items_prev_frame);
    ActiveItem *now = find(ctx->active_items);
-   if (active)
+   // An item let go this frame reports its deactivation now, and its activation too when it became active in this
+   // frame: a tap presses and releases in one frame.
+   bool let_go = id == ctx->released_id;
+   if (active && !let_go)
    {
       if (!now)
       {
@@ -723,9 +732,9 @@ void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, b
       }
       now->edited = now->edited || edited;
    }
-   ctx->last_item_activated = active && !before;
-   ctx->last_item_deactivated = !active && before && !now;
-   ctx->last_item_deactivated_after_edit = ctx->last_item_deactivated && (before->edited || edited);
+   ctx->last_item_activated = (active || let_go) && !before;
+   ctx->last_item_deactivated = let_go || (!active && before && !now);
+   ctx->last_item_deactivated_after_edit = ctx->last_item_deactivated && ((before && before->edited) || edited);
 }
 
 bool monstro_is_item_hovered(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_hovered; }

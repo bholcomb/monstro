@@ -70,7 +70,8 @@ typedef enum MonstroButtonFlags {
  * An item is active while it is held (a pressed button, a dragged slider or
  * knob), edited (a text or number field) or open (a combo). Its edges tell a
  * host when an interaction starts and ends, so it can act once per drag or
- * edit rather than on every change.
+ * edit rather than on every change. A tap, pressed and released between two
+ * frames, starts and ends in one frame: both edges are reported in it.
  */
 bool monstro_is_item_hovered(MonstroContext* ctx);
 bool monstro_is_item_active(MonstroContext* ctx);

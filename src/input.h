@@ -17,6 +17,7 @@ struct ButtonState
    float clicked_time = -1.0f;
    float clicked_pos_x = 0.0f;
    float clicked_pos_y = 0.0f;
+   bool tapped = false; // pressed and released since the last frame, which sees it pressed and released, not down
 };
 
 struct MouseState
@@ -47,6 +48,8 @@ struct MouseState
    }
 
    bool isDown(MonstroMouseButton button) const;
+   // Down for some of this frame: held, or tapped (pressed and released since the last frame).
+   bool isHeld(MonstroMouseButton button) const;
    bool isPressed(MonstroMouseButton button) const;
    bool isReleased(MonstroMouseButton button) const;
    bool isDoubleClicked(MonstroMouseButton button) const;

@@ -13,14 +13,19 @@ extern "C" {
  * Input Events (call from app input callbacks, or once a frame with polled state)
  *
  * Mouse moves, button and key changes and wheel movements are queued in order
- * and taken at the next begin_frame, so nothing is lost between frames: a
- * press and release that both happen before a frame still click. A frame
- * takes events in order until one would change something already changed
- * that frame (the same button or key again, or a move after a button), and
- * the rest wait for the next frames. A press after a move is taken with it:
- * the item it lands on is the one on top there in the last frame. A tap that
- * moves, presses and releases between two frames is seen over two frames: the
- * move and the press, then the release.
+ * and taken at the next begin_frame, so nothing is lost between frames. A
+ * frame takes events in order until one would change something already
+ * changed that frame, and the rest wait for the next frames:
+ *
+ * - A press after a move is taken with it, and lands on the item on top there
+ *   in the last frame.
+ * - A release right after a press of the same button is taken with it: the
+ *   frame sees a tap, the button pressed and released (and not down). A tap
+ *   that moves, presses and releases between two frames clicks a button in
+ *   the next frame; a slider jumps to where it was tapped and lets go.
+ * - A move after a button change waits, so the button changes where the mouse
+ *   was. So does any other second change of a button, or of a key: a double
+ *   tap between two frames is seen as two taps, in two frames.
  *
  * Setting a button, key or position to the state it already has queues
  * nothing, and moves in a row are merged, so polling every frame is fine.

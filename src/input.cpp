@@ -12,6 +12,8 @@ void MouseState::setButton(MonstroMouseButton button, bool is_down) { buttons[bu
 
 bool MouseState::isDown(MonstroMouseButton button) const { return buttons[button].down; }
 
+bool MouseState::isHeld(MonstroMouseButton button) const { return buttons[button].down || buttons[button].pressed; }
+
 bool MouseState::isPressed(MonstroMouseButton button) const { return buttons[button].pressed; }
 
 bool MouseState::isReleased(MonstroMouseButton button) const { return buttons[button].released; }
@@ -94,8 +96,9 @@ void MouseState::newFrame(float dt, float current_time)
    {
       ButtonState *btn = &buttons[i];
 
-      btn->pressed = btn->down && (btn->down_time < 0.0f);
-      btn->released = !btn->down && (btn->down_time >= 0.0f);
+      btn->pressed = (btn->down && btn->down_time < 0.0f) || btn->tapped;
+      btn->released = (!btn->down && btn->down_time >= 0.0f) || btn->tapped;
+      btn->tapped = false;
       btn->double_clicked = false;
 
       if (btn->pressed)
@@ -271,7 +274,7 @@ void Context::queueKey(MonstroKey key, bool down)
 
 void Context::takeInputEvents()
 {
-   bool button_changed[MONSTRO_MOUSE_BUTTON_COUNT] = {};
+   int button_changes[MONSTRO_MOUSE_BUTTON_COUNT] = {};
    bool any_button_changed = false;
    bool key_changed[MONSTRO_KEY_COUNT] = {};
 
@@ -290,11 +293,15 @@ void Context::takeInputEvents()
       else if (event.type == InputEvent::MOUSE_BUTTON)
       {
          // A press after a move is taken: the item on top at the new position is known from the last frame's
-         // record of its items (see Context::drawn_items).
-         if (button_changed[event.index])
+         // record of its items (see Context::drawn_items). A release right after a press is taken with it, as a
+         // tap that the frame sees pressed and released; any other second change of a button waits.
+         int &changes = button_changes[event.index];
+         if (changes == 2 || (changes == 1 && event.down))
             break;
+         if (changes == 1)
+            mouse.buttons[event.index].tapped = true;
          mouse.setButton((MonstroMouseButton)event.index, event.down);
-         button_changed[event.index] = true;
+         changes++;
          any_button_changed = true;
       }
       else if (event.type == InputEvent::MOUSE_WHEEL)

@@ -134,6 +134,7 @@ struct Context
    uint64_t hovered_id_prev_frame = 0;
    uint64_t active_id = 0;
    uint64_t active_id_prev_frame = 0;
+   uint64_t released_id = 0; // the item that stopped being active this frame, if any
    bool active_id_is_alive = false;
 
    uint64_t last_item_id = 0;

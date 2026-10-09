@@ -34,14 +34,10 @@ static bool knob_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool 
    bool held = false;
    if (ctx->active_id == id)
    {
-      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
-      {
-         held = true;
-      }
-      else
-      {
+      // Held for the frame of a tap too, which presses and releases in it, and let go at its end.
+      held = !ctx->disabled && ctx->mouse.isHeld(MONSTRO_MOUSE_BUTTON_LEFT);
+      if (ctx->disabled || !monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
          ctx->setActiveId(0);
-      }
    }
 
    *out_hovered = hovered || held;
