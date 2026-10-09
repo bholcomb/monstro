@@ -725,6 +725,12 @@ current clip rect.  A button scrolled half out of a child panel can be clicked
 on its visible half only, and a child panel scrolled under its window's title
 bar does not take the mouse there.
 
+What lies wholly outside the clip rect is not drawn at all: a shape, image or
+glyph clipped away adds no vertices, indices or draw command.  A widget
+clipped away still runs and keeps its place in the layout, so what follows it
+does not move; it only costs nothing to render.  A long list scrolled far, or
+many cockpit screens each clipping its pages, draws only what shows.
+
 ### Active items
 
 An item is active while it is held (a pressed button, a dragged slider, knob
@@ -835,7 +841,9 @@ These checks are always on, in release builds too.  They catch:
   stack fails where it happens, and so does ending a child region with
   `monstro_end_window` or a window with `monstro_end_child`.
 - **Out-of-range arguments**, such as a table with more than 128 columns, a
-  column set of more than 16, or a vertex layout whose attributes do not fit.
+  column set of more than 16, a vertex layout whose attributes do not fit, an
+  ellipse of fewer than three segments, or page tabs whose selection is not a
+  tab.
 - **Exhausted capacities.** Monstro never grows its storage to hide a UI that
   outgrew it; running out stops with what ran out, its capacity and what was
   needed, so you can simplify that UI or size the capacity for it
@@ -980,6 +988,20 @@ The format formats the value shown on the bar: a float slider passes its value
 as a `double` (`"%.2f"`), an int slider as an `int` (`"%d"`, the default when the
 format is `NULL`). Int sliders snap to whole numbers.
 
+`MONSTRO_SLIDER_VERTICAL` stands a slider up: its minimum is at the bottom and
+its maximum at the top, it fills from the bottom, and it is 120 pixels tall
+unless given a height (its width is its thickness).  A lever on a cockpit
+screen:
+
+```c
+monstro_set_cursor_screen_pos(ctx, 456, 196);
+monstro_slider_float_ex(ctx, "lift##", &lift, 0.0f, 1.0f, NULL,
+                        28.0f, 96.0f, MONSTRO_SLIDER_VERTICAL, NULL);
+```
+
+A slider whose label shows nothing (`"lift##"`) is its bar alone: it takes no
+space for the label, so it fills the size it is given.
+
 ### Knobs
 
 ```c
@@ -987,6 +1009,24 @@ static float gain = 0.5f;
 monstro_knob(ctx, "Gain", &gain, 0.0f, 1.0f, "%.2f", NULL);
 monstro_knob_sized(ctx, "Rate", &gain, 0.0f, 100.0f, "%.1f", 60.0f, NULL);
 ```
+
+A knob turns by dragging up and down, from where it was.  An absolute knob
+(`MONSTRO_KNOB_ABSOLUTE`, through `monstro_knob_ex`) points where the pointer
+is instead: while held, its value is the pointer's angle about its centre,
+over the sweep from the minimum at the lower left, clockwise over the top, to
+the maximum at the lower right; in the gap at the bottom it is the nearer end.
+A press or a tap sets the value where it lands.  So a host whose value lives
+elsewhere, such as a simulation, can pass the committed value every frame and
+read back the value the pointer means, without keeping a drag of its own:
+
+```c
+float heading = ship->heading_bug;   /* the committed value */
+if (monstro_knob_ex(ctx, "hdg##", &heading, 0.0f, 360.0f, NULL, 84.0f,
+                    MONSTRO_KNOB_ABSOLUTE, NULL))
+    send_set_heading(heading);
+```
+
+As with sliders, a knob whose label shows nothing is the knob alone.
 
 ### Progress bar
 
@@ -997,7 +1037,17 @@ monstro_progress_bar(ctx, 0.75f, 120.0f, 20.0f, NULL);      /* shows "75%" */
 char overlay[32];
 snprintf(overlay, sizeof(overlay), "%d of %d files", done, total);
 monstro_progress_bar(ctx, fraction, 120.0f, 20.0f, overlay);
+
+/* No text at all: an empty overlay. */
+monstro_progress_bar(ctx, fraction, 120.0f, 20.0f, "");
+
+/* A gauge standing up, filling from the bottom. */
+monstro_progress_bar_ex(ctx, fuel, 22.0f, 98.0f, "", MONSTRO_PROGRESS_VERTICAL);
 ```
+
+A vertical bar is 120 pixels tall unless given a height.  To tone a gauge by
+its value (caution, warning), push a progress style with that fill colour
+(`cursor_normal`) for the one bar.
 
 
 ### Text input
@@ -1038,6 +1088,22 @@ static bool selected = false;
 monstro_selectable(ctx, "Item", &selected, MONSTRO_SELECTABLE_NONE, NULL);
 ```
 
+The text sits in the selectable as its style's `text_alignment` says: at the
+top left in the default themes.  A lit button, such as a toggle on a cockpit
+screen, is a sized selectable lit while its value is on, with its text
+centred:
+
+```c
+MonstroStyleSelectable lit = *monstro_get_selectable_style(ctx);
+lit.text_alignment = MONSTRO_ALIGN_CENTER;
+lit.padding[0] = lit.padding[1] = 0.0f;
+monstro_push_selectable_style(ctx, &lit);
+bool on = ramp_open;                 /* the committed value */
+if (monstro_selectable_sized(ctx, "ramp##RAMP", &on, 244.0f, 60.0f, MONSTRO_SELECTABLE_NONE, NULL))
+    send_toggle_ramp();
+monstro_pop_style(ctx, 1);
+```
+
 ### Combo box
 
 ```c
@@ -1062,6 +1128,13 @@ if (monstro_begin_combo(ctx, "Custom", items[current], NULL)) {
 monstro_image(ctx, my_texture_id, 128.0f, 128.0f);
 monstro_icon(ctx, icon_texture_id, 24.0f);
 ```
+
+An image is any texture of the host's, named by its own ID (see [Texture IDs
+and the renderer mapping](#texture-ids-and-the-renderer-mapping)): a camera
+feed on a cockpit screen is the camera's render target drawn with
+`monstro_image` or `monstro_draw_image`.  It becomes a draw command of its own
+with that texture ID, in draw order among the rest, so what is drawn after it
+(a frame, a reticle) lies over it.
 
 ### Separator
 
@@ -1108,6 +1181,27 @@ if (monstro_begin_tab_bar(ctx, "tabs", MONSTRO_TAB_BAR_NONE)) {
 
 Tab bars nest: a tab's content may hold another tab bar, and once the inner
 bar ends, tab items go to the outer bar again.
+
+A tab bar keeps its own selection and sizes each tab to its text.  **Page
+tabs** are for a selection the host keeps, such as the page of a cockpit
+screen, which lives in the simulation: a row of tabs sharing a box evenly,
+the selected one lit.  Pass the host's selection every frame; a click on
+another tab writes that tab's index and returns `true`, and the host decides
+what happens (it may change its page a tick later, and until then the tabs
+keep showing the page it passes):
+
+```c
+const char* pages[] = {"flt##FLT", "sys##SYS", "cargo##CARGO"};
+int shown = ship->page;
+monstro_set_cursor_screen_pos(ctx, 0, 448);
+if (monstro_page_tabs(ctx, "pages", pages, 3, &shown, 512.0f, 64.0f))
+    send_select_page(shown);
+```
+
+Each tab's ID is its label's, within the strip's ID, so a live label keeps it.
+A width of 0 fills the available width, a height of 0 fits the text, and a
+selection that is not a tab's index stops the program.  They use the tab
+style.
 
 ### Trees
 
@@ -1311,7 +1405,12 @@ column in a row -- this wraps to column 0 of the next row.  The final
 MonstroVec2 pos = monstro_get_cursor_pos(ctx);         /* local to window */
 MonstroVec2 spos = monstro_get_cursor_screen_pos(ctx); /* screen pixels */
 monstro_set_cursor_pos(ctx, 10.0f, 50.0f);
+monstro_set_cursor_screen_pos(ctx, 320.0f, 64.0f);    /* at a point on the display */
 ```
+
+A screen laid out in pixels, such as a cockpit display, places each control
+with `monstro_set_cursor_screen_pos` at its box rather than letting the layout
+flow.
 
 ### Remaining content space
 
@@ -1762,7 +1861,16 @@ monstro_draw_triangle(canvas, p1, p2, p3, color, thickness);
 monstro_draw_triangle_filled(canvas, p1, p2, p3, color);
 monstro_draw_quad(canvas, p1, p2, p3, p4, color, thickness);
 monstro_draw_quad_filled(canvas, p1, p2, p3, p4, color);
+monstro_draw_ellipse(canvas, center, radii, rotation, color, 32, thickness);
+monstro_draw_ellipse_filled(canvas, center, radii, rotation, color, 32);
 ```
+
+Colors are packed 8-bit RGBA (`0xAABBGGRR`) and reach the vertices unchanged.
+Angles are radians, and since +y is down, a positive angle turns clockwise on
+screen.  A quad takes its four corners as given, so a rotated rectangle (a
+horizon's sky and ground, rolled) is its corners turned.  An ellipse takes its
+two radii along its own axes, turned by `rotation`; it needs at least three
+segments.
 
 **Complex shapes:**
 
@@ -1781,10 +1889,16 @@ Pass `0` for `num_segments` to use the default tessellation.
 monstro_draw_text(canvas, font, pos, color, "Hello");
 monstro_draw_text_aligned(canvas, font, rect, color, "Centered", MONSTRO_ALIGN_CENTER);
 monstro_draw_text_wrapped(canvas, font, pos, color, "Long text...", wrap_width);
+monstro_draw_text_rotated(canvas, font, rect, color, "10", MONSTRO_ALIGN_CENTER, pivot, angle);
 monstro_draw_image(canvas, texture_id, rect, uv_min, uv_max, 0xFFFFFFFF);
 monstro_draw_image_rounded(canvas, texture_id, rect, uv_min, uv_max, 0xFFFFFFFF, 4.0f, MONSTRO_CORNER_ALL);
 monstro_draw_nine_patch(canvas, &patch, rect, 0xFFFFFFFF);
 ```
+
+Turned text is laid out in `rect` as `monstro_draw_text_aligned` lays it out,
+then turned with the rect by `angle` about `pivot`: a pitch ladder's numbers,
+laid out level beside their rungs, turn with the horizon about the point it
+rolls about.
 
 **Path API for complex shapes:**
 
@@ -1797,6 +1911,15 @@ monstro_path_bezier_cubic_to(canvas, cp1, cp2, end_pt, 0);
 monstro_path_stroke(canvas, color, true, 2.0f);   /* or monstro_path_fill(canvas, color); */
 ```
 
+A dial's scale is an arc: clear the path, add the arc, stroke it open.  A
+band in another colour is a second arc over part of the sweep:
+
+```c
+monstro_path_clear(canvas);
+monstro_path_arc_to(canvas, centre, radius, 0.75f * PI, 2.25f * PI, 32);
+monstro_path_stroke(canvas, NORMAL, false, 3.0f);
+```
+
 **Clip rects** restrict drawing to a sub-region:
 
 ```c
@@ -1804,6 +1927,9 @@ monstro_push_clip_rect(canvas, region);
 /* ... drawing calls are clipped to region ... */
 monstro_pop_clip_rect(canvas);
 ```
+
+A clip rect is intersected with the one around it, and what lies wholly
+outside it is not drawn (see [Clipping](#clipping)).
 
 **Custom draw callback** lets you inject your own rendering commands (e.g. for
 GPU-native effects) into the draw stream:
@@ -2278,6 +2404,17 @@ where they show, a slider and knob that leave other buttons dark while dragged
 and log their activated and deactivated edges, labels that show live values
 and keep their IDs, two windows each with a popup named "menu", and a button
 that counts every click however fast.  It is a page, not a library.
+
+### cockpit
+
+A cockpit screen (`examples/cockpit/main.cpp`): one 512 x 512 multi-function
+display, as a game draws an MFD on a render target.  The flight page has an
+artificial horizon (sky and ground rolled and pitched in a clip rect, a pitch
+ladder whose numbers turn with it), two dials with caution bands, readouts,
+vertical rotor bars without text, an absolute heading knob and a vertical
+lift lever; the systems and cargo pages have gauges, lit buttons and gear
+lamps drawn as ellipses.  The page tabs light the page the example's
+simulation keeps.  It is a page, not a library.
 
 ### console
 

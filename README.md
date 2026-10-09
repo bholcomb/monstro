@@ -17,6 +17,11 @@ A C API immediate mode UI library with a C++ internal implementation.
   [guide](docs/GUIDE.md#interaction-rules))
 - Fails hard and loudly on misuse and exhausted capacities instead of throwing
   or silently dropping output (see the [guide](docs/GUIDE.md#errors-and-limits))
+- What game cockpit screens need: page tabs whose selection the host keeps,
+  vertical sliders and progress bars, knobs that point where the pointer is,
+  lit buttons with centred text, ellipses, text turned about a point (a
+  horizon's pitch ladder), host textures such as camera feeds, and no geometry
+  for anything wholly clipped away (see the `cockpit` example)
 
 ## Building
 
