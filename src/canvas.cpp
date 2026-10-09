@@ -612,6 +612,38 @@ void Canvas::addQuadFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, Monst
    quad_indices(r, 0, 0, 1, 2, 3);
 }
 
+void Canvas::pathEllipse(MonstroVec2 center, MonstroVec2 radii, float rotation, int num_segments)
+{
+   float c = cosf(rotation), s = sinf(rotation);
+   for (int i = 0; i < num_segments; i++)
+   {
+      float angle = (float)i / (float)num_segments * 6.2831853f;
+      float x = cosf(angle) * radii.x, y = sinf(angle) * radii.y;
+      pathPush({center.x + x * c - y * s, center.y + x * s + y * c});
+   }
+}
+
+void Canvas::addEllipse(MonstroVec2 center, MonstroVec2 radii, float rotation, uint32_t color, int num_segments,
+                        float thickness)
+{
+   float reach = fmaxf(radii.x, radii.y) + thickness * 0.5f;
+   if (clippedAway(center.x - reach, center.y - reach, center.x + reach, center.y + reach))
+      return;
+   path_count = 0;
+   pathEllipse(center, radii, rotation, num_segments);
+   pathStroke(color, true, thickness);
+}
+
+void Canvas::addEllipseFilled(MonstroVec2 center, MonstroVec2 radii, float rotation, uint32_t color, int num_segments)
+{
+   float reach = fmaxf(radii.x, radii.y);
+   if (clippedAway(center.x - reach, center.y - reach, center.x + reach, center.y + reach))
+      return;
+   path_count = 0;
+   pathEllipse(center, radii, rotation, num_segments);
+   pathFill(color);
+}
+
 /* ------------------------------------------------------------------------- */
 /* Complex Shapes                                                            */
 /* ------------------------------------------------------------------------- */

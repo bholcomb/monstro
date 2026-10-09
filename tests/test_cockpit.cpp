@@ -3,6 +3,8 @@
 #include "harness.h"
 #include <cmath>
 
+static bool near(float a, float b, float tolerance = 0.01f) { return std::fabs(a - b) < tolerance; }
+
 // One fixed window filling the display, without decorations, as a cockpit screen draws.
 static void begin_screen(Ui &ui)
 {
@@ -35,6 +37,7 @@ TEST(geometry_wholly_outside_the_clip_rect_is_not_drawn)
    monstro_draw_circle(canvas, {350, 150}, 20, 0xffffffff, 16, 2);
    monstro_draw_triangle_filled(canvas, {0, 0}, {50, 0}, {0, 50}, 0xffffffff);
    monstro_draw_quad_filled(canvas, {300, 0}, {350, 0}, {350, 50}, {300, 50}, 0xffffffff);
+   monstro_draw_ellipse_filled(canvas, {150, 300}, {40, 20}, 0.5f, 0xffffffff, 16);
    monstro_draw_image(canvas, 7, {210, 120, 30, 30}, {0, 0}, {1, 1}, 0xffffffff);
    monstro_draw_text(canvas, ui.font, {300, 120}, 0xffffffff, "far away");
    CHECK(ui.vertexCount() == vertices && ui.ctx->canvas->command_count == commands);
@@ -89,4 +92,50 @@ TEST(a_widget_clipped_away_draws_nothing_but_still_takes_its_place)
    }
    // Clipped away, they kept their room: what follows them is where it was.
    CHECK(after[1].y == after[0].y && after[1].y > hidden.y + hidden.h);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Ellipses                                                                  */
+/* ------------------------------------------------------------------------- */
+
+TEST(an_ellipse_outline_lies_on_its_turned_radii)
+{
+   Ui ui(false);
+   ui.begin();
+   MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+   uint32_t first = ui.vertexCount();
+   MonstroVec2 center = {200, 150};
+   const float quarter = 1.5707963f;
+   monstro_draw_ellipse_filled(canvas, center, {60, 20}, 0.0f, 0xff00ff00, 8);
+   monstro_draw_ellipse_filled(canvas, center, {60, 20}, quarter, 0xff00ff00, 8);
+   const MonstroDrawData *data = ui.end();
+   CHECK(data->vertex_count - first == 16);
+   const MonstroVertex *flat = data->vertices + first;
+   const MonstroVertex *turned = flat + 8;
+   // Unturned, the first point is at the end of the x radius and the third at the end of the y radius (+y down).
+   CHECK(near(flat[0].position[0], 260) && near(flat[0].position[1], 150));
+   CHECK(near(flat[2].position[0], 200) && near(flat[2].position[1], 170));
+   // A quarter turn clockwise puts the x radius straight down.
+   CHECK(near(turned[0].position[0], 200) && near(turned[0].position[1], 210));
+   CHECK(near(turned[2].position[0], 180) && near(turned[2].position[1], 150));
+   for (int i = 0; i < 16; i++)
+      CHECK(flat[i].color == 0xff00ff00);
+}
+
+TEST(an_ellipse_outline_is_its_segments_stroked)
+{
+   Ui ui(false);
+   ui.begin();
+   uint32_t first = ui.vertexCount();
+   monstro_draw_ellipse(monstro_get_window_canvas(ui.ctx), {200, 150}, {60, 20}, 0.3f, 0xffffffff, 12, 2.0f);
+   const MonstroDrawData *data = ui.end();
+   // One quad per segment, closed.
+   CHECK(data->vertex_count - first == 12 * 4);
+}
+
+FATAL_TEST(an_ellipse_of_two_segments_aborts, "monstro_draw_ellipse: num_segments is 2")
+{
+   Ui ui(false);
+   ui.begin();
+   monstro_draw_ellipse(monstro_get_window_canvas(ui.ctx), {200, 150}, {60, 20}, 0.0f, 0xffffffff, 2, 1.0f);
 }

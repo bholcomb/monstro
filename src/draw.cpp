@@ -80,6 +80,24 @@ void monstro_draw_quad_filled(MonstroCanvas *canvas, MonstroVec2 p1, MonstroVec2
    lent(canvas, __func__)->addQuadFilled(p1, p2, p3, p4, color);
 }
 
+void monstro_draw_ellipse(MonstroCanvas *canvas, MonstroVec2 center, MonstroVec2 radii, float rotation, uint32_t color,
+                          int num_segments, float thickness)
+{
+   MONSTRO_REQUIRE(num_segments >= 3, "%s: num_segments is %d; an ellipse needs at least 3", __func__, num_segments);
+   MONSTRO_REQUIRE(radii.x >= 0.0f && radii.y >= 0.0f, "%s: radii (%g, %g) must not be negative", __func__,
+                   (double)radii.x, (double)radii.y);
+   lent(canvas, __func__)->addEllipse(center, radii, rotation, color, num_segments, thickness);
+}
+
+void monstro_draw_ellipse_filled(MonstroCanvas *canvas, MonstroVec2 center, MonstroVec2 radii, float rotation,
+                                 uint32_t color, int num_segments)
+{
+   MONSTRO_REQUIRE(num_segments >= 3, "%s: num_segments is %d; an ellipse needs at least 3", __func__, num_segments);
+   MONSTRO_REQUIRE(radii.x >= 0.0f && radii.y >= 0.0f, "%s: radii (%g, %g) must not be negative", __func__,
+                   (double)radii.x, (double)radii.y);
+   lent(canvas, __func__)->addEllipseFilled(center, radii, rotation, color, num_segments);
+}
+
 /* Complex Shapes */
 
 void monstro_draw_polyline(MonstroCanvas *canvas, const MonstroVec2 *points, int count, uint32_t color, bool closed,

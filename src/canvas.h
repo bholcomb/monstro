@@ -146,6 +146,9 @@ struct Canvas
    void addCircleFilled(MonstroVec2 center, float radius, uint32_t color, int num_segments);
    void addQuad(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color, float thickness);
    void addQuadFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color);
+   void addEllipse(MonstroVec2 center, MonstroVec2 radii, float rotation, uint32_t color, int num_segments,
+                   float thickness);
+   void addEllipseFilled(MonstroVec2 center, MonstroVec2 radii, float rotation, uint32_t color, int num_segments);
 
    void addPolyline(const MonstroVec2 *points, int num_points, uint32_t color, bool closed, float thickness);
    void addConvexPolyFilled(const MonstroVec2 *points, int num_points, uint32_t color);
@@ -186,6 +189,8 @@ struct Canvas
    bool clippedAway(const MonstroVec2 *points, int count, float margin) const;
    void pathPush(MonstroVec2 point);
    void pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12);
+   // The outline of an ellipse into the path.
+   void pathEllipse(MonstroVec2 center, MonstroVec2 radii, float rotation, int num_segments);
    void pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCornerFlags rounding_corners);
    void addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width);
 };

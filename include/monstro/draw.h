@@ -50,6 +50,17 @@ void monstro_draw_quad(MonstroCanvas* canvas, MonstroVec2 p1, MonstroVec2 p2,
 void monstro_draw_quad_filled(MonstroCanvas* canvas, MonstroVec2 p1, MonstroVec2 p2,
                               MonstroVec2 p3, MonstroVec2 p4, uint32_t color);
 
+/*
+ * An ellipse with radii.x along its own x axis and radii.y along its y axis,
+ * turned by rotation radians (clockwise on screen, as +y is down), outlined
+ * with num_segments points (at least 3).
+ */
+void monstro_draw_ellipse(MonstroCanvas* canvas, MonstroVec2 center, MonstroVec2 radii, float rotation,
+                          uint32_t color, int num_segments, float thickness);
+
+void monstro_draw_ellipse_filled(MonstroCanvas* canvas, MonstroVec2 center, MonstroVec2 radii, float rotation,
+                                 uint32_t color, int num_segments);
+
 /* ------------------------------------------------------------------------- */
 /* Complex Shapes                                                            */
 /* ------------------------------------------------------------------------- */
