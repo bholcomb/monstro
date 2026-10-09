@@ -431,7 +431,9 @@ static int example_app_run(const ExampleAppDesc &desc)
    VESwapchainDesc sd = {};
    sd.width = (uint32_t)win_w;
    sd.height = (uint32_t)win_h;
-   sd.colorFormat = VK_FORMAT_B8G8R8A8_SRGB;
+   // Monstro's colours are authored in sRGB: a UNORM swapchain and render target pass them to the screen as
+   // authored, and blending happens in sRGB space like most UI renderers. An _SRGB format would encode them twice.
+   sd.colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 #ifdef DEBUG
    sd.vsync = true;
 #endif
@@ -453,6 +455,13 @@ static int example_app_run(const ExampleAppDesc &desc)
       veDestroyContext(app.context);
       glfwTerminate();
       return 1;
+   }
+   // VulkEase falls back to another surface format when the requested one is missing; the colours depend on it.
+   if (veGetSwapchainFormat(app.swapchain) != sd.colorFormat)
+   {
+      fprintf(stderr, "The surface does not support VK_FORMAT_B8G8R8A8_UNORM (got format %d)\n",
+              (int)veGetSwapchainFormat(app.swapchain));
+      abort();
    }
 
    int fw, fh;
