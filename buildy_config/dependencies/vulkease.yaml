@@ -1,11 +1,12 @@
 # VulkEase - Vulkan made easy
-# Pre-built library from dist directory
+# Pre-built library from the dist directory of a VulkEase checkout at
+# VULKEASE_ROOT (default: ../vulkease, next to this repository)
 
 vulkease:
   common:
     include_dirs:
-      - "/home/bholcomb/projects/side/vulkease/dist/include"
+      - "${VULKEASE_ROOT}/dist/include"
     lib_dirs:
-      - "/home/bholcomb/projects/side/vulkease/dist/bin"
+      - "${VULKEASE_ROOT}/dist/bin"
     libs:
       - "vulkease"

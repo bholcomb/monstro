@@ -20,6 +20,30 @@ A C API immediate mode UI library with a C++ internal implementation.
 ./tests/run.sh   # headless tests, normal and with ASan/UBSan
 ```
 
+The library and tests need nothing else (`./buildy --target monstro` or
+`--target monstro_tests`). The examples render with
+[VulkEase](https://github.com/bholcomb/vulkease), which needs Vulkan 1.4, so
+they need the LunarG Vulkan SDK and a built VulkEase checkout; without them
+the examples stop at compile time and say which is missing. Source the SDK's
+environment script first. VulkEase is found at `VULKEASE_ROOT`, by default
+`../vulkease` next to this repository, and its `dist/` must hold the library
+and headers (run `./buildy` there first; a debug build turns on the
+validation layers).
+
+```bash
+source /path/to/vulkan/1.4.350.1/setup-env.sh
+export VULKEASE_ROOT=/path/to/vulkease   # only if it is not ../vulkease
+./buildy
+```
+
+Run the examples from `bin/`, where their shaders and fonts are staged, in a
+shell with the SDK environment and VulkEase on the library path:
+
+```bash
+export LD_LIBRARY_PATH="${VULKEASE_ROOT:-$PWD/../vulkease}/dist/bin:$LD_LIBRARY_PATH"
+cd bin && ./monstro_basic
+```
+
 ## Example
 
 ```c

@@ -8,7 +8,15 @@ project:
 
 variables:
   import_env_vars:
-    # These are only required on Windows; Linux uses system packages
+    # Only the examples use these; the library and tests build without them.
+    # For the examples on Linux, source the Vulkan SDK's setup-env.sh first:
+    # the distribution's loader is older than the Vulkan 1.4 VulkEase needs.
+    - name: VULKAN_SDK
+      default: ""
+    # VulkEase checkout, built so its dist/ holds the library and headers
+    - name: VULKEASE_ROOT
+      default: "${workspace_root}/../vulkease"
+    # Only required on Windows; Linux builds GLFW from source
     - name: GLFW_ROOT
       default: ""                   # Empty default for Linux (uses system paths)
 

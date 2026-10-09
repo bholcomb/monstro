@@ -15,6 +15,15 @@
 #ifndef MONSTRO_EXAMPLE_APP_H
 #define MONSTRO_EXAMPLE_APP_H
 
+// The examples build only with the Vulkan SDK and a built VulkEase; say which is missing.
+#if !__has_include(<vulkan/vulkan.h>)
+#error "Vulkan headers not found: source the Vulkan SDK's setup-env.sh before building the examples"
+#endif
+#include <vulkan/vulkan.h>
+#ifndef VK_API_VERSION_1_4
+#error "Vulkan headers older than 1.4: source the Vulkan SDK's setup-env.sh before building the examples"
+#endif
+
 #include <GLFW/glfw3.h>
 #include <vulkease.h>
 #include <GLFW/glfw3native.h>
