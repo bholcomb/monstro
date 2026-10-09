@@ -423,7 +423,7 @@ MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext *ctx, MonstroFil
       if (state->mode == MONSTRO_FILE_DIALOG_OPEN)
          text_flags = MONSTRO_INPUT_TEXT_NONE;
 
-      monstro_input_text(ctx, "File##fd_filename", state->filename_input, sizeof(state->filename_input), text_flags,
+      monstro_input_text(ctx, "fd_filename##File", state->filename_input, sizeof(state->filename_input), text_flags,
                          nullptr);
 
       const char *ok_label = (state->mode == MONSTRO_FILE_DIALOG_SAVE) ? "Save" : "Open";

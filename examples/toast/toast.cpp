@@ -118,7 +118,7 @@ void toast_draw(ToastManager *tm, MonstroContext *ctx, float dt)
       float y_pos = y_offset;
 
       char win_id[32];
-      snprintf(win_id, sizeof(win_id), "##toast_%d", i);
+      snprintf(win_id, sizeof(win_id), "toast_%d##", i);
 
       monstro_set_next_window_pos(ctx, x_pos, y_pos, MONSTRO_COND_ALWAYS);
       monstro_set_next_window_size(ctx, toast_w, 0, MONSTRO_COND_FIRST_USE_EVER);

@@ -14,7 +14,7 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
 
    monstro_add_item(ctx, style->combo.content_padding[0], style->combo.content_padding[1]);

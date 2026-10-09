@@ -38,9 +38,9 @@ template <typename Draw> static uint32_t vertices_of(Draw draw)
 static uint32_t int_slider_glyphs(int value, const char *format)
 {
    uint32_t with_text = vertices_of([&](MonstroContext *ctx)
-                                    { monstro_slider_int(ctx, "##s", &value, INT_MIN, INT_MAX, format, nullptr); });
+                                    { monstro_slider_int(ctx, "s##", &value, INT_MIN, INT_MAX, format, nullptr); });
    uint32_t without_text =
-       vertices_of([&](MonstroContext *ctx) { monstro_slider_int(ctx, "##s", &value, INT_MIN, INT_MAX, "", nullptr); });
+       vertices_of([&](MonstroContext *ctx) { monstro_slider_int(ctx, "s##", &value, INT_MIN, INT_MAX, "", nullptr); });
    return (with_text - without_text) / 4;
 }
 
@@ -59,7 +59,7 @@ TEST(int_slider_rounds_negative_values_to_the_nearest_int)
    MonstroRect item = {};
    auto draw = [&]()
    {
-      monstro_slider_int(ui.ctx, "##s", &value, -10, 0, "%d", nullptr);
+      monstro_slider_int(ui.ctx, "s##", &value, -10, 0, "%d", nullptr);
       item = monstro_get_item_rect(ui.ctx);
    };
    frame(ui, draw);
@@ -75,7 +75,7 @@ TEST(int_slider_keeps_ints_a_float_cannot_hold)
    Ui ui;
    int value = 16777217;
    bool changed = true;
-   frame(ui, [&]() { changed = monstro_slider_int(ui.ctx, "##s", &value, 0, INT_MAX, "%d", nullptr); });
+   frame(ui, [&]() { changed = monstro_slider_int(ui.ctx, "s##", &value, 0, INT_MAX, "%d", nullptr); });
    CHECK(!changed);
    CHECK(value == 16777217);
 }
@@ -87,7 +87,7 @@ TEST(input_int_steps_ints_a_float_cannot_hold)
    MonstroRect item = {};
    auto draw = [&]()
    {
-      monstro_input_int(ui.ctx, "##n", &value, 1, 10, nullptr);
+      monstro_input_int(ui.ctx, "n##", &value, 1, 10, nullptr);
       item = monstro_get_item_rect(ui.ctx);
    };
    frame(ui, draw);
@@ -105,7 +105,7 @@ TEST(input_double_keeps_full_precision)
    MonstroRect item = {};
    auto draw = [&]()
    {
-      changed = monstro_input_double(ui.ctx, "##d", &value, 0.0, 0.0, "%.12f", nullptr);
+      changed = monstro_input_double(ui.ctx, "d##", &value, 0.0, 0.0, "%.12f", nullptr);
       item = monstro_get_item_rect(ui.ctx);
    };
    frame(ui, draw);

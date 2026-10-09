@@ -510,3 +510,123 @@ TEST(a_text_field_reports_its_edit_when_editing_ends)
    CHECK(e.deactivated && e.after_edit);
    CHECK(std::strcmp(name, "Kestrel!") == 0);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Label IDs                                                                 */
+/* ------------------------------------------------------------------------- */
+
+TEST(a_slider_whose_label_shows_its_value_keeps_its_drag)
+{
+   Ui ui;
+   float speed = 10.0f;
+   MonstroRect slider = {};
+   Edges e;
+   int activations = 0;
+   auto draw = [&]()
+   {
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 200, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+      char label[64];
+      std::snprintf(label, sizeof(label), "speed##Speed: %.1f m/s", speed);
+      monstro_slider_float(ui.ctx, label, &speed, 0.0f, 100.0f, "%.1f", nullptr);
+      slider = monstro_get_item_rect(ui.ctx);
+      e.read(ui.ctx);
+      activations += e.activated;
+      monstro_end_window(ui.ctx);
+   };
+   frame(ui, draw);
+   float x = slider.x + slider.w - 20, y = slider.y + slider.h * 0.5f;
+   ui.moveMouse(x, y);
+   frame(ui, draw);
+   ui.pressLeft(true);
+   frame(ui, draw);
+   for (int i = 1; i <= 6; i++)
+   {
+      float before = speed;
+      ui.moveMouse(x - (float)i * 15.0f, y);
+      frame(ui, draw);
+      // The label changed with the value, and the drag goes on.
+      CHECK(e.active && speed != before);
+   }
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(activations == 1 && e.deactivated && e.after_edit);
+}
+
+TEST(a_tree_node_whose_label_shows_a_count_stays_open)
+{
+   Ui ui;
+   int contacts = 3;
+   MonstroRect row = {};
+   bool open = false;
+   auto draw = [&]()
+   {
+      char label[64];
+      std::snprintf(label, sizeof(label), "contacts##Contacts (%d)", contacts);
+      open = monstro_begin_tree_node(ui.ctx, label, MONSTRO_TREE_NONE);
+      row = monstro_get_item_rect(ui.ctx);
+      if (open)
+         monstro_end_tree_node(ui.ctx);
+   };
+   frame(ui, draw);
+   CHECK(!open);
+   ui.moveMouse(row.x + 10, row.y + row.h * 0.5f);
+   frame(ui, draw);
+   ui.pressLeft(true);
+   frame(ui, draw);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(open);
+   for (int i = 0; i < 5; i++)
+   {
+      contacts++;
+      frame(ui, draw);
+      CHECK(open);
+   }
+}
+
+TEST(the_text_before_hashes_is_the_id_and_the_text_after_is_shown)
+{
+   Ui ui;
+   uint32_t plain = 0, hidden_id = 0;
+   uint64_t first = 0, second = 0;
+   frame(ui,
+         [&]()
+         {
+            uint32_t before = ui.vertexCount();
+            monstro_button(ui.ctx, "Reset", nullptr);
+            plain = ui.vertexCount() - before;
+            before = ui.vertexCount();
+            monstro_button(ui.ctx, "position##Reset", nullptr);
+            hidden_id = ui.vertexCount() - before;
+            first = ui.ctx->last_item_id;
+            monstro_button(ui.ctx, "rotation##Reset", nullptr);
+            second = ui.ctx->last_item_id;
+         });
+   // The same text is drawn, under two IDs; the ID is the text before the ##.
+   CHECK(plain == hidden_id && plain > 0);
+   CHECK(first != second);
+   frame(ui,
+         [&]()
+         {
+            monstro_button(ui.ctx, "position##Something else", nullptr);
+            CHECK(ui.ctx->last_item_id == first);
+         });
+}
+
+FATAL_TEST(a_label_with_nothing_before_its_hashes_aborts, "label '##cmd' has no ID",
+           "write 'id##cmd', or 'cmd##' to show nothing")
+{
+   Ui ui;
+   char text[16] = "";
+   ui.begin();
+   monstro_input_text(ui.ctx, "##cmd", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+}
+
+FATAL_TEST(a_window_with_nothing_before_its_hashes_aborts, "window '##Toast' has no name", "write 'name##Toast'")
+{
+   Ui ui;
+   ui.begin();
+   monstro_begin_window(ui.ctx, "##Toast", nullptr, MONSTRO_WINDOW_DEFAULT);
+}

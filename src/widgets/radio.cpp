@@ -15,7 +15,7 @@ bool monstro_radio_button(MonstroContext *ctx, const char *label, int *value, in
    MonstroFont *font = style->font;
    MonstroStyleToggle *os = &style->option;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
 
    monstro_add_item(ctx, os->padding[0], os->padding[1]);

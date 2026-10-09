@@ -152,7 +152,7 @@ static bool selectable_impl(MonstroContext *ctx, const char *label, bool *select
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    MonstroVec2 label_size = measure_selectable_label(font, display);
 

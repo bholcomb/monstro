@@ -333,7 +333,7 @@ bool monstro_color_picker(MonstroContext *ctx, const char *label, MonstroColor *
       }
 
       monstro_push_id(ctx, label);
-      if (monstro_input_text(ctx, "Hex##cp_hex", hex_buf, sizeof(hex_buf), MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL,
+      if (monstro_input_text(ctx, "cp_hex##Hex", hex_buf, sizeof(hex_buf), MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL,
                              nullptr))
       {
          unsigned int rv = 0, gv = 0, bv = 0, av = 255;
@@ -382,7 +382,7 @@ bool monstro_color_button(MonstroContext *ctx, const char *label, MonstroColor c
 
    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect r = {pos.x, pos.y, width, height};
 

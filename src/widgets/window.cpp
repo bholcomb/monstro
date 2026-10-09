@@ -38,6 +38,10 @@ bool monstro_begin_window(MonstroContext *ctx, const char *name, bool *p_open, M
    monstro::requireContext(ctx, __func__, {MONSTRO_ARG(name)});
    MONSTRO_REQUIRE(ctx->in_frame, "monstro_begin_window called outside a frame: window and widget calls belong "
                                   "between monstro_begin_frame and monstro_end_frame");
+   MONSTRO_REQUIRE(monstro_id_text_length(name) > 0,
+                   "window '%s' has no name: the text before ## names it and the text after it is its title; "
+                   "write 'name##%s'",
+                   name, monstro_display_text(name));
 
    monstro::Window *win = ctx->findWindow(name);
    if (!win)

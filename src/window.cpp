@@ -47,6 +47,13 @@ uint64_t Window::getChildId(const char *childName)
    return childId;
 }
 
+uint64_t Window::getItemId(const char *label)
+{
+   uint64_t itemId = ctx->ids().getLabelId(label);
+   ctx->keepAliveId(itemId);
+   return itemId;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Begin / End                                                               */
 /* ------------------------------------------------------------------------- */

@@ -593,18 +593,35 @@ monstro_slider_float(ctx, "Volume", &volume, 0.0f, 1.0f, "%.2f", NULL);
 
 ### ID system
 
-Every widget needs a unique ID within its window.  The ID is computed by
-hashing the entire label string.  The **displayed text** is everything
-*after* the `##` separator.  Everything before `##` is hidden and exists
-only to make the ID unique.  This is the opposite of Dear ImGui's convention.
+Every widget needs an ID that is unique within its scope: its window, and any
+IDs pushed inside it.  A label's text **before** `##` is its ID; the text
+**after** `##` is what is shown.  This is the opposite of Dear ImGui's
+convention.  Without `##`, the whole label is both the ID and the text.
 
 ```c
-monstro_button(ctx, "position##Reset", NULL);  /* displays "Reset" */
-monstro_button(ctx, "rotation##Reset", NULL);  /* displays "Reset", different ID */
+monstro_button(ctx, "position##Reset", NULL);  /* shows "Reset", ID "position" */
+monstro_button(ctx, "rotation##Reset", NULL);  /* shows "Reset", ID "rotation" */
+monstro_input_text(ctx, "cmd##", buf, sizeof(buf), 0, NULL);  /* shows no label */
 ```
 
-If the label contains no `##`, the entire string is used as both the ID and
-the display text.
+Because only the text before `##` is the ID, a label can show a live value and
+keep its state.  A slider being dragged, an open tree node or a text field
+being edited stays what it is as its text changes:
+
+```c
+char label[64];
+snprintf(label, sizeof(label), "speed##Speed: %.1f m/s", speed);
+monstro_slider_float(ctx, label, &speed, 0.0f, 100.0f, "%.1f", NULL);
+```
+
+Without the `##`, `"Speed: 12.3"` would be a new widget every time the number
+changed.  A label whose ID would be empty, such as `"##cmd"`, stops the
+program: write `"cmd##"` to show nothing.  Window names follow the same rule
+(`"main##Hello World"` is the window `main` with the title "Hello World").
+
+Arguments named `str_id` -- invisible and image buttons, tables, tab bars,
+column sets -- are never shown, so they are used whole, as are the names given
+to `monstro_push_id` and `monstro_get_id`.
 
 For widgets generated in a loop, push and pop ID scopes:
 
@@ -1947,7 +1964,7 @@ bool file_browser_update(MonstroContext* ctx, FileBrowserState* s) {
     monstro_open_popup_ex(ctx, "file_browser", true);
     if (monstro_begin_popup_modal(ctx, "file_browser", &s->open, 0)) {
         /* Path bar */
-        monstro_input_text(ctx, "##path", s->current_path, sizeof(s->current_path),
+        monstro_input_text(ctx, "path##", s->current_path, sizeof(s->current_path),
                            MONSTRO_INPUT_TEXT_NONE, NULL);
 
         monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
@@ -2042,7 +2059,7 @@ bool color_picker_update(MonstroContext* ctx, ColorPickerState* s) {
         monstro_spacer(ctx, 4.0f);
         monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
         monstro_label(ctx, "Hex:");
-        if (monstro_input_text(ctx, "##hex", s->hex, sizeof(s->hex),
+        if (monstro_input_text(ctx, "hex##", s->hex, sizeof(s->hex),
                                MONSTRO_INPUT_TEXT_CHARS_HEXADECIMAL, NULL)) {
             sync_rgb_from_hex(s);
         }
@@ -2058,7 +2075,7 @@ bool color_picker_update(MonstroContext* ctx, ColorPickerState* s) {
         swatch_btn.hover = preview;
         swatch_btn.active = preview;
         monstro_push_button_style(ctx, &swatch_btn);
-        monstro_button_sized(ctx, "##preview", 120.0f, 40.0f, NULL);
+        monstro_button_sized(ctx, "preview##", 120.0f, 40.0f, NULL);
         monstro_pop_style(ctx, 1);
 
         monstro_spacer(ctx, 8.0f);

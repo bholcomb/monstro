@@ -157,7 +157,7 @@ void shortcut_editor_draw(ShortcutEditor *se, MonstroContext *ctx)
 
             monstro_table_next_column(ctx);
             char btn_id[32];
-            snprintf(btn_id, sizeof(btn_id), "Rebind##%d", i);
+            snprintf(btn_id, sizeof(btn_id), "rebind%d##Rebind", i);
             if (monstro_button(ctx, btn_id, nullptr))
             {
                se->capturing = true;

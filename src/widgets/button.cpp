@@ -151,7 +151,7 @@ bool monstro_button_ex(MonstroContext *ctx, const char *label, float width, floa
 
    monstro_add_item(ctx, style->button.padding[0], style->button.padding[1]);
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    float w = 0.0f;

@@ -5,8 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-uint64_t monstro_hash_data(const void *data, size_t size, uint64_t seed);
-
 void monstro_add_item(MonstroContext *ctx, float width, float height);
 
 void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, bool hovered, bool active, bool clicked,
@@ -14,7 +12,12 @@ void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, b
 
 void monstro_draw_disabled_overlay(MonstroContext *ctx, MonstroRect rect);
 
+/*
+ * A label's text before ## is its ID, the text after it is shown: "speed##Speed: 12.3" shows "Speed: 12.3" and
+ * keeps the ID "speed" as the number changes. Without ##, the whole label is both.
+ */
 const char *monstro_display_text(const char *label);
+size_t monstro_id_text_length(const char *label);
 void monstro_copy_id_text(const char *label, char *out, size_t out_size);
 
 #define MONSTRO_REPLACEMENT_CHARACTER 0xFFFDu

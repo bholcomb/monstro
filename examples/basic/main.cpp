@@ -331,7 +331,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_next_column(ctx);
       monstro_slider_float(ctx, "col_vol##Vol", &d->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
       monstro_next_column(ctx);
-      if (monstro_button(ctx, "Reset##vol", nullptr))
+      if (monstro_button(ctx, "vol_reset##Reset", nullptr))
       {
          d->sliderValue = 0.5f;
       }
@@ -554,7 +554,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
 
       monstro_separator_text(ctx, "Item State Queries");
 
-      if (monstro_button(ctx, "Hover/Click Me##statequery", nullptr))
+      if (monstro_button(ctx, "statequery##Hover/Click Me", nullptr))
       {
          printf("Item state: clicked!\n");
       }
@@ -594,7 +594,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       }
 
       monstro_separator_text(ctx, "Color Picker");
-      if (monstro_color_button(ctx, "##picker_swatch", d->pickerColor, 40.0f, 20.0f)) {
+      if (monstro_color_button(ctx, "picker_swatch##", d->pickerColor, 40.0f, 20.0f)) {
           d->colorPickerOpen = !d->colorPickerOpen;
       }
 
@@ -643,7 +643,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
 
       if (monstro_begin_window(ctx, "Color Picker", &d->colorPickerOpen, pickerFlags))
       {
-         monstro_color_picker(ctx, "##demo_picker", &d->pickerColor, MONSTRO_COLOR_PICKER_NONE);
+         monstro_color_picker(ctx, "demo_picker##", &d->pickerColor, MONSTRO_COLOR_PICKER_NONE);
       }
       monstro_end_window(ctx);
    }

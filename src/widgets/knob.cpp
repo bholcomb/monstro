@@ -78,7 +78,7 @@ bool monstro_knob_sized(MonstroContext *ctx, const char *label, float *value, fl
    MonstroFont *font = style->font;
    MonstroStyleKnob *ks = &style->knob;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
 
    monstro_add_item(ctx, ks->padding[0], ks->padding[1]);

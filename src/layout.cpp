@@ -93,6 +93,14 @@ const char *monstro_display_text(const char *label)
    return label;
 }
 
+size_t monstro_id_text_length(const char *label)
+{
+   size_t length = 0;
+   while (label[length] != '\0' && !(label[length] == '#' && label[length + 1] == '#'))
+      length++;
+   return length;
+}
+
 void monstro_copy_id_text(const char *label, char *out, size_t out_size)
 {
    if (!out || out_size == 0)
@@ -102,9 +110,7 @@ void monstro_copy_id_text(const char *label, char *out, size_t out_size)
    if (!label)
       return;
 
-   size_t id_len = 0;
-   while (label[id_len] != '\0' && !(label[id_len] == '#' && label[id_len + 1] == '#'))
-      id_len++;
+   size_t id_len = monstro_id_text_length(label);
    size_t len = monstro_utf8_fit(label, id_len < out_size - 1 ? id_len : out_size - 1);
    memcpy(out, label, len);
    out[len] = '\0';

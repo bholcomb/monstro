@@ -61,7 +61,7 @@ bool monstro_checkbox(MonstroContext *ctx, const char *label, bool *value, const
    float total_h = fmaxf(box_size, text_h);
 
    MonstroRect r = {pos.x, pos.y, total_w, total_h};
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
 
    bool hovered = false;
    bool held = false;

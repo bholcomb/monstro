@@ -142,27 +142,27 @@ bool property_editor_draw(PropertyEditor *pe, MonstroContext *ctx)
          switch (item->type)
          {
          case PROP_BOOL:
-            if (monstro_checkbox(ctx, "##v", &item->bool_val, nullptr))
+            if (monstro_checkbox(ctx, "v##", &item->bool_val, nullptr))
                any_changed = true;
             break;
 
          case PROP_INT:
-            if (monstro_slider_int(ctx, "##v", &item->int_val, item->int_min, item->int_max, "%d", nullptr))
+            if (monstro_slider_int(ctx, "v##", &item->int_val, item->int_min, item->int_max, "%d", nullptr))
                any_changed = true;
             break;
 
          case PROP_FLOAT:
-            if (monstro_slider_float(ctx, "##v", &item->float_val, item->float_min, item->float_max, "%.3f", nullptr))
+            if (monstro_slider_float(ctx, "v##", &item->float_val, item->float_min, item->float_max, "%.3f", nullptr))
                any_changed = true;
             break;
 
          case PROP_STRING:
-            if (monstro_input_text(ctx, "##v", item->str_val, PROP_MAX_STR, MONSTRO_INPUT_TEXT_NONE, nullptr))
+            if (monstro_input_text(ctx, "v##", item->str_val, PROP_MAX_STR, MONSTRO_INPUT_TEXT_NONE, nullptr))
                any_changed = true;
             break;
 
          case PROP_COLOR:
-            if (monstro_color_button(ctx, "##v", item->color_val, 40, 20))
+            if (monstro_color_button(ctx, "v##", item->color_val, 40, 20))
                any_changed = true;
             break;
 
@@ -171,7 +171,7 @@ bool property_editor_draw(PropertyEditor *pe, MonstroContext *ctx)
             const char *options[PROP_MAX_ENUM_OPTIONS];
             for (int j = 0; j < item->enum_val.option_count; j++)
                options[j] = item->enum_val.options[j].label;
-            if (monstro_combo(ctx, "##v", &item->enum_val.current, options, item->enum_val.option_count, nullptr))
+            if (monstro_combo(ctx, "v##", &item->enum_val.current, options, item->enum_val.option_count, nullptr))
                any_changed = true;
             break;
          }

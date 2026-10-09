@@ -96,7 +96,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    MonstroStyleEdit *es = &style->edit;
    monstro::EditState *edit = &ctx->edit_state;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    bool is_read_only = (flags & MONSTRO_INPUT_TEXT_READ_ONLY) != 0;
    bool is_password = (flags & MONSTRO_INPUT_TEXT_PASSWORD) != 0;
@@ -477,7 +477,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
    MonstroStyleEdit *es = &style->edit;
    monstro::EditState *edit = &ctx->edit_state;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    bool is_read_only = (flags & MONSTRO_INPUT_TEXT_READ_ONLY) != 0;
 

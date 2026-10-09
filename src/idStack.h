@@ -15,7 +15,10 @@ class IdStack
    void push(const char *name);
    void pop();
 
+   // The ID of a name, hashed whole, in the current scope.
    uint64_t getId(const char *name) const;
+   // The ID of a label: only the text before its ##, which must not be empty; see monstro_display_text.
+   uint64_t getLabelId(const char *label) const;
 
    int depth() const { return seeds.size(); }
    bool isBalanced() const { return seeds.empty(); }

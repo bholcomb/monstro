@@ -85,7 +85,7 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
    MonstroFont *font = style->font;
    monstro::Canvas *canvas = ctx->canvas;
 
-   uint64_t tab_id = win->getChildId(label);
+   uint64_t tab_id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    if (bar->first_tab == 0)
    {

@@ -177,7 +177,7 @@ void console_draw(Console *con, MonstroContext *ctx, float dt)
       }
       monstro_end_layout(ctx);
 
-      monstro_input_text(ctx, "Filter##con_filter", con->filter, sizeof(con->filter), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      monstro_input_text(ctx, "con_filter##Filter", con->filter, sizeof(con->filter), MONSTRO_INPUT_TEXT_NONE, nullptr);
       monstro_separator(ctx);
 
       const MonstroStyle *style = monstro_get_style(ctx);
@@ -207,7 +207,7 @@ void console_draw(Console *con, MonstroContext *ctx, float dt)
       }
 
       MonstroInputTextFlags flags = (MonstroInputTextFlags)(MONSTRO_INPUT_TEXT_ENTER_RETURNS);
-      if (monstro_input_text(ctx, "##cmd", con->cmd_input, sizeof(con->cmd_input), flags, nullptr))
+      if (monstro_input_text(ctx, "cmd##", con->cmd_input, sizeof(con->cmd_input), flags, nullptr))
       {
          if (con->cmd_input[0])
          {

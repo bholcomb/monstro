@@ -142,7 +142,7 @@ bool monstro_begin_menu(MonstroContext *ctx, const char *label, bool enabled)
       // A press on the open menu's label closes that menu, whether it sits in a menu bar or a parent menu.
       if (pressed)
       {
-         monstro::closePopup(ctx, win->getChildId(label));
+         monstro::closePopup(ctx, win->getItemId(label));
          return false;
       }
       else

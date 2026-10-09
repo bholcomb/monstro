@@ -49,7 +49,7 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    MonstroFont *font = style->font;
    MonstroStyleSlider *ss = &style->slider;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
 
    monstro_add_item(ctx, ss->padding[0], ss->padding[1]);

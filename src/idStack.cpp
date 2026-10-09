@@ -36,4 +36,15 @@ uint64_t IdStack::getId(const char *name) const
    return hash_data(name, std::strlen(name), seed);
 }
 
+uint64_t IdStack::getLabelId(const char *label) const
+{
+   size_t length = monstro_id_text_length(label);
+   MONSTRO_REQUIRE(length > 0,
+                   "label '%s' has no ID: the text before ## is its ID and the text after it is shown; write "
+                   "'id##%s', or '%s##' to show nothing",
+                   label, monstro_display_text(label), monstro_display_text(label));
+   uint64_t seed = seeds.empty() ? FNV_OFFSET_BASIS : seeds.top();
+   return hash_data(label, length, seed);
+}
+
 } // namespace monstro

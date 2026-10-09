@@ -118,7 +118,7 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
    MonstroStyleEdit *es = &ps->edit;
    monstro::EditState *edit = &ctx->edit_state;
 
-   uint64_t id = win->getChildId(label);
+   uint64_t id = win->getItemId(label);
    const char *display = monstro_display_text(label);
    uint64_t dec_id = id ^ 0x100;
    uint64_t inc_id = id ^ 0x200;

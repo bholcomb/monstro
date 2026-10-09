@@ -56,7 +56,7 @@ void monstro_open_popup(MonstroContext *ctx, const char *label) { monstro_open_p
 void monstro_open_popup_ex(MonstroContext *ctx, const char *label, bool modal)
 {
    monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
-   uint64_t popup_id = win->getChildId(label);
+   uint64_t popup_id = win->getItemId(label);
 
    if (is_popup_open_internal(ctx, popup_id))
       return;
@@ -100,7 +100,7 @@ void monstro_close_current_popup(MonstroContext *ctx)
 bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFlags extra_flags)
 {
    monstro::Window *parent_win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(label)});
-   uint64_t popup_id = parent_win->getChildId(label);
+   uint64_t popup_id = parent_win->getItemId(label);
 
    if (!is_popup_open_internal(ctx, popup_id))
    {
@@ -145,7 +145,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
    if (p_open && !*p_open)
       return false;
 
-   uint64_t popup_id = parent_win->getChildId(label);
+   uint64_t popup_id = parent_win->getItemId(label);
 
    if (!is_popup_open_internal(ctx, popup_id))
    {
@@ -239,6 +239,6 @@ bool monstro_is_popup_open(MonstroContext *ctx, const char *str_id)
 {
    monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
 
-   uint64_t popup_id = win->getChildId(str_id);
+   uint64_t popup_id = win->getItemId(str_id);
    return is_popup_open_internal(ctx, popup_id);
 }

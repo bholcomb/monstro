@@ -60,7 +60,9 @@ struct Window
 
    void init(Context *context, const char *windowName, MonstroWindowFlags windowFlags);
 
+   // The ID of a name hashed whole, or of a label (its text before ##), in the current ID scope.
    uint64_t getChildId(const char *childName);
+   uint64_t getItemId(const char *label);
 
    void move(float dx, float dy)
    {
