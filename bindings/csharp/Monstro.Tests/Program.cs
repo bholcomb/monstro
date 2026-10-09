@@ -307,6 +307,61 @@ unsafe class Program
             Check("context config defaults", defaults.max_input_events == 64 && defaults.max_items == 512);
         }
 
+        // Cockpit widgets through the convenience layer: page tabs the host keeps, a vertical slider, an absolute knob.
+        {
+            using var env = new Env();
+            env.LoadFont("sans", args[1], 16);
+            using var ui = env.CreateContext();
+            string[] pages = { "flt##FLT", "sys##SYS", "cargo##CARGO" };
+            int page = 1, shown = 1;
+            bool clicked = false, sliderChanged = false, knobChanged = false;
+            float lift = 0, trim = 0;
+            MonstroRect tabs = default, slider = default, knob = default;
+            void Frame()
+            {
+                ui.BeginFrame(512, 512, 1.0f / 60);
+                ui.SetNextWindowPosition(0, 0);
+                ui.SetNextWindowSize(512, 512);
+                ui.BeginWindow("screen", MonstroWindowFlags.Background | MonstroWindowFlags.Inputs);
+                ui.SetCursorScreenPosition(0, 448);
+                shown = page;
+                clicked = ui.PageTabs("pages", pages, ref shown, 512, 64);
+                tabs = ui.ItemRect;
+                ui.SetCursorScreenPosition(40, 40);
+                sliderChanged = ui.SliderFloat("lift##", ref lift, 0, 100, 30, 200, MonstroSliderFlags.Vertical);
+                slider = ui.ItemRect;
+                ui.SetCursorScreenPosition(200, 40);
+                knobChanged = ui.Knob("trim##", ref trim, 0, 12, 100, MonstroKnobFlags.Absolute);
+                knob = ui.ItemRect;
+                ui.ProgressBar(0.5f, 20, 100, "", MonstroProgressFlags.Vertical);
+                ui.EndWindow();
+                ui.EndFrame();
+            }
+            void Tap(float x, float y)
+            {
+                ui.SetMousePosition(x, y);
+                ui.SetMouseButton(MonstroMouseButton.Left, true);
+                ui.SetMouseButton(MonstroMouseButton.Left, false);
+                Frame();
+            }
+            Frame();
+            Check("page tabs keep the host's selection", !clicked && shown == 1 && tabs.w == 512 && tabs.h == 64);
+            Tap(tabs.x + 40, tabs.y + 32);
+            Check("page tabs report a tapped tab", clicked && shown == 0);
+            Frame();
+            Check("page tabs show the host's page until it changes", !clicked && shown == 1);
+            Tap(slider.x + 15, slider.y + 50);
+            Check("vertical slider tapped a quarter down", sliderChanged && Math.Abs(lift - 75) < 0.01f);
+            Tap(knob.x + 50, knob.y + 10);
+            Check("absolute knob tapped at the top", knobChanged && Math.Abs(trim - 6) < 0.01f);
+            Throws<ArgumentOutOfRangeException>("page tabs selection out of range", () =>
+            {
+                ui.BeginFrame(512, 512, 0.01f);
+                try { int bad = 3; ui.PageTabs("pages", pages, ref bad); }
+                finally { ui.EndFrame(); }
+            });
+        }
+
         using (var edit = new Env())
         using (var ctx = edit.CreateContext())
         {

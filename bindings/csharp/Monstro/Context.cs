@@ -194,6 +194,59 @@ public sealed unsafe class Context : IDisposable
         fixed (int* pointer = &value)
             return Native.monstro_slider_int(ctx, label ?? throw new ArgumentNullException(nameof(label)), pointer, min, max, format, tooltip);
     }
+    /// <summary>A slider of the given size (0 for the default); MonstroSliderFlags.Vertical runs it bottom to top.</summary>
+    public bool SliderFloat(string label, ref float value, float min, float max, float width, float height,
+                            MonstroSliderFlags flags, string? format = null, string? tooltip = null)
+    {
+        MonstroContext ctx = RequireFrame();
+        fixed (float* pointer = &value)
+            return Native.monstro_slider_float_ex(ctx, label ?? throw new ArgumentNullException(nameof(label)), pointer, min, max, format,
+                                                  width, height, flags, tooltip);
+    }
+    /// <summary>A knob (diameter 0 for the theme's); MonstroKnobFlags.Absolute points it where the pointer is.</summary>
+    public bool Knob(string label, ref float value, float min, float max, float diameter = 0,
+                     MonstroKnobFlags flags = MonstroKnobFlags.None, string? format = null, string? tooltip = null)
+    {
+        MonstroContext ctx = RequireFrame();
+        fixed (float* pointer = &value)
+            return Native.monstro_knob_ex(ctx, label ?? throw new ArgumentNullException(nameof(label)), pointer, min, max, format,
+                                          diameter, flags, tooltip);
+    }
+    /// <summary>overlay null shows the percentage and "" no text; MonstroProgressFlags.Vertical fills bottom up.</summary>
+    public void ProgressBar(float fraction, float width = 0, float height = 0, string? overlay = null,
+                            MonstroProgressFlags flags = MonstroProgressFlags.None) =>
+        Native.monstro_progress_bar_ex(RequireFrame(), fraction, width, height, overlay, flags);
+    /// <summary>
+    /// Page tabs lighting tab <paramref name="selected"/>, which the host keeps: pass it every frame, and a
+    /// click on another tab writes that tab's index and returns true.
+    /// </summary>
+    public bool PageTabs(string id, ReadOnlySpan<string> labels, ref int selected, float width = 0, float height = 0)
+    {
+        MonstroContext ctx = RequireFrame();
+        if (id == null) throw new ArgumentNullException(nameof(id));
+        if (labels.Length == 0) throw new ArgumentOutOfRangeException(nameof(labels), "Page tabs need at least one tab");
+        if ((uint)selected >= (uint)labels.Length) throw new ArgumentOutOfRangeException(nameof(selected));
+        // The labels as NUL-terminated UTF-8, one buffer, pinned only for the call.
+        int bytes = 0;
+        foreach (string label in labels)
+            bytes += Encoding.UTF8.GetByteCount(label ?? throw new ArgumentNullException(nameof(labels))) + 1;
+        byte[] text = new byte[bytes];
+        int[] starts = new int[labels.Length];
+        for (int i = 0, at = 0; i < labels.Length; i++)
+        {
+            starts[i] = at;
+            at += Encoding.UTF8.GetBytes(labels[i], 0, labels[i].Length, text, at) + 1;
+        }
+        byte*[] pointers = new byte*[labels.Length];
+        fixed (byte* first = text)
+        fixed (byte** labelPointers = pointers)
+        fixed (int* pointer = &selected)
+        {
+            for (int i = 0; i < labels.Length; i++)
+                pointers[i] = first + starts[i];
+            return Native.monstro_page_tabs(ctx, id, labelPointers, labels.Length, pointer, width, height);
+        }
+    }
     /// <summary>capacityBytes includes the UTF-8 NUL terminator, rather than UTF-16 characters.</summary>
     public bool InputText(string label, ref string value, int capacityBytes = 1024,
                           MonstroInputTextFlags flags = MonstroInputTextFlags.None, string? tooltip = null)
@@ -230,6 +283,8 @@ public sealed unsafe class Context : IDisposable
     public void BeginLayout(MonstroLayoutDirection direction) => Native.monstro_begin_layout(RequireFrame(), direction);
     public void EndLayout() => Native.monstro_end_layout(RequireFrame());
     public void SetCursorPosition(float x, float y) => Native.monstro_set_cursor_pos(RequireFrame(), x, y);
+    /// <summary>Places the next item at a point on the display, as a cockpit screen places its controls.</summary>
+    public void SetCursorScreenPosition(float x, float y) => Native.monstro_set_cursor_screen_pos(RequireFrame(), x, y);
     public void PushButtonStyle(in MonstroStyleButton style)
     {
         MonstroContext ctx = RequireFrame();

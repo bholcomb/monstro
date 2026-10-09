@@ -80,6 +80,14 @@ MobiusState.
 `InputText` copies the string into a UTF-8 buffer of `capacityBytes` for each
 call; native editing keeps only the cursor and selection between frames.
 
+For cockpit screens, `PageTabs` takes the labels as strings and the selection
+by `ref`, as the host keeps it: pass the page every frame and read back a
+click. `SliderFloat` with a size and `MonstroSliderFlags.Vertical`, `Knob` with
+`MonstroKnobFlags.Absolute`, `ProgressBar` with `MonstroProgressFlags.Vertical`
+and `SetCursorScreenPosition` place and run the other controls; ellipses and
+turned text are `Native.monstro_draw_ellipse` and
+`Native.monstro_draw_text_rotated`.
+
 Use an environment and its contexts on one thread at a time, including
 disposal. Balance every window/layout/ID/style/disabled stack before `EndFrame`:
 native Monstro never throws, and it aborts the process with a message on misuse,
@@ -125,7 +133,8 @@ constants against a C probe, and that no entry point takes or returns a bare
 `IntPtr`. It then exercises draw output and its validity, multiple
 frames, UTF-8, one-byte booleans, pointers, the shared atlas, fonts from paths
 and bytes, themes shared by contexts with pushes kept in the frame, settings,
-host buffers in split streams, callbacks, and disposal.
+host buffers in split streams, callbacks, the cockpit widgets (page tabs, a
+vertical slider and an absolute knob, tapped), and disposal.
 
 Regenerate the committed C API mirror and ABI probe after public header changes:
 
