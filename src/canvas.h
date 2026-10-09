@@ -181,6 +181,9 @@ struct Canvas
    Reservation reserveSolid(uint32_t vert_count, uint32_t idx_count);
    MonstroDrawCommand *getOrCreateDrawCommand(uint64_t texture_id);
    MonstroDrawCommand *newDrawCommand();
+   // Geometry within these bounds lies wholly outside the clip rect, where nothing of it shows: it is not drawn.
+   bool clippedAway(float min_x, float min_y, float max_x, float max_y) const;
+   bool clippedAway(const MonstroVec2 *points, int count, float margin) const;
    void pathPush(MonstroVec2 point);
    void pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12);
    void pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCornerFlags rounding_corners);

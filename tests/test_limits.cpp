@@ -117,10 +117,11 @@ FATAL_TEST(draw_command_overflow_aborts, "draw command list overflow: capacity 8
    Ui ui(false, nullptr, &config);
    ui.begin();
    MonstroCanvas *canvas = root_canvas(ui);
+   // A rect inside each of nine clip rects: nine commands.
    for (int i = 0; i < 9; i++)
    {
       monstro_push_clip_rect(canvas, {(float)i, 0.0f, 10.0f, 10.0f});
-      fill_rects(canvas, 1);
+      monstro_draw_rect_filled(canvas, {(float)i, 0.0f, 1.0f, 1.0f}, 0xffffffff, 0.0f, MONSTRO_CORNER_NONE);
       monstro_pop_clip_rect(canvas);
    }
 }
@@ -134,6 +135,8 @@ FATAL_TEST(windows_share_one_command_list, "draw command list overflow: capacity
    const char *names[] = {"A", "B", "C", "D", "E"};
    for (const char *name : names)
    {
+      // Each draws its background: a window with no size would draw nothing.
+      monstro_set_next_window_size(ui.ctx, 100, 100, MONSTRO_COND_ALWAYS);
       monstro_begin_window(ui.ctx, name, nullptr, MONSTRO_WINDOW_BACKGROUND);
       monstro_end_window(ui.ctx);
    }

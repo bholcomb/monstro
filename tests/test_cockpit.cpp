@@ -1,0 +1,92 @@
+// What cockpit screens need.
+#include "context.h"
+#include "harness.h"
+#include <cmath>
+
+// One fixed window filling the display, without decorations, as a cockpit screen draws.
+static void begin_screen(Ui &ui)
+{
+   monstro_set_next_window_pos(ui.ctx, 0, 0, MONSTRO_COND_ALWAYS);
+   monstro_set_next_window_size(ui.ctx, 512, 512, MONSTRO_COND_ALWAYS);
+   monstro_begin_window(ui.ctx, "screen", nullptr,
+                        (MonstroWindowFlags)(MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_INPUTS));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Culling                                                                   */
+/* ------------------------------------------------------------------------- */
+
+TEST(geometry_wholly_outside_the_clip_rect_is_not_drawn)
+{
+   Ui ui;
+   ui.begin();
+   begin_screen(ui);
+   MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+   monstro_push_clip_rect(canvas, {100, 100, 100, 100});
+   uint32_t vertices = ui.vertexCount();
+   uint32_t commands = ui.ctx->canvas->command_count;
+
+   // Each of these lies wholly outside the clip rect, some touching its edge.
+   monstro_draw_rect_filled(canvas, {300, 300, 50, 50}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
+   monstro_draw_rect_filled(canvas, {40, 100, 60, 50}, 0xffffffff, 8, MONSTRO_CORNER_ALL);
+   monstro_draw_rect(canvas, {0, 0, 50, 50}, 0xffffffff, 0, MONSTRO_CORNER_NONE, 2);
+   monstro_draw_line(canvas, {0, 250}, {400, 250}, 0xffffffff, 2);
+   monstro_draw_circle_filled(canvas, {50, 50}, 20, 0xffffffff, 16);
+   monstro_draw_circle(canvas, {350, 150}, 20, 0xffffffff, 16, 2);
+   monstro_draw_triangle_filled(canvas, {0, 0}, {50, 0}, {0, 50}, 0xffffffff);
+   monstro_draw_quad_filled(canvas, {300, 0}, {350, 0}, {350, 50}, {300, 50}, 0xffffffff);
+   monstro_draw_image(canvas, 7, {210, 120, 30, 30}, {0, 0}, {1, 1}, 0xffffffff);
+   monstro_draw_text(canvas, ui.font, {300, 120}, 0xffffffff, "far away");
+   CHECK(ui.vertexCount() == vertices && ui.ctx->canvas->command_count == commands);
+
+   // A shape partly inside is drawn whole; the clip rect cuts it.
+   monstro_draw_rect_filled(canvas, {80, 80, 50, 50}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
+   CHECK(ui.vertexCount() == vertices + 4);
+   // A line's thickness counts: one just outside but thick enough to reach in is drawn.
+   monstro_draw_line(canvas, {120, 98}, {180, 98}, 0xffffffff, 6);
+   CHECK(ui.vertexCount() == vertices + 8);
+
+   // A clip rect with no area shows nothing at all.
+   monstro_push_clip_rect(canvas, {300, 300, 10, 10});
+   monstro_draw_rect_filled(canvas, {0, 0, 512, 512}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
+   CHECK(ui.vertexCount() == vertices + 8);
+   monstro_pop_clip_rect(canvas);
+   monstro_pop_clip_rect(canvas);
+   monstro_end_window(ui.ctx);
+   ui.end();
+}
+
+TEST(a_widget_clipped_away_draws_nothing_but_still_takes_its_place)
+{
+   Ui ui;
+   MonstroRect first = {}, hidden = {}, after[2] = {};
+   uint32_t before = 0, drawn_hidden = 0;
+   for (int clip_it = 0; clip_it < 2; clip_it++)
+   {
+      ui.begin();
+      begin_screen(ui);
+      MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+      monstro_button_sized(ui.ctx, "first", 100, 30, nullptr);
+      first = monstro_get_item_rect(ui.ctx);
+      before = ui.vertexCount();
+      if (clip_it)
+         monstro_push_clip_rect(canvas, {0, 0, 0, 0});
+      float progress = 0.5f;
+      monstro_button_sized(ui.ctx, "hidden", 100, 30, nullptr);
+      hidden = monstro_get_item_rect(ui.ctx);
+      monstro_slider_float(ui.ctx, "slider", &progress, 0, 1, "%.2f", nullptr);
+      monstro_progress_bar(ui.ctx, progress, 100, 20, nullptr);
+      if (clip_it)
+         monstro_pop_clip_rect(canvas);
+      drawn_hidden = ui.vertexCount() - before;
+      monstro_button_sized(ui.ctx, "after", 100, 30, nullptr);
+      after[clip_it] = monstro_get_item_rect(ui.ctx);
+      monstro_end_window(ui.ctx);
+      ui.end();
+      // Drawn, the three widgets make geometry; clipped away, none.
+      CHECK(clip_it ? drawn_hidden == 0 : drawn_hidden > 0);
+      CHECK(hidden.y > first.y && hidden.h == 30);
+   }
+   // Clipped away, they kept their room: what follows them is where it was.
+   CHECK(after[1].y == after[0].y && after[1].y > hidden.y + hidden.h);
+}

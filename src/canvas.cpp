@@ -321,6 +321,29 @@ MonstroDrawCommand *Canvas::newDrawCommand()
    return cmd;
 }
 
+bool Canvas::clippedAway(float min_x, float min_y, float max_x, float max_y) const
+{
+   // Outside a window there is no clip rect; drawing there stops when the command is made.
+   if (clip_rects.empty())
+      return false;
+   MonstroRect clip = clip_rects.top();
+   return clip.w <= 0.0f || clip.h <= 0.0f || max_x <= clip.x || max_y <= clip.y || min_x >= clip.x + clip.w ||
+          min_y >= clip.y + clip.h;
+}
+
+bool Canvas::clippedAway(const MonstroVec2 *points, int count, float margin) const
+{
+   float min_x = points[0].x, min_y = points[0].y, max_x = points[0].x, max_y = points[0].y;
+   for (int i = 1; i < count; i++)
+   {
+      min_x = fminf(min_x, points[i].x);
+      min_y = fminf(min_y, points[i].y);
+      max_x = fmaxf(max_x, points[i].x);
+      max_y = fmaxf(max_y, points[i].y);
+   }
+   return clippedAway(min_x - margin, min_y - margin, max_x + margin, max_y + margin);
+}
+
 void Canvas::pathPush(MonstroVec2 point)
 {
    MONSTRO_REQUIRE(path_count < path_capacity,
@@ -447,6 +470,9 @@ void Canvas::addLine(MonstroVec2 p1, MonstroVec2 p2, uint32_t color, float thick
    float len = sqrtf(dx * dx + dy * dy);
    if (len < 0.0001f)
       return;
+   MonstroVec2 ends[2] = {p1, p2};
+   if (clippedAway(ends, 2, thickness * 0.5f))
+      return;
 
    dx /= len;
    dy /= len;
@@ -490,6 +516,8 @@ void Canvas::addRectFilled(MonstroRect rect, uint32_t color, float rounding, Mon
 void Canvas::addRectFilledMultiColor(MonstroRect rect, uint32_t col_ul, uint32_t col_ur, uint32_t col_lr,
                                      uint32_t col_ll)
 {
+   if (clippedAway(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h))
+      return;
    MonstroVec2 w = env->atlas.white_uv;
    Reservation r = reserveSolid(4, 6);
    r.vertex(0, rect.x, rect.y, w.x, w.y, col_ul);
@@ -501,6 +529,9 @@ void Canvas::addRectFilledMultiColor(MonstroRect rect, uint32_t col_ul, uint32_t
 
 void Canvas::addTriangleFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint32_t color)
 {
+   MonstroVec2 corners[3] = {p1, p2, p3};
+   if (clippedAway(corners, 3, 0.0f))
+      return;
    MonstroVec2 w = env->atlas.white_uv;
    Reservation r = reserveSolid(3, 3);
    r.vertex(0, p1.x, p1.y, w.x, w.y, color);
@@ -521,6 +552,8 @@ void Canvas::addTriangle(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, uint32_
 void Canvas::addCircleFilled(MonstroVec2 center, float radius, uint32_t color, int num_segments)
 {
    if (num_segments < 3)
+      return;
+   if (clippedAway(center.x - radius, center.y - radius, center.x + radius, center.y + radius))
       return;
 
    MonstroVec2 w = env->atlas.white_uv;
@@ -543,6 +576,9 @@ void Canvas::addCircle(MonstroVec2 center, float radius, uint32_t color, int num
 {
    if (num_segments < 3)
       return;
+   float reach = radius + thickness * 0.5f;
+   if (clippedAway(center.x - reach, center.y - reach, center.x + reach, center.y + reach))
+      return;
 
    for (int i = 0; i < num_segments; i++)
    {
@@ -564,6 +600,9 @@ void Canvas::addQuad(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2
 
 void Canvas::addQuadFilled(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, MonstroVec2 p4, uint32_t color)
 {
+   MonstroVec2 corners[4] = {p1, p2, p3, p4};
+   if (clippedAway(corners, 4, 0.0f))
+      return;
    MonstroVec2 w = env->atlas.white_uv;
    Reservation r = reserveSolid(4, 6);
    r.vertex(0, p1.x, p1.y, w.x, w.y, color);
@@ -593,6 +632,8 @@ void Canvas::addPolyline(const MonstroVec2 *points, int num_points, uint32_t col
 void Canvas::addConvexPolyFilled(const MonstroVec2 *points, int num_points, uint32_t color)
 {
    if (num_points < 3)
+      return;
+   if (clippedAway(points, num_points, 0.0f))
       return;
 
    MonstroVec2 w = env->atlas.white_uv;
@@ -770,6 +811,8 @@ void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, cons
 void Canvas::addImage(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max,
                       uint32_t tint_color)
 {
+   if (clippedAway(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h))
+      return;
    Reservation r = reserve(texture_id, 4, 6);
    r.vertex(0, rect.x, rect.y, uv_min.x, uv_min.y, tint_color);
    r.vertex(1, rect.x + rect.w, rect.y, uv_max.x, uv_min.y, tint_color);
@@ -787,6 +830,8 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
       return;
    }
 
+   if (clippedAway(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h))
+      return;
    MonstroVec2 a = {rect.x, rect.y};
    MonstroVec2 b = {rect.x + rect.w, rect.y + rect.h};
 
@@ -823,6 +868,8 @@ void Canvas::addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 
 void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint32_t tint_color)
 {
    if (!patch)
+      return;
+   if (clippedAway(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h))
       return;
 
    Reservation r = reserve(patch->texture_id, 16, 54);
