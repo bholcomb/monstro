@@ -734,7 +734,28 @@ void Canvas::addBezierQuadratic(MonstroVec2 p1, MonstroVec2 p2, MonstroVec2 p3, 
 /* ------------------------------------------------------------------------- */
 
 // Text with embedded {icon:ID} tags; it wraps at wrap_width when that is positive.
-void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width)
+void Canvas::addGlyph(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t color,
+                      const Turn *turn)
+{
+   if (!turn)
+   {
+      addImage(texture_id, rect, uv_min, uv_max, color);
+      return;
+   }
+   MonstroVec2 corners[4] = {turn->apply({rect.x, rect.y}), turn->apply({rect.x + rect.w, rect.y}),
+                             turn->apply({rect.x + rect.w, rect.y + rect.h}), turn->apply({rect.x, rect.y + rect.h})};
+   if (clippedAway(corners, 4, 0.0f))
+      return;
+   Reservation r = reserve(texture_id, 4, 6);
+   r.vertex(0, corners[0].x, corners[0].y, uv_min.x, uv_min.y, color);
+   r.vertex(1, corners[1].x, corners[1].y, uv_max.x, uv_min.y, color);
+   r.vertex(2, corners[2].x, corners[2].y, uv_max.x, uv_max.y, color);
+   r.vertex(3, corners[3].x, corners[3].y, uv_min.x, uv_max.y, color);
+   quad_indices(r, 0, 0, 1, 2, 3);
+}
+
+void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width,
+                        const Turn *turn)
 {
    uint64_t atlas_texture = env->atlas.texture_id;
    float pen_x = pos.x;
@@ -759,8 +780,8 @@ void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, cons
             line_y += line_height;
          }
          MonstroRect icon_rect = {pen_x, pos.y + line_y, icon_sz, icon_sz};
-         addImage(icon->in_atlas ? atlas_texture : icon->texture_id, icon_rect, icon->uv_min, icon->uv_max,
-                  icon->is_monochrome ? color : 0xFFFFFFFF);
+         addGlyph(icon->in_atlas ? atlas_texture : icon->texture_id, icon_rect, icon->uv_min, icon->uv_max,
+                  icon->is_monochrome ? color : 0xFFFFFFFF, turn);
          pen_x += icon_sz;
          continue;
       }
@@ -789,8 +810,8 @@ void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, cons
       {
          MonstroRect rect = {pen_x + glyph.offset[0], pos.y + line_y + glyph.offset[1] + ascent, glyph.size[0],
                              glyph.size[1]};
-         addImage(atlas_texture, rect, {glyph.min_tex_coord[0], glyph.min_tex_coord[1]},
-                  {glyph.max_tex_coord[0], glyph.max_tex_coord[1]}, color);
+         addGlyph(atlas_texture, rect, {glyph.min_tex_coord[0], glyph.min_tex_coord[1]},
+                  {glyph.max_tex_coord[0], glyph.max_tex_coord[1]}, color, turn);
       }
       pen_x += glyph.advance[0];
    }
@@ -800,17 +821,18 @@ void Canvas::addText(MonstroFont *font, MonstroVec2 pos, uint32_t color, const c
 {
    if (!font || !text)
       return;
-   addTextRun(font, pos, color, text, 0.0f);
+   addTextRun(font, pos, color, text, 0.0f, nullptr);
 }
 
 void Canvas::addTextWrapped(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width)
 {
    if (!font || !text || wrap_width <= 0.0f)
       return;
-   addTextRun(font, pos, color, text, wrap_width);
+   addTextRun(font, pos, color, text, wrap_width, nullptr);
 }
 
-void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, const char *text, MonstroAlign align)
+void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, const char *text, MonstroAlign align,
+                       const Turn *turn)
 {
    if (!font || !text)
       return;
@@ -833,7 +855,7 @@ void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, cons
    else if (vertical == MONSTRO_ALIGN_BOTTOM)
       y = rect.y + rect.h - text_size.y;
 
-   addText(font, {x, y}, color, text);
+   addTextRun(font, {x, y}, color, text, 0.0f, turn);
 }
 
 /* ------------------------------------------------------------------------- */

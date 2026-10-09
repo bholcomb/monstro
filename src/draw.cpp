@@ -1,5 +1,6 @@
 #include "monstro/draw.h"
 #include "canvas.h"
+#include <math.h>
 
 // The canvas a draw call works on: it must be lent to a context for a frame.
 static monstro::Canvas *lent(MonstroCanvas *canvas, const char *function)
@@ -145,6 +146,14 @@ void monstro_draw_text_wrapped(MonstroCanvas *canvas, MonstroFont *font, Monstro
 {
    MONSTRO_REQUIRE(font && text, "%s: the font and text must not be null", __func__);
    lent(canvas, __func__)->addTextWrapped(font, pos, color, text, wrap_width);
+}
+
+void monstro_draw_text_rotated(MonstroCanvas *canvas, MonstroFont *font, MonstroRect rect, uint32_t color,
+                               const char *text, MonstroAlign align, MonstroVec2 pivot, float angle)
+{
+   MONSTRO_REQUIRE(font && text, "%s: the font and text must not be null", __func__);
+   monstro::Turn turn = {pivot, cosf(angle), sinf(angle)};
+   lent(canvas, __func__)->addTextEx(font, rect, color, text, align, &turn);
 }
 
 /* Images */

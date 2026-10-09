@@ -94,6 +94,16 @@ void monstro_draw_text_wrapped(MonstroCanvas* canvas, MonstroFont* font,
                                MonstroVec2 pos, uint32_t color,
                                const char* text, float wrap_width);
 
+/*
+ * Text aligned in rect as monstro_draw_text_aligned places it, then turned
+ * with rect by angle radians (clockwise on screen) about pivot: a pitch
+ * ladder's numbers rolling with the horizon, a label along a dial's needle.
+ */
+void monstro_draw_text_rotated(MonstroCanvas* canvas, MonstroFont* font,
+                               MonstroRect rect, uint32_t color,
+                               const char* text, MonstroAlign align,
+                               MonstroVec2 pivot, float angle);
+
 /* ------------------------------------------------------------------------- */
 /* Images                                                                    */
 /* ------------------------------------------------------------------------- */

@@ -38,6 +38,19 @@ struct Reservation
    void index(uint32_t i, uint32_t vertex);
 };
 
+// A turn about a pivot, for text drawn rotated: positive angles turn clockwise on screen (+y is down).
+struct Turn
+{
+   MonstroVec2 pivot;
+   float cos_angle, sin_angle;
+
+   MonstroVec2 apply(MonstroVec2 p) const
+   {
+      float dx = p.x - pivot.x, dy = p.y - pivot.y;
+      return {pivot.x + dx * cos_angle - dy * sin_angle, pivot.y + dx * sin_angle + dy * cos_angle};
+   }
+};
+
 struct RecordedCommand
 {
    MonstroDrawCommand command;
@@ -158,7 +171,9 @@ struct Canvas
                            int num_segments);
 
    void addText(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text);
-   void addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, const char *text, MonstroAlign align);
+   // Text aligned in rect; with a turn, the whole of it is then turned about the turn's pivot.
+   void addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, const char *text, MonstroAlign align,
+                  const Turn *turn = nullptr);
    void addTextWrapped(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width);
 
    void addImage(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t tint_color);
@@ -192,7 +207,11 @@ struct Canvas
    // The outline of an ellipse into the path.
    void pathEllipse(MonstroVec2 center, MonstroVec2 radii, float rotation, int num_segments);
    void pathRect(MonstroVec2 a, MonstroVec2 b, float rounding, MonstroCornerFlags rounding_corners);
-   void addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width);
+   void addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, const char *text, float wrap_width,
+                   const Turn *turn);
+   // One glyph or icon: an image, turned when there is a turn.
+   void addGlyph(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max, uint32_t color,
+                 const Turn *turn);
 };
 
 } // namespace monstro

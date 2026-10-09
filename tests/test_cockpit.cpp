@@ -95,7 +95,7 @@ TEST(a_widget_clipped_away_draws_nothing_but_still_takes_its_place)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Ellipses                                                                  */
+/* Ellipses, turned quads and turned text                                    */
 /* ------------------------------------------------------------------------- */
 
 TEST(an_ellipse_outline_lies_on_its_turned_radii)
@@ -138,4 +138,53 @@ FATAL_TEST(an_ellipse_of_two_segments_aborts, "monstro_draw_ellipse: num_segment
    Ui ui(false);
    ui.begin();
    monstro_draw_ellipse(monstro_get_window_canvas(ui.ctx), {200, 150}, {60, 20}, 0.0f, 0xffffffff, 2, 1.0f);
+}
+
+TEST(a_turned_quad_keeps_its_corners_and_colour)
+{
+   Ui ui(false);
+   ui.begin();
+   uint32_t first = ui.vertexCount();
+   // A horizon's ground, rolled 30 degrees about the screen's centre.
+   MonstroVec2 corners[4] = {{120.0f, 200.0f}, {420.0f, 373.2f}, {320.0f, 546.4f}, {20.0f, 373.2f}};
+   monstro_draw_quad_filled(monstro_get_window_canvas(ui.ctx), corners[0], corners[1], corners[2], corners[3],
+                            0xff204060);
+   const MonstroDrawData *data = ui.end();
+   CHECK(data->vertex_count - first == 4);
+   for (int i = 0; i < 4; i++)
+   {
+      const MonstroVertex &v = data->vertices[first + i];
+      CHECK(v.position[0] == corners[i].x && v.position[1] == corners[i].y && v.color == 0xff204060);
+   }
+}
+
+TEST(turned_text_is_the_aligned_text_turned_about_its_pivot)
+{
+   Ui ui;
+   MonstroRect rect = {100, 100, 120, 40};
+   MonstroVec2 pivot = {160, 200};
+   const float angle = 0.5f;
+   ui.begin();
+   MonstroCanvas *canvas = monstro_get_window_canvas(ui.ctx);
+   uint32_t upright_first = ui.vertexCount();
+   monstro_draw_text_aligned(canvas, ui.font, rect, 0xffffffff, "10", MONSTRO_ALIGN_CENTER);
+   uint32_t turned_first = ui.vertexCount();
+   monstro_draw_text_rotated(canvas, ui.font, rect, 0xffffffff, "10", MONSTRO_ALIGN_CENTER, pivot, angle);
+   uint32_t unturned_first = ui.vertexCount();
+   monstro_draw_text_rotated(canvas, ui.font, rect, 0xffffffff, "10", MONSTRO_ALIGN_CENTER, pivot, 0.0f);
+   const MonstroDrawData *data = ui.end();
+
+   uint32_t count = turned_first - upright_first;
+   CHECK(count == 8 && unturned_first - turned_first == count && data->vertex_count - unturned_first == count);
+   float c = std::cos(angle), s = std::sin(angle);
+   for (uint32_t i = 0; i < count; i++)
+   {
+      const MonstroVertex &upright = data->vertices[upright_first + i];
+      const MonstroVertex &turned = data->vertices[turned_first + i];
+      const MonstroVertex &unturned = data->vertices[unturned_first + i];
+      float dx = upright.position[0] - pivot.x, dy = upright.position[1] - pivot.y;
+      CHECK(near(turned.position[0], pivot.x + dx * c - dy * s) && near(turned.position[1], pivot.y + dx * s + dy * c));
+      CHECK(turned.texcoord[0] == upright.texcoord[0] && turned.texcoord[1] == upright.texcoord[1]);
+      CHECK(near(unturned.position[0], upright.position[0]) && near(unturned.position[1], upright.position[1]));
+   }
 }
