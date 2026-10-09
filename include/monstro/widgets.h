@@ -66,10 +66,22 @@ typedef enum MonstroButtonFlags {
 /* Item State Queries (call after the widget)                                */
 /* ------------------------------------------------------------------------- */
 
+/*
+ * An item is active while it is held (a pressed button, a dragged slider or
+ * knob), edited (a text or number field) or open (a combo). Its edges tell a
+ * host when an interaction starts and ends, so it can act once per drag or
+ * edit rather than on every change.
+ */
 bool monstro_is_item_hovered(MonstroContext* ctx);
 bool monstro_is_item_active(MonstroContext* ctx);
 bool monstro_is_item_clicked(MonstroContext* ctx, MonstroMouseButton button);
+/* The item changed its value this frame. */
 bool monstro_is_item_edited(MonstroContext* ctx);
+/* The item became active this frame. */
+bool monstro_is_item_activated(MonstroContext* ctx);
+/* The item stopped being active this frame. */
+bool monstro_is_item_deactivated(MonstroContext* ctx);
+/* The item stopped being active this frame and changed its value while it was. */
 bool monstro_is_item_deactivated_after_edit(MonstroContext* ctx);
 MonstroRect monstro_get_item_rect(MonstroContext* ctx);
 MonstroVec2 monstro_get_item_rect_min(MonstroContext* ctx);

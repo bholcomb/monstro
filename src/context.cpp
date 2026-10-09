@@ -144,7 +144,11 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
    last_item_active = false;
    last_item_clicked = false;
    last_item_edited = false;
+   last_item_activated = false;
+   last_item_deactivated = false;
    last_item_deactivated_after_edit = false;
+   active_items_prev_frame = active_items;
+   active_items.clear();
    disabled = false;
 
    next_window_size_x = display_width;
@@ -676,9 +680,38 @@ void monstro_set_last_item(MonstroContext *ctx, uint64_t id, MonstroRect rect, b
    ctx->last_item_active = active;
    ctx->last_item_clicked = clicked;
    ctx->last_item_edited = edited;
+   ctx->last_item_activated = false;
+   ctx->last_item_deactivated = false;
+   ctx->last_item_deactivated_after_edit = false;
+   if (id == 0)
+      return;
 
-   bool was_active = (ctx->active_id_prev_frame == id && ctx->active_id != id);
-   ctx->last_item_deactivated_after_edit = was_active && edited;
+   using ActiveItem = monstro::Context::ActiveItem;
+   auto find = [id](monstro::FixedStack<ActiveItem, MONSTRO_MAX_ACTIVE_ITEMS> &items) -> ActiveItem *
+   {
+      for (int i = 0; i < items.size(); i++)
+      {
+         if (items[i].id == id)
+            return &items[i];
+      }
+      return nullptr;
+   };
+   const ActiveItem *before = find(ctx->active_items_prev_frame);
+   ActiveItem *now = find(ctx->active_items);
+   if (active)
+   {
+      if (!now)
+      {
+         MONSTRO_REQUIRE(ctx->active_items.size() < MONSTRO_MAX_ACTIVE_ITEMS,
+                         "more than %d items are active at once in frame %d (window '%s')", MONSTRO_MAX_ACTIVE_ITEMS,
+                         ctx->frame, ctx->current_window ? ctx->current_window->name : "");
+         now = &ctx->active_items.push({id, before && before->edited});
+      }
+      now->edited = now->edited || edited;
+   }
+   ctx->last_item_activated = active && !before;
+   ctx->last_item_deactivated = !active && before && !now;
+   ctx->last_item_deactivated_after_edit = ctx->last_item_deactivated && (before->edited || edited);
 }
 
 bool monstro_is_item_hovered(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_hovered; }
@@ -692,6 +725,10 @@ bool monstro_is_item_clicked(MonstroContext *ctx, MonstroMouseButton button)
 }
 
 bool monstro_is_item_edited(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_edited; }
+
+bool monstro_is_item_activated(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_activated; }
+
+bool monstro_is_item_deactivated(MonstroContext *ctx) { return requireContext(ctx, __func__)->last_item_deactivated; }
 
 bool monstro_is_item_deactivated_after_edit(MonstroContext *ctx)
 {

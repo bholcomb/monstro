@@ -17,12 +17,28 @@ static MonstroVec2 middle(MonstroRect r) { return {r.x + r.w * 0.5f, r.y + r.h *
 /* Input events                                                              */
 /* ------------------------------------------------------------------------- */
 
+struct Edges
+{
+   bool active = false, activated = false, deactivated = false, after_edit = false, edited = false;
+
+   void read(MonstroContext *ctx)
+   {
+      active = monstro_is_item_active(ctx);
+      activated = monstro_is_item_activated(ctx);
+      deactivated = monstro_is_item_deactivated(ctx);
+      after_edit = monstro_is_item_deactivated_after_edit(ctx);
+      edited = monstro_is_item_edited(ctx);
+   }
+   bool none() const { return !activated && !deactivated && !after_edit; }
+};
+
 // A window with one button; counts its clicks.
 struct OneButton
 {
    Ui ui;
    MonstroRect rect = {};
    int clicks = 0;
+   Edges edges;
 
    void frame()
    {
@@ -33,6 +49,7 @@ struct OneButton
       if (monstro_button(ui.ctx, "Fire", nullptr))
          clicks++;
       rect = monstro_get_item_rect(ui.ctx);
+      edges.read(ui.ctx);
       monstro_end_window(ui.ctx);
       ui.end();
    }
@@ -404,4 +421,92 @@ TEST(a_button_held_when_the_mouse_leaves_its_window_lets_go_on_release)
    t.ui.pressLeft(false);
    t.frame();
    CHECK(t.ui.ctx->active_id == 0 && t.clicks == 0);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Activated and deactivated edges                                           */
+/* ------------------------------------------------------------------------- */
+
+TEST(a_slider_drag_reports_one_activation_and_one_deactivation_after_edit)
+{
+   Ui ui;
+   float value = 0.5f;
+   MonstroRect slider = {};
+   Edges e;
+   int activations = 0, deactivations = 0, commits = 0, edits = 0;
+   auto draw = [&]()
+   {
+      monstro_set_next_window_pos(ui.ctx, 20, 20, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 300, 200, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+      monstro_slider_float(ui.ctx, "Throttle", &value, 0.0f, 1.0f, "%.2f", nullptr);
+      slider = monstro_get_item_rect(ui.ctx);
+      e.read(ui.ctx);
+      activations += e.activated;
+      deactivations += e.deactivated;
+      commits += e.after_edit;
+      edits += e.edited;
+      monstro_end_window(ui.ctx);
+   };
+   frame(ui, draw);
+   ui.moveMouse(slider.x + slider.w * 0.5f, slider.y + slider.h * 0.5f);
+   frame(ui, draw);
+   CHECK(e.none() && !e.active);
+   ui.pressLeft(true);
+   frame(ui, draw);
+   CHECK(e.activated && e.active && !e.deactivated);
+   for (int i = 1; i <= 5; i++)
+   {
+      ui.moveMouse(slider.x + slider.w * 0.5f + (float)i * 10.0f, slider.y + slider.h * 0.5f);
+      frame(ui, draw);
+      CHECK(e.active && e.none() && e.edited);
+   }
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(e.deactivated && e.after_edit && !e.active);
+   frame(ui, draw);
+   CHECK(e.none());
+   CHECK(activations == 1 && deactivations == 1 && commits == 1 && edits >= 5);
+}
+
+TEST(a_button_press_activates_and_its_release_deactivates_without_an_edit)
+{
+   OneButton t;
+   t.frame();
+   t.ui.moveMouse(t.rect.x + 5, t.rect.y + 5);
+   t.frame();
+   t.ui.pressLeft(true);
+   t.ui.pressLeft(false);
+   t.frame();
+   CHECK(t.edges.activated && !t.edges.deactivated);
+   t.frame();
+   CHECK(t.edges.deactivated && !t.edges.after_edit && !t.edges.activated && t.clicks == 1);
+}
+
+TEST(a_text_field_reports_its_edit_when_editing_ends)
+{
+   Ui ui;
+   char name[32] = "Kestrel";
+   MonstroRect field = {};
+   Edges e;
+   auto draw = [&]()
+   {
+      monstro_input_text(ui.ctx, "Name", name, sizeof(name), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      field = monstro_get_item_rect(ui.ctx);
+      e.read(ui.ctx);
+   };
+   frame(ui, draw);
+   ui.moveMouse(field.x + field.w - 6, field.y + field.h * 0.5f);
+   frame(ui, draw);
+   ui.pressLeft(true);
+   ui.pressLeft(false);
+   frame(ui, draw);
+   CHECK(e.activated);
+   ui.type("!");
+   frame(ui, draw);
+   CHECK(e.edited && e.none());
+   ui.pressKey(MONSTRO_KEY_ENTER, true);
+   frame(ui, draw);
+   CHECK(e.deactivated && e.after_edit);
+   CHECK(std::strcmp(name, "Kestrel!") == 0);
 }

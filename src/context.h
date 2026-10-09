@@ -137,7 +137,18 @@ struct Context
    bool last_item_active = false;
    bool last_item_clicked = false;
    bool last_item_edited = false;
+   bool last_item_activated = false;
+   bool last_item_deactivated = false;
    bool last_item_deactivated_after_edit = false;
+
+   // Items that reported themselves active this frame and last, for their edges; see monstro_set_last_item.
+   struct ActiveItem
+   {
+      uint64_t id = 0;
+      bool edited = false; // changed its value since it became active
+   };
+   FixedStack<ActiveItem, MONSTRO_MAX_ACTIVE_ITEMS> active_items{"active item list"};
+   FixedStack<ActiveItem, MONSTRO_MAX_ACTIVE_ITEMS> active_items_prev_frame{"active item list"};
 
    bool disabled = false;
 
