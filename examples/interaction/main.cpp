@@ -72,11 +72,12 @@ static void overlap_window(MonstroContext *ctx)
    monstro_label(ctx, text);
 
    monstro_separator(ctx);
-   monstro_label(ctx, "Click fast: every click counts.");
+   monstro_label(ctx, "Click fast: every click counts, in the next frame.");
    char tap_label[64];
    snprintf(tap_label, sizeof(tap_label), "tap##Tapped %d times", g_taps);
    if (monstro_button_sized(ctx, tap_label, 200, 40, nullptr))
       g_taps++;
+   log_edges(ctx, "tap");
    monstro_end_window(ctx);
 }
 
