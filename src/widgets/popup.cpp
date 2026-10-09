@@ -14,22 +14,11 @@ static bool is_popup_open_internal(MonstroContext *ctx, uint64_t popup_id)
    return false;
 }
 
-static void build_window_name(char *out, size_t out_size, const char *prefix, const char *label)
+// A popup's window is named by the popup's ID, which comes from the ID scope it is opened in, so popups
+// with the same label in different windows (or scopes) are different windows.
+static void build_window_name(char *out, size_t out_size, const char *prefix, uint64_t popup_id, const char *label)
 {
-   if (!out || out_size == 0)
-      return;
-
-   char id[256];
-   monstro_copy_id_text(label, id, sizeof(id));
-   const char *title = monstro_display_text(label);
-   if (!title)
-      title = "";
-   if (id[0] == '\0')
-   {
-      monstro_utf8_copy(id, sizeof(id), title);
-   }
-
-   snprintf(out, out_size, "%s%s##%s", prefix ? prefix : "", id, title);
+   snprintf(out, out_size, "%s%016llx##%s", prefix, (unsigned long long)popup_id, monstro_display_text(label));
    monstro_utf8_trim_partial(out);
 }
 
@@ -114,15 +103,15 @@ bool monstro_begin_popup(MonstroContext *ctx, const char *label, MonstroWindowFl
    char popup_name[320];
    if (flags & MONSTRO_WINDOW_CHILD_MENU)
    {
-      build_window_name(popup_name, sizeof(popup_name), "menu_", label);
+      build_window_name(popup_name, sizeof(popup_name), "menu_", popup_id, label);
    }
    else if (flags & MONSTRO_WINDOW_COMBO)
    {
-      build_window_name(popup_name, sizeof(popup_name), "combo_", label);
+      build_window_name(popup_name, sizeof(popup_name), "combo_", popup_id, label);
    }
    else
    {
-      build_window_name(popup_name, sizeof(popup_name), "popup_", label);
+      build_window_name(popup_name, sizeof(popup_name), "popup_", popup_id, label);
    }
 
    // Without a p_open the window always begins; monstro_end_popup ends it.
@@ -158,7 +147,7 @@ bool monstro_begin_popup_modal(MonstroContext *ctx, const char *label, bool *p_o
                             MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_MOVABLE | MONSTRO_WINDOW_AUTO_RESIZE);
 
    char popup_name[320];
-   build_window_name(popup_name, sizeof(popup_name), "modal_", label);
+   build_window_name(popup_name, sizeof(popup_name), "modal_", popup_id, label);
 
    monstro::Window *existing = ctx->findWindow(popup_name);
    if (existing && existing->size.x > 0.0f && existing->size.y > 0.0f)

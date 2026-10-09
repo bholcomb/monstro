@@ -725,7 +725,7 @@ TEST(a_popup_draws_above_a_later_window_and_takes_the_mouse)
 {
    PopupOverSibling t;
    t.frame(true);
-   monstro::Window *popup = t.ui.ctx->findWindow("popup_Menu");
+   monstro::Window *popup = find_window_titled(t.ui, "popup_", "Menu");
    monstro::Window *b = t.ui.ctx->findWindow("B");
    CHECK(popup && b);
    // The popup is A's child, and A's children draw after A's later siblings.
@@ -787,8 +787,8 @@ TEST(nested_sub_menus_draw_above_later_windows_and_take_the_mouse)
 
    frame(true);
    frame(false);
-   monstro::Window *file = ui.ctx->findWindow("menu_File");
-   monstro::Window *recent = ui.ctx->findWindow("menu_Recent");
+   monstro::Window *file = find_window_titled(ui, "menu_", "File");
+   monstro::Window *recent = find_window_titled(ui, "menu_", "Recent");
    monstro::Window *b = ui.ctx->findWindow("B");
    CHECK(file && recent && b);
    CHECK(file->draw_rank > b->draw_rank && recent->draw_rank > file->draw_rank);
@@ -835,7 +835,7 @@ TEST(a_combo_list_draws_above_a_later_window_and_takes_the_mouse)
    };
 
    frame(true);
-   monstro::Window *list = ui.ctx->findWindow("popup_Mode");
+   monstro::Window *list = find_window_titled(ui, "popup_", "Mode");
    monstro::Window *b = ui.ctx->findWindow("B");
    CHECK(list && b);
    CHECK(list->draw_rank > b->draw_rank);
@@ -901,7 +901,7 @@ TEST(a_modal_dims_what_is_drawn_below_it)
       monstro_end_window(ui.ctx);
       ui.end();
    }
-   monstro::Window *modal = ui.ctx->findWindow("modal_Confirm");
+   monstro::Window *modal = find_window_titled(ui, "modal_", "Confirm");
    monstro::Window *later = ui.ctx->findWindow("Later");
    CHECK(modal && later && modal->draw_rank > later->draw_rank);
 
@@ -924,10 +924,10 @@ TEST(a_modal_dims_what_is_drawn_below_it)
 }
 
 // The middle of two windows' overlap, from the last frame.
-static MonstroVec2 overlap_middle(Ui &ui, const char *over, const char *under)
+static MonstroVec2 overlap_middle(monstro::Window *over, monstro::Window *under)
 {
-   MonstroRect a = ui.ctx->findWindow(over)->getRect();
-   MonstroRect b = ui.ctx->findWindow(under)->getRect();
+   MonstroRect a = over->getRect();
+   MonstroRect b = under->getRect();
    float x0 = a.x > b.x ? a.x : b.x, y0 = a.y > b.y ? a.y : b.y;
    float x1 = a.x + a.w < b.x + b.w ? a.x + a.w : b.x + b.w;
    float y1 = a.y + a.h < b.y + b.h ? a.y + a.h : b.y + b.h;
@@ -956,12 +956,12 @@ TEST(a_child_panel_stays_at_its_parents_depth)
    };
    frame();
    monstro::Window *a = ui.ctx->findWindow("A");
-   monstro::Window *panel = ui.ctx->findWindow("child_A_Panel");
+   monstro::Window *panel = find_window_titled(ui, "child_", "Panel");
    monstro::Window *b = ui.ctx->findWindow("B");
    // The panel draws right after its parent, so B, in front of A, covers it.
    CHECK(panel->draw_rank == a->draw_rank + 1);
    CHECK(b->draw_rank > panel->draw_rank);
-   MonstroVec2 point = overlap_middle(ui, "child_A_Panel", "B");
+   MonstroVec2 point = overlap_middle(panel, b);
    ui.moveMouse(point.x, point.y);
    frame();
    CHECK(ui.ctx->hovered_window == b);
@@ -987,7 +987,7 @@ TEST(a_combo_in_a_child_panel_still_draws_over_later_windows)
    monstro_begin_window(ui.ctx, "B", nullptr, MONSTRO_WINDOW_DEFAULT);
    monstro_end_window(ui.ctx);
    ui.end();
-   monstro::Window *list = ui.ctx->findWindow("popup_Mode");
+   monstro::Window *list = find_window_titled(ui, "popup_", "Mode");
    monstro::Window *b = ui.ctx->findWindow("B");
    CHECK(list && list->draw_rank > b->draw_rank);
 }
@@ -1038,7 +1038,7 @@ TEST(a_tooltip_draws_over_everything)
       Ui ui(true);
       tooltip_frames(ui, false);
       monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
-      monstro::Window *popup = ui.ctx->findWindow("popup_Menu");
+      monstro::Window *popup = find_window_titled(ui, "popup_", "Menu");
       monstro::Window *b = ui.ctx->findWindow("B");
       CHECK(tooltip && tooltip->active && popup && b);
       CHECK(popup->draw_rank > b->draw_rank);
@@ -1054,7 +1054,7 @@ TEST(a_tooltip_draws_over_everything)
       Ui ui(true);
       tooltip_frames(ui, true);
       monstro::Window *tooltip = ui.ctx->findWindow("tooltip");
-      monstro::Window *modal = ui.ctx->findWindow("modal_Menu");
+      monstro::Window *modal = find_window_titled(ui, "modal_", "Menu");
       CHECK(tooltip && tooltip->active && modal);
       CHECK(tooltip->draw_rank > modal->draw_rank);
    }
@@ -1084,8 +1084,8 @@ TEST(a_modal_over_a_later_window_takes_the_mouse)
    };
    frame(true);
    frame(false);
-   MonstroVec2 point = overlap_middle(ui, "modal_Confirm", "Later");
+   MonstroVec2 point = overlap_middle(find_window_titled(ui, "modal_", "Confirm"), ui.ctx->findWindow("Later"));
    ui.moveMouse(point.x, point.y);
    frame(false);
-   CHECK(ui.ctx->hovered_window == ui.ctx->findWindow("modal_Confirm"));
+   CHECK(ui.ctx->hovered_window == find_window_titled(ui, "modal_", "Confirm"));
 }

@@ -152,6 +152,26 @@ void Ui::pressKey(MonstroKey key, bool down) { monstro_set_key(ctx, key, down); 
 
 void Ui::type(const char *utf8) { monstro_add_input_text(ctx, utf8); }
 
+monstro::Window *find_window_titled(Ui &ui, const char *prefix, const char *title)
+{
+   monstro::Window *found = nullptr;
+   int count = 0;
+   for (monstro::Window &w : ui.ctx->windows)
+   {
+      if (std::strncmp(w.name, prefix, std::strlen(prefix)) == 0 && std::strcmp(w.title, title) == 0)
+      {
+         found = &w;
+         count++;
+      }
+   }
+   if (count > 1)
+   {
+      std::fprintf(stderr, "%d windows named %s... titled '%s'\n", count, prefix, title);
+      std::abort();
+   }
+   return found;
+}
+
 uint32_t Ui::vertexCount() const
 {
    if (ctx->canvas)

@@ -36,6 +36,11 @@ void test_failed(const char *file, int line, const char *expression);
          test_failed(__FILE__, __LINE__, #expression);                                                                 \
    } while (0)
 
+namespace monstro
+{
+struct Window;
+}
+
 // The example font, loaded into env as "test" at 16 px; aborts when it cannot be read.
 MonstroFont *load_test_font(MonstroEnv *env);
 
@@ -69,5 +74,9 @@ struct Ui
    uint32_t vertexCount() const;
    uint32_t indexCount() const;
 };
+
+// A popup, menu, combo list, modal or child panel window. They are named by their ID, so they are found by
+// their kind (the start of the name, such as "popup_") and their title; there must be exactly one.
+monstro::Window *find_window_titled(Ui &ui, const char *prefix, const char *title);
 
 #endif

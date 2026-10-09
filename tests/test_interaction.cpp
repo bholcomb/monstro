@@ -630,3 +630,101 @@ FATAL_TEST(a_window_with_nothing_before_its_hashes_aborts, "window '##Toast' has
    ui.begin();
    monstro_begin_window(ui.ctx, "##Toast", nullptr, MONSTRO_WINDOW_DEFAULT);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Popups, child panels and windows scoped by ID                             */
+/* ------------------------------------------------------------------------- */
+
+TEST(popups_named_alike_in_two_windows_are_two_popups)
+{
+   Ui ui;
+   monstro::Window *popups[2] = {};
+   MonstroRect items[2] = {};
+   int picks[2] = {};
+   auto draw = [&](bool open)
+   {
+      const char *names[2] = {"Left", "Right"};
+      for (int i = 0; i < 2; i++)
+      {
+         monstro_set_next_window_pos(ui.ctx, 20.0f + 300.0f * (float)i, 20, MONSTRO_COND_ALWAYS);
+         monstro_set_next_window_size(ui.ctx, 250, 200, MONSTRO_COND_ALWAYS);
+         monstro_begin_window(ui.ctx, names[i], nullptr, MONSTRO_WINDOW_DEFAULT);
+         if (open)
+            monstro_open_popup(ui.ctx, "menu");
+         popups[i] = nullptr;
+         if (monstro_is_popup_open(ui.ctx, "menu"))
+            monstro_set_next_window_pos(ui.ctx, 40.0f + 300.0f * (float)i, 200, MONSTRO_COND_ALWAYS);
+         if (monstro_begin_popup(ui.ctx, "menu", MONSTRO_WINDOW_NONE))
+         {
+            popups[i] = ui.ctx->current_window;
+            if (monstro_button(ui.ctx, names[i], nullptr))
+               picks[i]++;
+            items[i] = monstro_get_item_rect(ui.ctx);
+            monstro_end_popup(ui.ctx);
+         }
+         monstro_end_window(ui.ctx);
+      }
+   };
+   frame(ui, [&]() { draw(true); });
+   frame(ui, [&]() { draw(false); });
+   CHECK(ui.ctx->popup_stack.size() == 2);
+   CHECK(popups[0] && popups[1] && popups[0] != popups[1]);
+   CHECK(popups[0]->pos.x == 40.0f && popups[1]->pos.x == 340.0f);
+   CHECK(std::strcmp(popups[0]->title, "menu") == 0 && std::strcmp(popups[1]->title, "menu") == 0);
+
+   // Picking from the right one closes it; the left one stays open.
+   MonstroVec2 p = middle(items[1]);
+   ui.moveMouse(p.x, p.y);
+   frame(ui, [&]() { draw(false); });
+   ui.pressLeft(true);
+   frame(ui, [&]() { draw(false); });
+   ui.pressLeft(false);
+   frame(ui, [&]() { draw(false); });
+   CHECK(picks[1] == 1 && picks[0] == 0);
+   CHECK(ui.ctx->popup_stack.size() == 1 && ui.ctx->popup_stack[0].parent_window == ui.ctx->findWindow("Left"));
+}
+
+TEST(child_panels_named_alike_in_two_id_scopes_are_two_panels)
+{
+   Ui ui;
+   monstro::Window *panels[2] = {};
+   frame(ui,
+         [&]()
+         {
+            monstro_begin_window(ui.ctx, "Panel", nullptr, MONSTRO_WINDOW_DEFAULT);
+            for (int i = 0; i < 2; i++)
+            {
+               monstro_push_id(ui.ctx, i == 0 ? "port" : "starboard");
+               monstro_begin_child(ui.ctx, "engine", 100, 40, MONSTRO_WINDOW_BORDERS);
+               panels[i] = ui.ctx->current_window;
+               monstro_end_child(ui.ctx);
+               monstro_pop_id(ui.ctx);
+            }
+            monstro_end_window(ui.ctx);
+         });
+   CHECK(panels[0] && panels[1] && panels[0] != panels[1]);
+}
+
+TEST(windows_named_alike_in_two_contexts_keep_their_own_state)
+{
+   MonstroEnv *env = monstro_init(nullptr);
+   load_test_font(env);
+   {
+      Ui a(env), b(env);
+      for (Ui *ui : {&a, &b})
+      {
+         ui->begin();
+         float x = ui == &a ? 10.0f : 400.0f;
+         monstro_set_next_window_pos(ui->ctx, x, 30, MONSTRO_COND_FIRST_USE_EVER);
+         monstro_set_next_window_size(ui->ctx, 200, 100, MONSTRO_COND_FIRST_USE_EVER);
+         monstro_begin_window(ui->ctx, "Status", nullptr, MONSTRO_WINDOW_DEFAULT);
+         monstro_end_window(ui->ctx);
+         ui->end();
+      }
+      monstro::Window *wa = a.ctx->findWindow("Status");
+      monstro::Window *wb = b.ctx->findWindow("Status");
+      CHECK(wa && wb && wa != wb);
+      CHECK(wa->pos.x == 10.0f && wb->pos.x == 400.0f);
+   }
+   monstro_shutdown(env);
+}

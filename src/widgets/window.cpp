@@ -273,22 +273,10 @@ bool monstro_begin_child(MonstroContext *ctx, const char *str_id, float width, f
       child_flags = (MonstroWindowFlags)(child_flags & ~MONSTRO_WINDOW_BORDERS);
    }
 
-   char child_id[256];
-   monstro_copy_id_text(str_id, child_id, sizeof(child_id));
-   if (child_id[0] == '\0')
-   {
-      const char *fallback_id = monstro_display_text(str_id);
-      if (!fallback_id)
-         fallback_id = "";
-      monstro_utf8_copy(child_id, sizeof(child_id), fallback_id);
-   }
-
-   const char *child_title = monstro_display_text(str_id);
-   if (!child_title)
-      child_title = "";
-
-   char child_name[256 + 256 + 256 + 16];
-   snprintf(child_name, sizeof(child_name), "child_%s_%s##%s", parent->name, child_id, child_title);
+   // Named by its ID in the current scope, so like-named panels in different windows or scopes differ.
+   char child_name[256];
+   snprintf(child_name, sizeof(child_name), "child_%016llx##%s", (unsigned long long)parent->getItemId(str_id),
+            monstro_display_text(str_id));
    monstro_utf8_trim_partial(child_name);
 
    monstro_set_next_window_pos(ctx, cursor.x, cursor.y, MONSTRO_COND_ALWAYS);
