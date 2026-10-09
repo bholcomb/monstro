@@ -234,28 +234,77 @@ unsafe class Program
             ownUi.BeginFrame(400, 300, 0.01f);
             Draw(ownUi);
             DrawData own = ownUi.EndFrame();
-            byte[] positions = new byte[4096 * 8];
-            byte[] attributes = new byte[4096 * 12];
-            uint[] indices = new uint[4096 * 3];
-            Array.Fill(positions, (byte)0xcd);
-            Array.Fill(attributes, (byte)0xcd);
-            var buffers = new FrameBuffers(new Memory<byte>[] { positions, attributes }, indices);
+            static bool Holds(Span<byte> positions, Span<byte> attributes, Span<uint> indices, DrawData own)
+            {
+                bool same = indices.Slice(0, own.Indices.Length).SequenceEqual(own.Indices);
+                ReadOnlySpan<MonstroVertex> ownVertices = own.Vertices;
+                for (int i = 0; i < ownVertices.Length; i++)
+                {
+                    MonstroVertex v = ownVertices[i];
+                    same &= BitConverter.ToSingle(positions.Slice(i * 8)) == v.position[0] && BitConverter.ToSingle(positions.Slice(i * 8 + 4)) == v.position[1];
+                    same &= BitConverter.ToUInt32(attributes.Slice(i * 12)) == v.color;
+                    same &= BitConverter.ToSingle(attributes.Slice(i * 12 + 4)) == v.texcoord[0] && BitConverter.ToSingle(attributes.Slice(i * 12 + 8)) == v.texcoord[1];
+                }
+                return same;
+            }
+            // Buffers allocated once on the pinned object heap.
+            using var buffers = new FrameBuffers(config.vertex_layout, 4096, 4096 * 3);
+            Check("buffers sized by the layout", buffers.VertexBuffer(0).Length == 4096 * 8 && buffers.VertexBuffer(1).Length == 4096 * 12 &&
+                                                 buffers.Indices.Length == 4096 * 3);
             ui.BeginFrame(400, 300, 0.01f, buffers);
             Draw(ui);
             DrawData host = ui.EndFrame();
             Check("host frame equals the own frame", own.IsValid && host.ContentHash == own.ContentHash && host.DrawnIntoHostVertexBuffers &&
                                                      host.DrawnIntoHostIndices && host.Vertices.IsEmpty && host.IndexCount == own.Indices.Length);
-            bool same = indices.AsSpan(0, own.Indices.Length).SequenceEqual(own.Indices);
-            ReadOnlySpan<MonstroVertex> ownVertices = own.Vertices;
-            for (int i = 0; i < ownVertices.Length; i++)
+            Check("split host streams hold the same vertices", Holds(buffers.VertexBuffer(0), buffers.VertexBuffer(1), buffers.Indices, own));
+            // Steady state: frames into host buffers allocate no managed memory.
+            for (int i = 0; i < 4; i++) { ui.BeginFrame(400, 300, 0.01f, buffers); Draw(ui); ui.EndFrame(); }
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 100; i++) { ui.BeginFrame(400, 300, 0.01f, buffers); Draw(ui); ui.EndFrame(); }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Check($"host frames allocate nothing managed ({allocated} bytes in 100 frames)", allocated == 0);
+
+            // The host's own memory that stays put: native memory here.
+            MonstroFrameBuffers raw = default;
+            raw.vertex_buffers[0] = (ulong)NativeMemory.Alloc(4096 * 8);
+            raw.vertex_buffers[1] = (ulong)NativeMemory.Alloc(4096 * 12);
+            raw.vertex_capacity = 4096;
+            raw.indices = (uint*)NativeMemory.Alloc(4096 * 3, sizeof(uint));
+            raw.index_capacity = 4096 * 3;
+            try
             {
-                MonstroVertex v = ownVertices[i];
-                same &= BitConverter.ToSingle(positions, i * 8) == v.position[0] && BitConverter.ToSingle(positions, i * 8 + 4) == v.position[1];
-                same &= BitConverter.ToUInt32(attributes, i * 12) == v.color;
-                same &= BitConverter.ToSingle(attributes, i * 12 + 4) == v.texcoord[0] && BitConverter.ToSingle(attributes, i * 12 + 8) == v.texcoord[1];
+                using var mapped = new FrameBuffers(config.vertex_layout, raw);
+                ui.BeginFrame(400, 300, 0.01f, mapped);
+                Draw(ui);
+                host = ui.EndFrame();
+                Check("frame into native memory", host.ContentHash == own.ContentHash &&
+                                                  Holds(mapped.VertexBuffer(0), mapped.VertexBuffer(1), mapped.Indices, own));
             }
-            Check("split host streams hold the same vertices", same);
-            Throws<ArgumentException>("streams must match the layout", () => ui.BeginFrame(400, 300, 0.01f, new FrameBuffers(new Memory<byte>[] { positions }, default)));
+            finally
+            {
+                NativeMemory.Free((void*)raw.vertex_buffers[0]);
+                NativeMemory.Free((void*)raw.vertex_buffers[1]);
+                NativeMemory.Free(raw.indices);
+            }
+            MonstroVertexLayout layout = config.vertex_layout;
+            Throws<ArgumentException>("a pointer for each layout buffer", () =>
+            {
+                MonstroFrameBuffers one = default;
+                one.vertex_buffers[0] = (ulong)NativeMemory.Alloc(4096 * 8);
+                one.vertex_capacity = 4096;
+                try { new FrameBuffers(layout, one); }
+                finally { NativeMemory.Free((void*)one.vertex_buffers[0]); }
+            });
+            Throws<ArgumentOutOfRangeException>("capacities are not negative", () => new FrameBuffers(layout, -1, 0));
+            using (var other = new FrameBuffers(Native.monstro_env_config_default().vertex_layout, 64, 64))
+                Throws<ArgumentException>("buffers must match the layout", () => ui.BeginFrame(400, 300, 0.01f, other));
+            var disposed = new FrameBuffers(config.vertex_layout, 64, 64);
+            ui.BeginFrame(400, 300, 0.01f, disposed);
+            Throws<InvalidOperationException>("buffers are not disposed during their frame", disposed.Dispose);
+            ui.EndFrame();
+            disposed.Dispose();
+            Throws<ObjectDisposedException>("disposed buffers", () => ui.BeginFrame(400, 300, 0.01f, disposed));
+            Throws<ObjectDisposedException>("disposed buffers have no memory", () => _ = disposed.Indices.Length);
 
             using var second = env.CreateContext();
             ui.BeginFrame(400, 300, 0.01f);

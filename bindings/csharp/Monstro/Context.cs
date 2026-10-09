@@ -1,26 +1,8 @@
 // Optional convenience layer over the one-to-one C API mirror in Native.cs.
 using System;
-using System.Buffers;
 using System.Text;
 
 namespace Monstro;
-
-/// <summary>
-/// Host storage for one frame: one byte buffer per buffer of the environment's vertex layout
-/// (MonstroEnvConfig.vertex_layout), and the indices. Leave VertexBuffers empty, or Indices empty, to use
-/// the canvas's own storage for them. The memory is pinned from BeginFrame to EndFrame and only written.
-/// </summary>
-public sealed class FrameBuffers
-{
-    public Memory<byte>[] VertexBuffers { get; }
-    public Memory<uint> Indices { get; }
-
-    public FrameBuffers(Memory<byte>[] vertexBuffers, Memory<uint> indices)
-    {
-        VertexBuffers = vertexBuffers ?? throw new ArgumentNullException(nameof(vertexBuffers));
-        Indices = indices;
-    }
-}
 
 /// <summary>
 /// One UI on an environment: its input, display size and the state it keeps between frames. Use it on one
@@ -33,7 +15,7 @@ public sealed unsafe class Context : IDisposable
     private readonly Env _env;
     private MonstroContext _handle;
     private bool _inFrame;
-    private MemoryHandle[] _pins = Array.Empty<MemoryHandle>();
+    private FrameBuffers? _frameBuffers;
     private bool _hostIndices;
 
     internal Context(Env env, MonstroContextConfig? config)
@@ -78,7 +60,7 @@ public sealed unsafe class Context : IDisposable
 
     public void BeginFrame(float width, float height, float deltaTime) => Begin(width, height, deltaTime, null);
 
-    /// <summary>Builds the frame into host buffers, pinned until EndFrame.</summary>
+    /// <summary>Builds the frame into host buffers made for the environment's vertex layout; they are written until EndFrame.</summary>
     public void BeginFrame(float width, float height, float deltaTime, FrameBuffers buffers) =>
         Begin(width, height, deltaTime, buffers ?? throw new ArgumentNullException(nameof(buffers)));
 
@@ -91,6 +73,16 @@ public sealed unsafe class Context : IDisposable
         if (!float.IsFinite(deltaTime) || deltaTime < 0) throw new ArgumentOutOfRangeException(nameof(deltaTime));
         if (_env.OpenFrames >= _env.Config.canvas_count)
             throw new InvalidOperationException($"All {_env.Config.canvas_count} canvases are lent; end a frame first");
+        MonstroFrameBuffers native = default;
+        if (buffers != null)
+        {
+            native = buffers.Buffers;
+            MonstroVertexLayout layout = _env.Config.vertex_layout, theirs = buffers.Layout;
+            if (!new ReadOnlySpan<byte>(&layout, sizeof(MonstroVertexLayout)).SequenceEqual(
+                    new ReadOnlySpan<byte>(&theirs, sizeof(MonstroVertexLayout))))
+                throw new ArgumentException("The buffers were made for another vertex layout than the environment's", nameof(buffers));
+            if (buffers.InFrame) throw new InvalidOperationException("Another frame is being built into these buffers");
+        }
 
         Native.monstro_set_display_size(Handle, width, height);
         if (buffers == null)
@@ -100,50 +92,13 @@ public sealed unsafe class Context : IDisposable
         }
         else
         {
-            MonstroFrameBuffers native = Pin(buffers);
-            try { Native.monstro_begin_frame_into(Handle, deltaTime, &native); }
-            catch { Unpin(); throw; }
+            _hostIndices = native.indices != null;
+            Native.monstro_begin_frame_into(Handle, deltaTime, &native);
+            buffers.InFrame = true;
+            _frameBuffers = buffers;
         }
         _inFrame = true;
         _env.OpenFrames++;
-    }
-
-    private MonstroFrameBuffers Pin(FrameBuffers buffers)
-    {
-        MonstroVertexLayout layout = _env.Config.vertex_layout;
-        int streams = buffers.VertexBuffers.Length;
-        if (streams != 0 && streams != layout.buffer_count)
-            throw new ArgumentException($"The vertex layout has {layout.buffer_count} buffers; {streams} were given");
-        MonstroFrameBuffers native = default;
-        _pins = new MemoryHandle[streams + 1];
-        _hostIndices = !buffers.Indices.IsEmpty;
-        if (streams > 0)
-        {
-            long capacity = long.MaxValue;
-            for (int b = 0; b < streams; b++)
-                capacity = Math.Min(capacity, buffers.VertexBuffers[b].Length / layout.stride[b]);
-            if (capacity <= 0) throw new ArgumentException("The vertex buffers hold no vertex");
-            for (int b = 0; b < streams; b++)
-            {
-                _pins[b] = buffers.VertexBuffers[b].Pin();
-                native.vertex_buffers[b] = (ulong)_pins[b].Pointer;
-            }
-            native.vertex_capacity = (uint)Math.Min(capacity, uint.MaxValue);
-        }
-        if (!buffers.Indices.IsEmpty)
-        {
-            _pins[streams] = buffers.Indices.Pin();
-            native.indices = (uint*)_pins[streams].Pointer;
-            native.index_capacity = (uint)buffers.Indices.Length;
-        }
-        return native;
-    }
-
-    private void Unpin()
-    {
-        foreach (MemoryHandle pin in _pins)
-            pin.Dispose();
-        _pins = Array.Empty<MemoryHandle>();
     }
 
     /// <summary>Ends the frame; its draw data is a view into the canvas, valid until the canvas builds another frame.</summary>
@@ -153,7 +108,11 @@ public sealed unsafe class Context : IDisposable
         MonstroDrawData* data = Native.monstro_end_frame(Handle);
         _inFrame = false;
         _env.OpenFrames--;
-        Unpin();
+        if (_frameBuffers != null)
+        {
+            _frameBuffers.InFrame = false;
+            _frameBuffers = null;
+        }
         return new DrawData(_env, data, _hostIndices);
     }
 

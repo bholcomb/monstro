@@ -62,13 +62,18 @@ from it are only as valid as the view. Consume the frame -- upload or render it
 To build a frame straight into the host's own arrays, describe where vertex
 attributes go once, in `MonstroEnvConfig.vertex_layout` (position, texcoord and
 color, each in a buffer at an offset within its stride), and pass `FrameBuffers`
-to `BeginFrame`: one `Memory<byte>` per layout buffer and a `Memory<uint>` for
-the indices. They are pinned until `EndFrame` and only written; the vertex
-capacity is the smallest buffer's length over its stride. The draw data then
-reports `DrawnIntoHostVertexBuffers`/`DrawnIntoHostIndices`, and that geometry is
-in the host's arrays rather than in `Vertices`/`Indices`. For mapped GPU memory,
-call `Native.monstro_begin_frame_into` with a `MonstroFrameBuffers` of raw
-pointers.
+made for that layout to `BeginFrame`. Their memory never moves, so nothing is
+pinned and no frame allocates: `new FrameBuffers(layout, vertexCapacity,
+indexCapacity)` allocates them once on the pinned object heap, and `new
+FrameBuffers(layout, MonstroFrameBuffers)` wraps raw pointers to memory the host
+keeps in place and alive until it disposes them (native or mapped GPU memory,
+or its own pinned arrays). A capacity of 0, or no pointer, leaves vertices or
+indices in the canvas. One frame at a time writes into the buffers, from
+`BeginFrame` to `EndFrame`; `VertexBuffer(b)` and `Indices` are spans over them
+for the renderer. The draw data then reports
+`DrawnIntoHostVertexBuffers`/`DrawnIntoHostIndices`, and that geometry is in the
+host's buffers rather than in `Vertices`/`Indices`. Buffers made for another
+layout, used once disposed, or disposed during their frame throw.
 
 Fonts, themes and the atlas belong to the `Env` and live until it is disposed;
 themes are immutable once registered, and `Context.Theme` picks one. Pushed
@@ -133,7 +138,8 @@ constants against a C probe, and that no entry point takes or returns a bare
 `IntPtr`. It then exercises draw output and its validity, multiple
 frames, UTF-8, one-byte booleans, pointers, the shared atlas, fonts from paths
 and bytes, themes shared by contexts with pushes kept in the frame, settings,
-host buffers in split streams, callbacks, the cockpit widgets (page tabs, a
+host buffers in split streams (pinned arrays and native memory) with no
+managed allocation per frame, callbacks, the cockpit widgets (page tabs, a
 vertical slider and an absolute knob, tapped), and disposal.
 
 Regenerate the committed C API mirror and ABI probe after public header changes:
