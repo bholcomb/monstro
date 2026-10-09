@@ -33,3 +33,47 @@ TEST(color_conversion_clamps_channels)
    CHECK(monstro_color_to_u32(monstro_color_rgba(1.0f, 0.0f, INFINITY, -INFINITY)) == 0x00ff00ffu);
    CHECK(monstro_color_to_u32(monstro_color_from_u32(0xaabbccddu)) == 0xaabbccddu);
 }
+
+// Where the first glyph of an aligned "H" lands in a frame of its own.
+static MonstroVec2 aligned_origin(Ui &ui, MonstroRect rect, int align)
+{
+   ui.begin();
+   uint32_t first = ui.vertexCount();
+   monstro_draw_text_aligned(monstro_get_window_canvas(ui.ctx), ui.font, rect, 0xffffffff, "H", (MonstroAlign)align);
+   const MonstroDrawData *data = ui.end();
+   return {data->vertices[first].position[0], data->vertices[first].position[1]};
+}
+
+static bool near(float a, float b) { return std::fabs(a - b) < 0.01f; }
+
+TEST(text_aligns_left_centre_and_right_as_named)
+{
+   Ui ui(true);
+   MonstroRect rect = {100.0f, 100.0f, 200.0f, 80.0f};
+   MonstroVec2 size = monstro_font_measure_text(ui.font, "H", 0.0f);
+
+   MonstroVec2 left = aligned_origin(ui, rect, MONSTRO_ALIGN_LEFT | MONSTRO_ALIGN_TOP);
+   MonstroVec2 centre = aligned_origin(ui, rect, MONSTRO_ALIGN_HCENTER | MONSTRO_ALIGN_TOP);
+   MonstroVec2 right = aligned_origin(ui, rect, MONSTRO_ALIGN_RIGHT | MONSTRO_ALIGN_TOP);
+   // The glyph sits at its own small offset from the text's origin, the same in every case.
+   CHECK(left.x >= rect.x && left.x < rect.x + 4.0f);
+   CHECK(near(centre.x - left.x, (rect.w - size.x) * 0.5f));
+   CHECK(near(right.x - left.x, rect.w - size.x));
+   CHECK(left.y == centre.y && centre.y == right.y);
+
+   MonstroVec2 middle = aligned_origin(ui, rect, MONSTRO_ALIGN_LEFT | MONSTRO_ALIGN_VCENTER);
+   MonstroVec2 bottom = aligned_origin(ui, rect, MONSTRO_ALIGN_LEFT | MONSTRO_ALIGN_BOTTOM);
+   CHECK(near(middle.y - left.y, (rect.h - size.y) * 0.5f));
+   CHECK(near(bottom.y - left.y, rect.h - size.y));
+   CHECK(middle.x == left.x && bottom.x == left.x);
+
+   // One flag alone keeps its edge, no flag is the top left, and the presets combine both axes.
+   MonstroVec2 only_left = aligned_origin(ui, rect, MONSTRO_ALIGN_LEFT);
+   MonstroVec2 none = aligned_origin(ui, rect, 0);
+   MonstroVec2 preset_default = aligned_origin(ui, rect, MONSTRO_ALIGN_DEFAULT);
+   MonstroVec2 preset_centre = aligned_origin(ui, rect, MONSTRO_ALIGN_CENTER);
+   CHECK(only_left.x == left.x && only_left.y == left.y);
+   CHECK(none.x == left.x && none.y == left.y);
+   CHECK(preset_default.x == left.x && preset_default.y == middle.y);
+   CHECK(preset_centre.x == centre.x && preset_centre.y == middle.y);
+}

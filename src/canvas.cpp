@@ -747,14 +747,17 @@ void Canvas::addTextEx(MonstroFont *font, MonstroRect rect, uint32_t color, cons
    float x = rect.x;
    float y = rect.y;
 
-   if (align & MONSTRO_ALIGN_HCENTER)
+   // Centring sets both of an axis's flags; one flag alone keeps text at that edge.
+   uint32_t horizontal = align & MONSTRO_ALIGN_HCENTER;
+   if (horizontal == MONSTRO_ALIGN_HCENTER)
       x = rect.x + (rect.w - text_size.x) * 0.5f;
-   else if (align & MONSTRO_ALIGN_RIGHT)
+   else if (horizontal == MONSTRO_ALIGN_RIGHT)
       x = rect.x + rect.w - text_size.x;
 
-   if (align & MONSTRO_ALIGN_VCENTER)
+   uint32_t vertical = align & MONSTRO_ALIGN_VCENTER;
+   if (vertical == MONSTRO_ALIGN_VCENTER)
       y = rect.y + (rect.h - text_size.y) * 0.5f;
-   else if (align & MONSTRO_ALIGN_BOTTOM)
+   else if (vertical == MONSTRO_ALIGN_BOTTOM)
       y = rect.y + rect.h - text_size.y;
 
    addText(font, {x, y}, color, text);
