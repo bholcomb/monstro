@@ -8,32 +8,17 @@ static double clampd(double v, double lo, double hi) { return v < lo ? lo : (v >
 
 static bool slider_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool *out_hovered, bool *out_held)
 {
-   monstro::Window *win = ctx->current_window;
-
-   *out_hovered = false;
-   *out_held = false;
-
-   if (ctx->disabled || win != ctx->hovered_window)
-      return false;
-
-   float mx = ctx->mouse.pos_x;
-   float my = ctx->mouse.pos_y;
-
-   bool hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
-   if (hovered)
+   bool hovered = ctx->hoverItem(id, r);
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      ctx->hovered_id = id;
-      if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-      {
-         ctx->setActiveId(id);
-         ctx->focusWindow(win);
-      }
+      ctx->setActiveId(id);
+      ctx->focusWindow(ctx->current_window);
    }
 
    bool held = false;
    if (ctx->active_id == id)
    {
-      if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
+      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
       }

@@ -17,36 +17,24 @@ static bool knob_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool 
 {
    monstro::Window *win = ctx->current_window;
 
-   *out_hovered = false;
-   *out_held = false;
-
-   if (ctx->disabled || win != ctx->hovered_window)
-      return false;
-
-   float mx = ctx->mouse.pos_x;
-   float my = ctx->mouse.pos_y;
-
    float cx = r.x + r.w * 0.5f;
    float cy = r.y + r.h * 0.5f;
    float radius = r.w * 0.5f;
-   float dx = mx - cx;
-   float dy = my - cy;
-   bool hovered = (dx * dx + dy * dy) <= (radius * radius);
+   float dx = ctx->mouse.pos_x - cx;
+   float dy = ctx->mouse.pos_y - cy;
+   bool in_circle = (dx * dx + dy * dy) <= (radius * radius);
+   bool hovered = in_circle && ctx->hoverItem(id, r);
 
-   if (hovered)
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      ctx->hovered_id = id;
-      if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-      {
-         ctx->setActiveId(id);
-         ctx->focusWindow(win);
-      }
+      ctx->setActiveId(id);
+      ctx->focusWindow(win);
    }
 
    bool held = false;
    if (ctx->active_id == id)
    {
-      if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
+      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
       }

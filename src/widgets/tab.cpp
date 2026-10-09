@@ -123,19 +123,11 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
 
    bar->header_start_x += tab_w + style->tab.spacing[0];
 
-   float mx = ctx->mouse.pos_x;
-   float my = ctx->mouse.pos_y;
-   bool hovered = win == ctx->hovered_window && mx >= tab_rect.x && mx < tab_rect.x + tab_rect.w && my >= tab_rect.y &&
-                  my < tab_rect.y + tab_rect.h;
-
-   if (hovered)
+   bool hovered = ctx->hoverItem(tab_id, tab_rect);
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      ctx->hovered_id = tab_id;
-      if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-      {
-         bar->selected_tab = tab_id;
-         is_selected = true;
-      }
+      bar->selected_tab = tab_id;
+      is_selected = true;
    }
 
    MonstroStyleButton *tab_btn = &style->tab.tab_maximize_button;
@@ -186,8 +178,11 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
       MonstroRect close_rect = {tab_rect.x + tab_rect.w - close_size - style->tab.padding[0] * 0.5f,
                                 tab_rect.y + style->tab.padding[1], close_size, close_size};
 
-      bool close_hovered = win == ctx->hovered_window && mx >= close_rect.x && mx < close_rect.x + close_rect.w &&
-                           my >= close_rect.y && my < close_rect.y + close_rect.h;
+      // The close button sits on its tab and covers it.
+      ctx->ids().push(tab_id);
+      uint64_t close_id = ctx->ids().getId("close");
+      ctx->ids().pop();
+      bool close_hovered = ctx->hoverItem(close_id, close_rect);
 
       if (close_hovered)
       {

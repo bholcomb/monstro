@@ -177,7 +177,7 @@ void monstro_table_setup_column(MonstroContext *ctx, const char *label, MonstroT
 
 void monstro_table_headers_row(MonstroContext *ctx)
 {
-   monstro::Window *win = monstro::requireWindow(ctx, __func__);
+   monstro::requireWindow(ctx, __func__);
    MonstroTableFrame *table = require_table(ctx, __func__);
    int column_count = table->state->column_count;
    float *widths = table->state->widths;
@@ -245,17 +245,10 @@ void monstro_table_headers_row(MonstroContext *ctx)
             uint64_t grip_id = ctx->ids().getId("##col_resize") ^ (uint64_t)(i + 1);
             ctx->keepAliveId(grip_id);
 
-            bool grip_hovered = false;
-            if (win == ctx->hovered_window)
+            bool grip_hovered = ctx->hoverItem(grip_id, grip_rect);
+            if (grip_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
             {
-               float mx = ctx->mouse.pos_x;
-               float my = ctx->mouse.pos_y;
-               grip_hovered = mx >= grip_rect.x && mx < grip_rect.x + grip_rect.w && my >= grip_rect.y &&
-                              my < grip_rect.y + grip_rect.h;
-               if (grip_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
-               {
-                  ctx->setActiveId(grip_id);
-               }
+               ctx->setActiveId(grip_id);
             }
 
             if (ctx->active_id == grip_id)

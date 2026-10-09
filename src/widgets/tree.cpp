@@ -24,8 +24,6 @@ static void draw_arrow(monstro::Canvas *canvas, float x, float y, float size, bo
 static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *label, MonstroTreeFlags flags,
                                bool is_leaf, bool *out_clicked)
 {
-   monstro::Window *win = ctx->current_window;
-
    MonstroStyle *style = &ctx->style();
    MonstroStyleTree *ts = &style->tree;
    MonstroFont *font = style->font;
@@ -66,17 +64,7 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect row_rect = {pos.x, pos.y, row_w, row_h};
 
-   bool hovered = false;
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= row_rect.x && mx < row_rect.x + row_rect.w && my >= row_rect.y && my < row_rect.y + row_rect.h;
-      if (hovered)
-      {
-         ctx->hovered_id = id;
-      }
-   }
+   bool hovered = ctx->hoverItem(id, row_rect);
 
    bool clicked = hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false);
    if (clicked && !is_leaf)
@@ -229,15 +217,7 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect row_rect = {pos.x, pos.y, avail_w, row_h};
 
-   bool hovered = false;
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= row_rect.x && mx < row_rect.x + row_rect.w && my >= row_rect.y && my < row_rect.y + row_rect.h;
-      if (hovered)
-         ctx->hovered_id = id;
-   }
+   bool hovered = ctx->hoverItem(id, row_rect);
 
    bool clicked = hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false);
    if (clicked)
@@ -283,14 +263,11 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
       float close_y = content_y + (text_size.y - close_size) * 0.5f;
       MonstroRect close_rect = {close_x, close_y, close_size, close_size};
 
-      bool close_hovered = false;
-      if (!ctx->disabled && win == ctx->hovered_window)
-      {
-         float mx = ctx->mouse.pos_x;
-         float my = ctx->mouse.pos_y;
-         close_hovered = mx >= close_rect.x && mx < close_rect.x + close_rect.w && my >= close_rect.y &&
-                         my < close_rect.y + close_rect.h;
-      }
+      // The close button sits on the header and covers it.
+      ctx->ids().push(id);
+      uint64_t close_id = ctx->ids().getId("close");
+      ctx->ids().pop();
+      bool close_hovered = ctx->hoverItem(close_id, close_rect);
 
       if (close_hovered)
       {

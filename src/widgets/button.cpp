@@ -6,23 +6,12 @@ static bool button_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, boo
                             MonstroButtonFlags flags)
 {
    monstro::Window *win = ctx->current_window;
-
-   if ((flags & MONSTRO_BUTTON_DISABLED) || ctx->disabled || win != ctx->hovered_window)
-   {
-      *out_hovered = false;
-      *out_held = false;
-      return false;
-   }
-
+   bool enabled = !(flags & MONSTRO_BUTTON_DISABLED) && !ctx->disabled;
+   bool hovered = ctx->hoverItem(id, r, enabled);
    bool pressed = false;
-   float mx = ctx->mouse.pos_x;
-   float my = ctx->mouse.pos_y;
 
-   bool hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
    if (hovered)
    {
-      ctx->hovered_id = id;
-
       bool require_no_key_mods = (flags & MONSTRO_BUTTON_NO_KEY_MODIFIERS) != 0;
       bool mods_ok =
           !require_no_key_mods || !(ctx->keyboard.getMods() & (MONSTRO_MOD_CTRL | MONSTRO_MOD_SHIFT | MONSTRO_MOD_ALT));
@@ -48,7 +37,7 @@ static bool button_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, boo
    bool held = false;
    if (ctx->active_id == id)
    {
-      if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
+      if (enabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
          if ((flags & MONSTRO_BUTTON_REPEAT) && hovered &&
@@ -59,7 +48,7 @@ static bool button_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, boo
       }
       else
       {
-         if (hovered && !(flags & MONSTRO_BUTTON_PRESSED_ON_CLICK))
+         if (enabled && hovered && !(flags & MONSTRO_BUTTON_PRESSED_ON_CLICK))
          {
             pressed = true;
          }

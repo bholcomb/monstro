@@ -39,6 +39,7 @@ struct Window
 
    MonstroVec2 pos = {0.0f, 0.0f};
    MonstroVec2 size = {0.0f, 0.0f};
+   MonstroRect hit_rect = {}; // where it takes the mouse: its rect, clipped as drawn (a child panel by its parent)
    float scroll_x = 0.0f, scroll_y = 0.0f;
    float content_height = 0.0f;
    float content_width = 0.0f;

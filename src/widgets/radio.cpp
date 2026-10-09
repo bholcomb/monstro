@@ -33,24 +33,8 @@ bool monstro_radio_button(MonstroContext *ctx, const char *label, int *value, in
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect r = {pos.x, pos.y, total_w, total_h};
 
-   bool hovered = false;
-   bool pressed = false;
-
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
-
-      if (hovered)
-      {
-         ctx->hovered_id = id;
-         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-         {
-            pressed = true;
-         }
-      }
-   }
+   bool hovered = ctx->hoverItem(id, r);
+   bool pressed = hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false);
 
    bool is_selected = (*value == button_value);
 

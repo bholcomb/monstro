@@ -8,29 +8,18 @@
 static bool spinner_button(MonstroContext *ctx, monstro::Canvas *canvas, MonstroRect rect, const char *symbol,
                            MonstroStyleButton *bs, MonstroFont *font, uint64_t id)
 {
-   bool hovered = false;
+   bool hovered = ctx->hoverItem(id, rect);
    bool pressed = false;
-
-   if (!ctx->disabled && ctx->current_window == ctx->hovered_window)
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= rect.x && mx < rect.x + rect.w && my >= rect.y && my < rect.y + rect.h;
-      if (hovered)
-      {
-         ctx->hovered_id = id;
-         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-         {
-            ctx->setActiveId(id);
-            pressed = true;
-         }
-      }
+      ctx->setActiveId(id);
+      pressed = true;
    }
 
    bool held = false;
-   if (!ctx->disabled && ctx->active_id == id)
+   if (ctx->active_id == id)
    {
-      if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
+      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
       }
@@ -190,16 +179,7 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
    }
 
    // Field interaction
-   bool hovered = false;
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w && my >= field_rect.y &&
-                my < field_rect.y + field_rect.h;
-      if (hovered)
-         ctx->hovered_id = id;
-   }
+   bool hovered = ctx->hoverItem(id, field_rect);
 
    if (is_active)
    {

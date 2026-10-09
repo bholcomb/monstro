@@ -268,8 +268,7 @@ bool Window::end()
       uint64_t resize_id = getChildId("##resize");
       ctx->keepAliveId(resize_id);
 
-      bool grip_hovered =
-          ctx->hovered_window == this && monstro_rect_contains(grip_rect, ctx->mouse.pos_x, ctx->mouse.pos_y);
+      bool grip_hovered = ctx->hoverItem(resize_id, grip_rect);
 
       if (grip_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
       {
@@ -315,6 +314,10 @@ bool Window::end()
    }
 
    Canvas &c = canvas();
+   MonstroRect clip = c.getClipRect();
+   float x0 = std::max(pos.x, clip.x), y0 = std::max(pos.y, clip.y);
+   float x1 = std::min(pos.x + size.x, clip.x + clip.w), y1 = std::min(pos.y + size.y, clip.y + clip.h);
+   hit_rect = {x0, y0, std::max(x1 - x0, 0.0f), std::max(y1 - y0, 0.0f)};
    c.popClipRect();
    int clips_open = c.clip_rects.size() - clip_base;
    int layers_open = c.layers.size() - layer_base;
@@ -471,15 +474,10 @@ void Window::drawVerticalScrollbar(float header_h)
    uint64_t sb_id = ctx->ids().getId("##vscroll");
    ctx->keepAliveId(sb_id);
 
-   if (ctx->hovered_window == this)
+   thumb_hovered = ctx->hoverItem(sb_id, track_rect);
+   if (thumb_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
    {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      thumb_hovered = monstro_rect_contains(track_rect, mx, my);
-      if (thumb_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
-      {
-         ctx->setActiveId(sb_id);
-      }
+      ctx->setActiveId(sb_id);
    }
 
    if (ctx->active_id == sb_id)
@@ -560,15 +558,10 @@ void Window::drawHorizontalScrollbar(float header_h)
    uint64_t sb_id = ctx->ids().getId("##hscroll");
    ctx->keepAliveId(sb_id);
 
-   if (ctx->hovered_window == this)
+   thumb_hovered = ctx->hoverItem(sb_id, track_rect);
+   if (thumb_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
    {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      thumb_hovered = monstro_rect_contains(track_rect, mx, my);
-      if (thumb_hovered && ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
-      {
-         ctx->setActiveId(sb_id);
-      }
+      ctx->setActiveId(sb_id);
    }
 
    if (ctx->active_id == sb_id)
@@ -734,12 +727,10 @@ void Window::drawForeground()
       uint64_t collapse_id = getChildId("##collapse");
       MonstroRect collapse_hit = {title_rect.x + style->window.header.padding[0], title_rect.y, btn_sz + 4.0f,
                                   title_rect.h};
-      bool col_hovered =
-          ctx->hovered_window == this && monstro_rect_contains(collapse_hit, ctx->mouse.pos_x, ctx->mouse.pos_y);
+      bool col_hovered = ctx->hoverItem(collapse_id, collapse_hit);
 
       if (col_hovered)
       {
-         ctx->hovered_id = collapse_id;
          if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
          {
             collapsed = false;
@@ -776,12 +767,10 @@ void Window::drawForeground()
 
             uint64_t collapse_id = getChildId("##collapse");
             MonstroRect collapse_hit = {content_left, title_rect.y, btn_sz + 4.0f, title_rect.h};
-            bool col_hovered =
-                ctx->hovered_window == this && monstro_rect_contains(collapse_hit, ctx->mouse.pos_x, ctx->mouse.pos_y);
+            bool col_hovered = ctx->hoverItem(collapse_id, collapse_hit);
 
             if (col_hovered)
             {
-               ctx->hovered_id = collapse_id;
                if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
                {
                   collapsed = true;
@@ -801,13 +790,11 @@ void Window::drawForeground()
             MonstroRect close_rect = {close_x, close_y, btn_sz, btn_sz};
 
             uint64_t close_id = getChildId("##close");
-            bool close_hovered =
-                ctx->hovered_window == this && monstro_rect_contains(close_rect, ctx->mouse.pos_x, ctx->mouse.pos_y);
+            bool close_hovered = ctx->hoverItem(close_id, close_rect);
 
             uint32_t close_col = monstro_color_to_u32(style->window.header.label_normal);
             if (close_hovered)
             {
-               ctx->hovered_id = close_id;
                canvas().addRectFilled(close_rect, monstro_color_to_u32(style->window.header.hover.data.color),
                                       style->window.rounding, MONSTRO_CORNER_ALL);
                if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
@@ -1248,7 +1235,7 @@ Window *Context::findHoveredWindow(float x, float y, bool excludeChildren)
       {
          bool takes_input =
              w.active && (w.flags & MONSTRO_WINDOW_INPUTS) && !(excludeChildren && (w.flags & MONSTRO_WINDOW_CHILD));
-         if (takes_input && monstro_rect_contains(w.getRect(), x, y) && (!result || w.draw_rank > result->draw_rank))
+         if (takes_input && monstro_rect_contains(w.hit_rect, x, y) && (!result || w.draw_rank > result->draw_rank))
             result = &w;
       }
 

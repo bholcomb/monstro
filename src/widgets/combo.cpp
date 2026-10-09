@@ -62,25 +62,8 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
    float combo_x = pos.x + label_size.x + label_spacing;
    MonstroRect combo_rect = {combo_x, pos.y, combo_width, combo_height};
 
-   bool hovered = false;
-   bool pressed = false;
-
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= combo_rect.x && mx < combo_rect.x + combo_rect.w && my >= combo_rect.y &&
-                my < combo_rect.y + combo_rect.h;
-
-      if (hovered)
-      {
-         ctx->hovered_id = id;
-         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-         {
-            pressed = true;
-         }
-      }
-   }
+   bool hovered = ctx->hoverItem(id, combo_rect);
+   bool pressed = hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false);
 
    bool opened = monstro_is_popup_open(ctx, label);
 

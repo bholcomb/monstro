@@ -62,6 +62,10 @@ struct Context
    void setActiveId(uint64_t id);
    void keepAliveId(uint64_t id);
 
+   // Whether the item id, at rect in the current window, is hovered: see hover_top. A disabled item is never
+   // hovered, but still covers the items under it.
+   bool hoverItem(uint64_t id, MonstroRect rect, bool enabled = true);
+
    Window *findWindow(const char *name);
    Window *createWindow(const char *name, MonstroWindowFlags flags);
    Window *findHoveredWindow(float x, float y, bool excludeChildren = false);
@@ -104,6 +108,23 @@ struct Context
    ConfiguredArray<MonstroTreeNodeState> tree_states{"tree node table", "raise MonstroContextConfig.max_tree_nodes"};
    ConfiguredArray<MonstroTableState> tables{"table state table", "raise MonstroContextConfig.max_tables"};
 
+   /*
+    * One item is hovered at a time: the one drawn on top under the mouse, in
+    * the hovered window, where it is not clipped away, and only while no other
+    * item is active. Items drawn later cover earlier ones, so the last item
+    * under the mouse in a frame is on top; it is remembered with its visible
+    * rect, and while the mouse stays in that rect the items under it are not
+    * hovered. Where nothing on top is known yet (the mouse just arrived), the
+    * first item under it is hovered for that frame.
+    */
+   struct HoverTop
+   {
+      uint64_t id = 0;
+      uint64_t window = 0;
+      MonstroRect rect = {};
+   };
+   HoverTop hover_top;            // the last item under the mouse so far this frame
+   HoverTop hover_top_prev_frame; // the item on top at the end of the last frame
    uint64_t hovered_id = 0;
    uint64_t hovered_id_prev_frame = 0;
    uint64_t active_id = 0;

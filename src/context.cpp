@@ -113,6 +113,8 @@ void Context::beginFrame(float dt, const MonstroFrameBuffers *buffers)
 
    hovered_id_prev_frame = hovered_id;
    hovered_id = 0;
+   hover_top_prev_frame = hover_top;
+   hover_top = {};
 
    if (!active_id_is_alive && active_id_prev_frame == active_id && active_id != 0)
    {
@@ -242,6 +244,42 @@ void Context::requireBalanced(const char *where) const
 }
 
 void Context::setActiveId(uint64_t id) { active_id = id; }
+
+static MonstroRect intersect(MonstroRect a, MonstroRect b)
+{
+   float x0 = a.x > b.x ? a.x : b.x;
+   float y0 = a.y > b.y ? a.y : b.y;
+   float x1 = a.x + a.w < b.x + b.w ? a.x + a.w : b.x + b.w;
+   float y1 = a.y + a.h < b.y + b.h ? a.y + a.h : b.y + b.h;
+   return {x0, y0, x1 > x0 ? x1 - x0 : 0.0f, y1 > y0 ? y1 - y0 : 0.0f};
+}
+
+bool Context::hoverItem(uint64_t id, MonstroRect rect, bool enabled)
+{
+   Window *win = current_window;
+   if (win != hovered_window)
+      return false;
+   MonstroRect visible = intersect(rect, canvas->getClipRect());
+   if (!monstro_rect_contains(visible, mouse.pos_x, mouse.pos_y))
+      return false;
+
+   // Under the mouse and drawn after the items before it, so on top of them.
+   hover_top = {id, win->id, visible};
+
+   if (!enabled || disabled)
+      return false;
+   if (active_id != 0 && active_id != id)
+      return false;
+   if (hovered_id != 0 && hovered_id != id)
+      return false;
+   const HoverTop &top = hover_top_prev_frame;
+   bool covered = top.id != 0 && top.id != id && top.window == win->id &&
+                  monstro_rect_contains(top.rect, mouse.pos_x, mouse.pos_y);
+   if (covered)
+      return false;
+   hovered_id = id;
+   return true;
+}
 
 void Context::keepAliveId(uint64_t id)
 {

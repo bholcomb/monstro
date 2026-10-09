@@ -134,18 +134,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    const char *field_text = buf;
 
    // Hit testing
-   bool hovered = false;
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w && my >= field_rect.y &&
-                my < field_rect.y + field_rect.h;
-      if (hovered)
-      {
-         ctx->hovered_id = id;
-      }
-   }
+   bool hovered = ctx->hoverItem(id, field_rect);
 
    if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
@@ -522,16 +511,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
       clamp_edit_state_to_buffer(edit, buf);
 
    // Hit testing
-   bool hovered = false;
-   if (!ctx->disabled && win == ctx->hovered_window)
-   {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= field_rect.x && mx < field_rect.x + field_rect.w && my >= field_rect.y &&
-                my < field_rect.y + field_rect.h;
-      if (hovered)
-         ctx->hovered_id = id;
-   }
+   bool hovered = ctx->hoverItem(id, field_rect);
 
    if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {

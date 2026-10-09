@@ -99,30 +99,17 @@ static uint32_t hue_color(float h)
 
 static bool drag_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool *out_hovered, bool *out_held)
 {
-   monstro::Window *win = ctx->current_window;
-   *out_hovered = false;
-   *out_held = false;
-   if (ctx->disabled || win != ctx->hovered_window)
-      return false;
-
-   float mx = ctx->mouse.pos_x;
-   float my = ctx->mouse.pos_y;
-   bool hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
-
-   if (hovered)
+   bool hovered = ctx->hoverItem(id, r);
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      ctx->hovered_id = id;
-      if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-      {
-         ctx->setActiveId(id);
-         ctx->focusWindow(win);
-      }
+      ctx->setActiveId(id);
+      ctx->focusWindow(ctx->current_window);
    }
 
    bool held = false;
    if (ctx->active_id == id)
    {
-      if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
+      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
          held = true;
       }
@@ -399,34 +386,24 @@ bool monstro_color_button(MonstroContext *ctx, const char *label, MonstroColor c
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect r = {pos.x, pos.y, width, height};
 
-   bool hovered = false, held = false, pressed = false;
-
-   if (!ctx->disabled && win == ctx->hovered_window)
+   bool held = false, pressed = false;
+   bool hovered = ctx->hoverItem(id, r);
+   if (hovered && monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
    {
-      float mx = ctx->mouse.pos_x;
-      float my = ctx->mouse.pos_y;
-      hovered = mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h;
-      if (hovered)
+      ctx->setActiveId(id);
+      ctx->focusWindow(win);
+   }
+   if (ctx->active_id == id)
+   {
+      if (!ctx->disabled && monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
       {
-         ctx->hovered_id = id;
-         if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
-         {
-            ctx->setActiveId(id);
-            ctx->focusWindow(win);
-         }
+         held = true;
       }
-      if (ctx->active_id == id)
+      else
       {
-         if (monstro_is_mouse_down(ctx, MONSTRO_MOUSE_BUTTON_LEFT))
-         {
-            held = true;
-         }
-         else
-         {
-            if (hovered)
-               pressed = true;
-            ctx->setActiveId(0);
-         }
+         if (hovered)
+            pressed = true;
+         ctx->setActiveId(0);
       }
    }
 
