@@ -354,23 +354,14 @@ static void ea_render_ui(ExampleApp *app, const MonstroDrawData *data, VECommand
          dc->custom_draw(dc->user_data, cr, dc->layer);
          continue;
       }
-      int32_t sx = (int32_t)dc->clip_rect[0], sy = (int32_t)dc->clip_rect[1];
-      uint32_t sw = (uint32_t)dc->clip_rect[2], sh = (uint32_t)dc->clip_rect[3];
-      if (sx < 0)
-      {
-         sw = (sw > (uint32_t)(-sx)) ? sw + (uint32_t)sx : 0;
-         sx = 0;
-      }
-      if (sy < 0)
-      {
-         sh = (sh > (uint32_t)(-sy)) ? sh + (uint32_t)sy : 0;
-         sy = 0;
-      }
-      if ((uint32_t)sx + sw > w)
-         sw = w - (uint32_t)sx;
-      if ((uint32_t)sy + sh > h)
-         sh = h - (uint32_t)sy;
-      veSetScissor(cmd, sx, sy, sw, sh);
+      // Clip rects are x, y, width, height and may reach past the framebuffer: clamp them to it.
+      float x0 = dc->clip_rect[0] > 0.0f ? dc->clip_rect[0] : 0.0f;
+      float y0 = dc->clip_rect[1] > 0.0f ? dc->clip_rect[1] : 0.0f;
+      float x1 = dc->clip_rect[0] + dc->clip_rect[2] < (float)w ? dc->clip_rect[0] + dc->clip_rect[2] : (float)w;
+      float y1 = dc->clip_rect[1] + dc->clip_rect[3] < (float)h ? dc->clip_rect[1] + dc->clip_rect[3] : (float)h;
+      if (x1 <= x0 || y1 <= y0)
+         continue;
+      veSetScissor(cmd, (int32_t)x0, (int32_t)y0, (uint32_t)(x1 - x0), (uint32_t)(y1 - y0));
 
       // Text and solid shapes use the atlas; other IDs are the texture views the examples registered.
       EAPushConstants pc = {};
