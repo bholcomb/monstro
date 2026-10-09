@@ -623,6 +623,13 @@ void Window::pushContentClipRect()
    }
    else
    {
+      // The content starts a padding in from the window's edge, so the clip reaches a padding past the view,
+      // up to a scrollbar where there is one.
+      const MonstroStyle &style = ctx->style();
+      if (!show_scrollbar_y)
+         content_rect.w += style.window.padding[0];
+      if (!show_scrollbar_x)
+         content_rect.h += style.window.padding[1];
       canvas().pushClipRect(content_rect);
    }
    content_clip_pushed = true;
