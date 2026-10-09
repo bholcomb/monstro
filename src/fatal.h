@@ -30,7 +30,4 @@
          monstro_fatal(__FILE__, __LINE__, #condition, __VA_ARGS__);                                                   \
    } while (0)
 
-// A required pointer argument of the calling API function.
-#define MONSTRO_REQUIRE_ARG(pointer) MONSTRO_REQUIRE(pointer, "%s: '%s' must not be null", __func__, #pointer)
-
 #endif
