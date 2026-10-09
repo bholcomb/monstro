@@ -201,6 +201,12 @@ Monstro through setter functions.
 | Text input (characters) | `monstro_add_input_text(ctx, utf8_string)` |
 | Window resize | `monstro_set_display_size(ctx, w, h)` |
 
+Input is queued, not sampled: each call records a change, and the next frames
+take the changes in order, so a press and release between two frames still
+click.  Calling a setter with the state it already has records nothing, so
+forwarding events from callbacks and polling the whole state once a frame both
+work.  See [Input between frames](#input-between-frames).
+
 Each context has its own input and display size.  The timing that interprets
 input -- double click time and distance, drag threshold, key repeat delay and
 rate, tooltip delay -- is shared, in the environment's settings:
@@ -683,7 +689,110 @@ if (monstro_begin_window(ctx, "My Window", NULL, MONSTRO_WINDOW_DEFAULT)) {
 }
 ```
 
-A missing or extra `end` stops the program; see the next section.
+A missing or extra `end` stops the program; see
+[Errors and Limits](#errors-and-limits).
+
+---
+
+## Interaction Rules
+
+These hold for every widget and window; the `interaction` example puts each
+one on a page to click through.
+
+### Hover: one item, the one on top
+
+At most one item is hovered in a frame, and only it can be pressed.  Across
+windows, the window drawn on top under the mouse takes it (popups over their
+window, windows in front over windows behind, child panels at their window's
+depth).  Within a window, items drawn later cover items drawn earlier, so of
+two overlapping buttons only the second lights up and fires.  A disabled item
+is never hovered but still covers what is under it.
+
+Monstro learns which item is on top as the frame is built, so it keeps the
+answer from the previous frame: where the mouse has just arrived and nothing
+is known yet, the first item under it is hovered for that frame.  Input is
+taken so that a press always lands after the frame that saw the mouse arrive
+(see [Input between frames](#input-between-frames)), so a press always goes
+to the item on top.
+
+### Clipping
+
+An item takes the mouse only where it is drawn: the part of it inside the
+current clip rect.  A button scrolled half out of a child panel can be clicked
+on its visible half only, and a child panel scrolled under its window's title
+bar does not take the mouse there.
+
+### Active items
+
+An item is active while it is held (a pressed button, a dragged slider, knob
+or scrollbar, a resize grip), edited (a text or number field) or open (a
+combo).  While a held item is active, no other item hovers or activates:
+dragging a slider across a button leaves the button dark, and releasing over
+it does not click it.  A held item lets go when the button is released,
+wherever the mouse is, or when it is disabled.
+
+### Activated and deactivated
+
+`monstro_is_item_activated` holds in the frame an item becomes active and
+`monstro_is_item_deactivated` in the frame it stops;
+`monstro_is_item_deactivated_after_edit` holds when it stops and its value
+changed at any point while it was active.  A host that sends one command per
+change, rather than one per frame, acts on these edges:
+
+```c
+monstro_slider_float(ctx, "throttle##Throttle", &throttle, 0.0f, 1.0f, "%.2f", NULL);
+if (monstro_is_item_activated(ctx))
+    begin_throttle_change();
+if (monstro_is_item_deactivated_after_edit(ctx))
+    send_throttle(throttle);
+```
+
+At most four items are active at once (in practice one is held and one is
+being edited); more stops the program.
+
+### IDs
+
+A label's text before `##` is its ID and the text after it is shown, so a
+label can show a live value and keep its state: `"speed##Speed: %.1f"`.  See
+[ID system](#id-system).
+
+### Popups and child panels
+
+A popup's ID comes from the ID scope it is opened in, and its window is named
+by that ID, so two windows that each open a popup called `"menu"` have two
+popups, each with its own position and content, and both can be open at once.
+Child panels are named the same way: two `"list"` panels under different
+pushed IDs are two panels.  Top-level windows are found by name within their
+context; windows of different contexts never meet.
+
+### Forgetting unused state
+
+A context remembers windows (their position, size, scroll and collapsed
+state), tree node open states, tab bar selections and table column widths in
+fixed tables.  State not used for `MonstroContextConfig.evict_after_frames`
+frames is forgotten at the end of a frame, and the next use starts afresh, as
+the first did.  The default, 3,600 frames, is a minute at 60 frames a second:
+a tool window closed for longer comes back as it first opened.  This keeps
+a UI that keeps making new state -- a context menu per row, a tree node per
+contact -- from filling the tables over a long session.  It is lifetime
+management, not growth: a table full of state in use still stops the program,
+and its capacity is sized for what one frame uses.
+
+### Input between frames
+
+The input setters queue changes (up to `max_input_events`), and each frame
+takes them in order until one would change something that frame already
+changed: the same button or key again, a press after a move, or a move after
+a press.  The rest wait for the following frames.  So a press and release
+between two frames are seen in two frames and click; a tap on a touch screen
+that moves, presses and releases between two frames is seen in three -- the
+move, so the item on top at the new position is known, then the press on it,
+then the release.  Every change reaches the UI in the order it happened, at
+the cost of a frame or two of latency for changes that arrive together.
+
+Wheel movements are summed, moves in a row are merged, and setting a state
+that is already current queues nothing.  Modifiers and typed text are not
+queued.
 
 ---
 
@@ -763,13 +872,19 @@ MonstroContext* ctx = monstro_context_create(env, &config);
 
 | Context capacity (`MonstroContextConfig`) | Default |
 | --- | --- |
-| `max_windows`: windows, child regions, popups and menus ever begun, the root included | 32 |
+| `max_windows`: windows, child regions, popups and menus with remembered state, the root included | 32 |
 | `max_tree_nodes`: tree nodes and collapsing headers with remembered state | 128 |
 | `max_tab_bars` | 16 |
 | `max_tables` | 8 |
 | `max_popups`: popups open at once | 8 |
+| `max_input_events`: input events waiting for a frame | 64 |
+| `evict_after_frames`: frames before unused state is forgotten (not a capacity) | 3,600 |
 
-A default context holds about 31 KB; a default environment about 7.4 MB
+State a UI stops using is forgotten after `evict_after_frames`, so the tables
+only need to hold what is in use; see
+[Forgetting unused state](#forgetting-unused-state).
+
+A default context holds about 32 KB; a default environment about 7.4 MB
 (a 2.9 MB canvas and a 4 MB atlas).
 
 The remaining limits are nesting depths and per-frame scratch, fixed for now:
@@ -788,6 +903,7 @@ The remaining limits are nesting depths and per-frame scratch, fixed for now:
 | Columns in one set, nested column sets | 16, 8 |
 | Text typed in one frame (`monstro_add_input_text`) | 255 bytes |
 | Tooltip text | 1,023 bytes |
+| Items active at once (see [Activated and deactivated](#activated-and-deactivated)) | 4 |
 
 ### Text
 
@@ -1299,7 +1415,9 @@ if (monstro_is_item_hovered(ctx))  { /* mouse is over it */ }
 if (monstro_is_item_active(ctx))   { /* being interacted with (held/dragging) */ }
 if (monstro_is_item_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT)) { /* was clicked */ }
 if (monstro_is_item_edited(ctx))   { /* value changed this frame */ }
-if (monstro_is_item_deactivated_after_edit(ctx)) { /* just released after editing */ }
+if (monstro_is_item_activated(ctx)) { /* became active this frame: a press, drag or edit began */ }
+if (monstro_is_item_deactivated(ctx)) { /* stopped being active this frame */ }
+if (monstro_is_item_deactivated_after_edit(ctx)) { /* stopped, and changed its value while active */ }
 
 MonstroRect r = monstro_get_item_rect(ctx);       /* screen-space rect */
 MonstroVec2 size = monstro_get_item_rect_size(ctx);
@@ -2257,7 +2375,7 @@ left open; see Errors and Limits.
 
 **One environment, many contexts.** Load fonts and register themes and icons
 once, in one environment, and give each UI (each screen, panel or tool window)
-its own context.  A context costs about 31 KB with the default capacities, so
+its own context.  A context costs about 32 KB with the default capacities, so
 contexts are cheap; the canvas and atlas are paid once.
 
 **Render a frame before building the next.** Draw data lives in the canvas
