@@ -589,3 +589,42 @@ TEST(a_host_texture_is_drawn_with_its_own_id_in_draw_order)
    CHECK(feed[0].texcoord[0] == 0 && feed[0].texcoord[1] == 0 && feed[2].texcoord[0] == 1 && feed[2].texcoord[1] == 1);
    CHECK(feed[0].color == 0xffffffff);
 }
+
+/* ------------------------------------------------------------------------- */
+/* Lit buttons: a selectable with its text centred                           */
+/* ------------------------------------------------------------------------- */
+
+// Where the first glyph of a selectable's text lands, and the selectable's rect.
+static MonstroVec2 selectable_text(Ui &ui, MonstroAlign align, MonstroRect *rect)
+{
+   ui.begin();
+   begin_screen(ui);
+   MonstroStyleSelectable style = *monstro_get_selectable_style(ui.ctx);
+   style.text_alignment = align;
+   style.padding[0] = style.padding[1] = 0.0f;
+   monstro_push_selectable_style(ui.ctx, &style);
+   monstro_set_cursor_screen_pos(ui.ctx, 100, 100);
+   bool on = true;
+   uint32_t first = ui.vertexCount();
+   monstro_selectable_sized(ui.ctx, "ramp##RAMP", &on, 200, 60, MONSTRO_SELECTABLE_NONE, nullptr);
+   *rect = monstro_get_item_rect(ui.ctx);
+   monstro_pop_style(ui.ctx, 1);
+   monstro_end_window(ui.ctx);
+   const MonstroDrawData *data = ui.end();
+   // The lit background is first, then the glyphs.
+   const MonstroVertex &glyph = data->vertices[first + 4];
+   return {glyph.position[0], glyph.position[1]};
+}
+
+TEST(a_selectable_places_its_text_as_its_style_aligns_it)
+{
+   Ui ui;
+   CHECK(monstro_get_selectable_style(ui.ctx)->text_alignment == MONSTRO_ALIGN_LEFT);
+   MonstroRect rect = {};
+   MonstroVec2 left = selectable_text(ui, MONSTRO_ALIGN_LEFT, &rect);
+   MonstroVec2 centre = selectable_text(ui, MONSTRO_ALIGN_CENTER, &rect);
+   MonstroVec2 size = monstro_font_measure_text(ui.font, "RAMP", 0.0f);
+   // By default at the top left, as before; centred, in the middle of the button.
+   CHECK(left.x >= rect.x && left.x < rect.x + 4.0f && left.y < rect.y + 16.0f);
+   CHECK(near(centre.x - left.x, (rect.w - size.x) * 0.5f) && near(centre.y - left.y, (rect.h - size.y) * 0.5f));
+}

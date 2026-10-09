@@ -170,7 +170,7 @@ void monstro_style_set_default(MonstroStyle *style)
    style->selectable.text_hover_active = TEXT_SEL;
    style->selectable.text_pressed_active = TEXT_SEL;
    style->selectable.text_background = WINDOW;
-   style->selectable.text_alignment = MONSTRO_ALIGN_CENTER;
+   style->selectable.text_alignment = MONSTRO_ALIGN_LEFT;
    style->selectable.rounding = 0.0f;
    style->selectable.padding[0] = 4.0f;
    style->selectable.padding[1] = 4.0f;

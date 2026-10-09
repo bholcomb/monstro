@@ -199,10 +199,11 @@ static bool selectable_impl(MonstroContext *ctx, const char *label, bool *select
       canvas->addRectFilled(outer, monstro_color_to_u32(bg->data.color), ss->rounding, MONSTRO_CORNER_ALL);
    }
 
-   MonstroVec2 text_pos = {inner.x, inner.y};
+   // The text is placed in the inner rect, left of a toggle, as the style aligns it.
    if (font)
    {
-      canvas->addText(font, text_pos, monstro_color_to_u32(text_color), display);
+      MonstroRect text_rect = {inner.x, inner.y, inner.w - toggle_extra, inner.h};
+      canvas->addTextEx(font, text_rect, monstro_color_to_u32(text_color), display, ss->text_alignment);
    }
 
    if (has_toggle)
