@@ -32,7 +32,7 @@ struct BasicDemo
    MonstroFileDialogState *fileDialog;
    char lastFilePath[4096];
 
-   VETextureIndex iconAtlasTexture;
+   VETexture iconAtlasTexture;
    uint64_t iconAtlasTextureId;
    MonstroIconId firstIconId;
 };
@@ -59,15 +59,15 @@ static void basic_init(ExampleApp *app, void *ud)
    }
 
    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
-   if (veCreateTexture2D(app->device, atlas_w, atlas_h, VK_FORMAT_R8G8B8A8_UNORM, usage, "BasicIconAtlas",
-                         &d->iconAtlasTexture) == VE_SUCCESS)
-   {
-      veHostWriteTextureRegion(app->device, d->iconAtlasTexture, pixels, sizeof(pixels), nullptr);
-      d->iconAtlasTextureId = (uint64_t)d->iconAtlasTexture;
-      d->firstIconId = 1;
-      monstro_register_icon_atlas(app->env, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h,
-                                  cols, rows);
-   }
+   ea_check(veCreateTexture2D(app->device, atlas_w, atlas_h, VK_FORMAT_R8G8B8A8_UNORM, usage, "BasicIconAtlas",
+                              &d->iconAtlasTexture),
+            "veCreateTexture2D(icons)");
+   ea_check(veHostWriteTextureRegion(app->device, d->iconAtlasTexture, pixels, sizeof(pixels), nullptr),
+            "veHostWriteTextureRegion(icons)");
+   d->iconAtlasTextureId = (uint64_t)veGetDefaultTextureView(app->device, d->iconAtlasTexture);
+   d->firstIconId = 1;
+   monstro_register_icon_atlas(app->env, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h, cols,
+                               rows);
 }
 
 static void basic_update(ExampleApp *app, void *ud, float dt)
@@ -657,7 +657,7 @@ static void basic_shutdown(ExampleApp *app, void *ud)
       monstro_file_dialog_destroy(d->fileDialog);
       d->fileDialog = nullptr;
    }
-   if (d->iconAtlasTexture != VE_INVALID_TEXTURE_INDEX)
+   if (d->iconAtlasTexture != VE_INVALID_TEXTURE)
    {
       veDestroyTexture(app->device, d->iconAtlasTexture);
    }
@@ -678,7 +678,7 @@ int main(int argc, char *argv[])
    demo.secondWindowOpen = true;
    demo.pickerColor = {0.4f, 0.7f, 1.0f, 1.0f};
    demo.fileDialog = monstro_file_dialog_create();
-   demo.iconAtlasTexture = VE_INVALID_TEXTURE_INDEX;
+   demo.iconAtlasTexture = VE_INVALID_TEXTURE;
 
    ExampleAppDesc desc = {};
    desc.title = "Monstro UI Example";
