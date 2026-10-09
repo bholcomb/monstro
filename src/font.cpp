@@ -4,11 +4,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Both libraries stay private to this file: their few process-wide settings
+// cannot be reached through the library's exports.
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
+#define STB_IMAGE_STATIC
+#define STBI_NO_FAILURE_STRINGS
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 /* ------------------------------------------------------------------------- */
 /* Font Manager                                                              */

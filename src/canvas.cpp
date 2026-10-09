@@ -13,20 +13,11 @@ namespace monstro
 /* Precomputed Circle Vertices (12-step)                                     */
 /* ------------------------------------------------------------------------- */
 
-static MonstroVec2 g_circle_vtx[12];
-static bool g_circle_built = false;
-
-static void ensure_circle_vtx()
-{
-   if (g_circle_built)
-      return;
-   for (int i = 0; i < 12; i++)
-   {
-      float a = ((float)i / 12.0f) * 2.0f * 3.14159265f;
-      g_circle_vtx[i] = {cosf(a), sinf(a)};
-   }
-   g_circle_built = true;
-}
+// cos and sin of i * 30 degrees. A constant table: the library keeps no mutable global state.
+static const MonstroVec2 CIRCLE_VERTICES[12] = {
+    {1.0f, 0.0f},  {0.8660254f, 0.5f},   {0.5f, 0.8660254f},   {0.0f, 1.0f},  {-0.5f, 0.8660254f}, {-0.8660254f, 0.5f},
+    {-1.0f, 0.0f}, {-0.8660254f, -0.5f}, {-0.5f, -0.8660254f}, {0.0f, -1.0f}, {0.5f, -0.8660254f}, {0.8660254f, -0.5f},
+};
 
 /* ------------------------------------------------------------------------- */
 /* Lifecycle                                                                 */
@@ -131,8 +122,6 @@ void Canvas::pathPush(MonstroVec2 point)
 
 void Canvas::pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, int a_max_of_12)
 {
-   ensure_circle_vtx();
-
    if (a_min_of_12 > a_max_of_12)
       return;
 
@@ -144,7 +133,7 @@ void Canvas::pathArcToFast(MonstroVec2 center, float radius, int a_min_of_12, in
    {
       for (int a = a_min_of_12; a <= a_max_of_12; a++)
       {
-         MonstroVec2 c = g_circle_vtx[a % 12];
+         MonstroVec2 c = CIRCLE_VERTICES[a % 12];
          pathPush({center.x + c.x * radius, center.y + c.y * radius});
       }
    }
