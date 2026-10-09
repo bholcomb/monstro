@@ -56,10 +56,8 @@ nothing is copied. It is valid until that canvas builds another frame. With
 the default single canvas that is the next `BeginFrame` of any context on the
 environment; with `canvas_count` N, canvases are lent in turn. Every property
 checks the view and throws once it is stale (`IsValid` asks first); spans taken
-from it are only as valid as the view. `Copy()` makes a `DrawDataCopy` of
-managed arrays that outlives the canvas and the environment. Copied commands
-still reference host textures and custom callbacks: keep those resources alive
-until the copy is rendered.
+from it are only as valid as the view. Consume the frame -- upload or render it
+-- before the canvas builds the next one; there is no copy.
 
 To build a frame straight into the host's own arrays, describe where vertex
 attributes go once, in `MonstroEnvConfig.vertex_layout` (position, texcoord and
@@ -124,7 +122,7 @@ After building the native library, run `./bindings/csharp/test.sh`. Set
 output directory. The console runner uses the real library and bundled example
 font. It checks every exported entry point, all struct sizes/offsets and enum
 constants against a C probe, and that no entry point takes or returns a bare
-`IntPtr`. It then exercises draw output and its validity, copies, multiple
+`IntPtr`. It then exercises draw output and its validity, multiple
 frames, UTF-8, one-byte booleans, pointers, the shared atlas, fonts from paths
 and bytes, themes shared by contexts with pushes kept in the frame, settings,
 host buffers in split streams, callbacks, and disposal.

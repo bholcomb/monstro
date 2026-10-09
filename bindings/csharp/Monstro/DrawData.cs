@@ -1,4 +1,4 @@
-// Draw data: a zero-copy view of a finished frame, and a managed copy for keeping it.
+// Draw data: a zero-copy view of a finished frame.
 using System;
 
 namespace Monstro;
@@ -7,7 +7,7 @@ namespace Monstro;
 /// A finished frame, viewed in the native canvas that built it: nothing is copied. It is valid until that
 /// canvas builds another frame (with one canvas, the next BeginFrame of any context on the environment);
 /// every property checks this and throws once it is stale. Spans taken from it are valid as long as the
-/// view is: check IsValid, or Copy() the frame to keep it.
+/// view is: consume the frame before the canvas builds the next one.
 /// </summary>
 public readonly unsafe ref struct DrawData
 {
@@ -36,7 +36,7 @@ public readonly unsafe ref struct DrawData
         {
             if (!IsValid)
                 throw new InvalidOperationException(
-                    "This draw data's canvas has built another frame since; Copy() draw data to keep it");
+                    "This draw data's canvas has built another frame since; consume draw data before the next frame");
             return _data;
         }
     }
@@ -67,40 +67,4 @@ public readonly unsafe ref struct DrawData
     /// <summary>Whether this frame differs from the context's previous one.</summary>
     public bool Changed => Data->changed != 0;
     public ulong AtlasVersion => Data->atlas_version;
-
-    /// <summary>
-    /// Copies the frame into managed arrays that outlive the canvas and the environment. Geometry written to
-    /// host storage is not copied: it is in the host's buffers already.
-    /// </summary>
-    public DrawDataCopy Copy() => new(Vertices.ToArray(), Indices.ToArray(), Commands.ToArray(), ContentHash, Changed,
-                                      AtlasVersion, FrameId, DisplaySize);
-}
-
-/// <summary>
-/// A managed copy of a frame. Its commands still name host textures and custom draw callbacks: keep those
-/// alive until the copy is rendered.
-/// </summary>
-public sealed class DrawDataCopy
-{
-    public MonstroVertex[] Vertices { get; }
-    public uint[] Indices { get; }
-    public MonstroDrawCommand[] Commands { get; }
-    public ulong ContentHash { get; }
-    public bool Changed { get; }
-    public ulong AtlasVersion { get; }
-    public ulong FrameId { get; }
-    public MonstroVec2 DisplaySize { get; }
-
-    internal DrawDataCopy(MonstroVertex[] vertices, uint[] indices, MonstroDrawCommand[] commands, ulong contentHash,
-                          bool changed, ulong atlasVersion, ulong frameId, MonstroVec2 displaySize)
-    {
-        Vertices = vertices;
-        Indices = indices;
-        Commands = commands;
-        ContentHash = contentHash;
-        Changed = changed;
-        AtlasVersion = atlasVersion;
-        FrameId = frameId;
-        DisplaySize = displaySize;
-    }
 }

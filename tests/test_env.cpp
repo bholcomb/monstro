@@ -7,13 +7,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-static MonstroDrawData *frame_copy(Ui &ui, void (*draw)(MonstroContext *))
-{
-   ui.begin();
-   draw(ui.ctx);
-   return monstro_draw_data_copy(ui.end());
-}
-
 static void draw_panel(MonstroContext *ctx)
 {
    monstro_set_next_window_pos(ctx, 40, 40, MONSTRO_COND_ALWAYS);
@@ -78,17 +71,17 @@ TEST(contexts_on_one_env_share_one_font_atlas)
       a.begin();
       monstro_label(a.ctx, "shared glyphs");
       const MonstroDrawData *da = a.end();
-      MonstroDrawData *copy_a = monstro_draw_data_copy(da);
+      uint64_t a_hash = da->content_hash;
+      uint32_t a_vertices = da->vertex_count;
       b.begin();
       monstro_label(b.ctx, "shared glyphs");
       const MonstroDrawData *db = b.end();
-      // The same text in two contexts samples the same atlas texels.
-      CHECK(same_draw_data(copy_a, db));
+      // The same text in two contexts samples the same atlas texels: the frames are identical.
+      CHECK(db->content_hash == a_hash && db->vertex_count == a_vertices && a_vertices > 0);
       bool all_atlas = true;
       for (uint32_t i = 0; i < db->command_count; i++)
          all_atlas = all_atlas && db->commands[i].texture_id == 7;
       CHECK(all_atlas);
-      monstro_draw_data_free(copy_a);
    }
    CHECK(monstro_env_get_atlas(env).version == version);
    CHECK(monstro_font_find(env, "test", 16.0f) == font);
@@ -219,22 +212,19 @@ TEST(one_canvas_is_lent_to_each_context_in_turn)
       a.begin();
       monstro_draw_rect_filled(monstro_get_window_canvas(a.ctx), {0, 0, 10, 10}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
       const MonstroDrawData *da = a.end();
-      MonstroDrawData *kept = monstro_draw_data_copy(da);
-      CHECK(da->vertex_count == 4);
+      CHECK(da->vertex_count == 4 && da->vertices[2].position[0] == 10.0f);
 
       uint64_t a_frame = da->frame_id;
       b.begin();
       const MonstroDrawData *db = b.end();
-      // One canvas: b's frame reused it, so a's draw data now shows b's frame. The copy kept a's.
+      // One canvas: b's frame reused it, so a's draw data now shows b's frame, and frame_id says so.
       CHECK(db == da);
-      CHECK(da->frame_id == a_frame + 1 && kept->frame_id == a_frame);
+      CHECK(da->frame_id == a_frame + 1);
       CHECK(da->vertex_count == 0);
-      CHECK(kept->vertex_count == 4 && kept->vertices[2].position[0] == 10.0f);
 
       c.begin();
       CHECK(c.ctx->canvas == a.ctx->env->canvases);
       c.end();
-      monstro_draw_data_free(kept);
    }
    monstro_shutdown(env);
 }
@@ -249,18 +239,19 @@ TEST(with_two_canvases_the_previous_frame_stays_valid)
       a.begin();
       monstro_draw_rect_filled(monstro_get_window_canvas(a.ctx), {0, 0, 10, 10}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
       const MonstroDrawData *da = a.end();
-      MonstroDrawData *kept = monstro_draw_data_copy(da);
+      uint64_t a_frame = da->frame_id;
+      uint64_t a_hash = da->content_hash;
       b.begin();
       const MonstroDrawData *db = b.end();
+      // b's frame went to the other canvas, so a's draw data still holds a's frame.
       CHECK(db != da);
-      CHECK(same_draw_data(da, kept));
+      CHECK(da->frame_id == a_frame && da->content_hash == a_hash && da->vertex_count == 4);
 
       // Frames of two contexts may be open at once, one canvas each.
       a.begin();
       b.begin();
       b.end();
       a.end();
-      monstro_draw_data_free(kept);
    }
    monstro_shutdown(env);
 }
@@ -314,17 +305,20 @@ TEST(draw_commands_carry_their_vertex_ranges)
 TEST(the_content_hash_tells_whether_a_frame_changed)
 {
    Ui ui(true);
-   MonstroDrawData *first = frame_copy(ui, draw_panel);
+   ui.begin();
+   draw_panel(ui.ctx);
+   const MonstroDrawData *first = ui.end();
    CHECK(first->changed);
-   MonstroDrawData *second = frame_copy(ui, draw_panel);
-   CHECK(!second->changed && second->content_hash == first->content_hash);
+   uint64_t first_hash = first->content_hash;
+   ui.begin();
+   draw_panel(ui.ctx);
+   const MonstroDrawData *second = ui.end();
+   CHECK(!second->changed && second->content_hash == first_hash);
    ui.begin();
    draw_panel(ui.ctx);
    monstro_draw_line(monstro_get_window_canvas(ui.ctx), {0, 0}, {5, 5}, 0xffffffff, 1.0f);
    const MonstroDrawData *third = ui.end();
-   CHECK(third->changed && third->content_hash != first->content_hash);
-   monstro_draw_data_free(first);
-   monstro_draw_data_free(second);
+   CHECK(third->changed && third->content_hash != first_hash);
 }
 
 TEST(windows_draw_in_front_to_back_order)
@@ -390,11 +384,11 @@ TEST(host_buffers_receive_the_same_frame)
 {
    const uint32_t capacity = 4096;
 
-   // (a) The canvas's own buffers.
+   // (a) The canvas's own buffers. Each Ui has its own environment, so this frame stays valid below.
    Ui own(true);
    draw_into(own, nullptr);
    draw_into(own, nullptr);
-   MonstroDrawData *expected = monstro_draw_data_copy(own.data);
+   const MonstroDrawData *expected = own.data;
 
    // (b) One interleaved host buffer, Monstro's own layout.
    Ui interleaved(true);
@@ -446,7 +440,6 @@ TEST(host_buffers_receive_the_same_frame)
                       texcoord[0] == v.texcoord[0] && texcoord[1] == v.texcoord[1] && color == v.color;
    }
    CHECK(same_vertices);
-   monstro_draw_data_free(expected);
 }
 
 FATAL_TEST(a_missing_host_stream_aborts, "vertex_buffers[1] is null but the environment's vertex layout has 2 buffers")
@@ -688,34 +681,6 @@ TEST(child_regions_pair_with_end_child)
    }
 }
 
-TEST(pressing_an_open_combo_closes_its_list)
-{
-   Ui ui(true);
-   MonstroRect box = {};
-   auto frame = [&](bool open)
-   {
-      ui.begin();
-      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
-      if (open)
-         monstro_open_popup(ui.ctx, "Mode");
-      bool listed = monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr);
-      box = monstro_get_item_rect(ui.ctx);
-      if (listed)
-         monstro_end_combo(ui.ctx);
-      monstro_end_window(ui.ctx);
-      ui.end();
-   };
-   frame(true);
-   CHECK(ui.ctx->popup_stack.size() == 1);
-   // The press lands on the combo box itself, outside any popup.
-   ui.moveMouse(box.x + box.w - 10.0f, box.y + box.h * 0.5f);
-   ui.pressLeft(true);
-   frame(false);
-   ui.pressLeft(false);
-   frame(false);
-   CHECK(ui.ctx->popup_stack.size() == 0);
-}
-
 /* ------------------------------------------------------------------------- */
 /* Popups, menus and combos draw on top, and the topmost window is hovered   */
 /* ------------------------------------------------------------------------- */
@@ -886,6 +851,34 @@ TEST(a_combo_list_draws_above_a_later_window_and_takes_the_mouse)
    ui.pressLeft(false);
    frame(false);
    CHECK(choice == 1);
+}
+
+TEST(pressing_an_open_combo_closes_its_list)
+{
+   Ui ui(true);
+   MonstroRect box = {};
+   auto frame = [&](bool open)
+   {
+      ui.begin();
+      monstro_begin_window(ui.ctx, "A", nullptr, MONSTRO_WINDOW_DEFAULT);
+      if (open)
+         monstro_open_popup(ui.ctx, "Mode");
+      bool listed = monstro_begin_combo(ui.ctx, "Mode", "Orbit", nullptr);
+      box = monstro_get_item_rect(ui.ctx);
+      if (listed)
+         monstro_end_combo(ui.ctx);
+      monstro_end_window(ui.ctx);
+      ui.end();
+   };
+   frame(true);
+   CHECK(ui.ctx->popup_stack.size() == 1);
+   // The press lands on the combo box itself, outside any popup.
+   ui.moveMouse(box.x + box.w - 10.0f, box.y + box.h * 0.5f);
+   ui.pressLeft(true);
+   frame(false);
+   ui.pressLeft(false);
+   frame(false);
+   CHECK(ui.ctx->popup_stack.size() == 0);
 }
 
 TEST(a_modal_dims_what_is_drawn_below_it)

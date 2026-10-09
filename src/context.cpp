@@ -351,40 +351,6 @@ void monstro_begin_frame_into(MonstroContext *ctx, float delta_time, const Monst
 
 const MonstroDrawData *monstro_end_frame(MonstroContext *ctx) { return requireContext(ctx, __func__)->endFrame(); }
 
-MonstroDrawData *monstro_draw_data_copy(const MonstroDrawData *data)
-{
-   MONSTRO_REQUIRE(data, "%s: the draw data must not be null", __func__);
-   MONSTRO_REQUIRE(data->vertices || data->vertex_count == 0,
-                   "%s: the frame was drawn into host vertex buffers; its vertices are there", __func__);
-
-   // One block: the header, then commands, vertices and indices, each suitably aligned.
-   size_t commands_at = sizeof(MonstroDrawData);
-   size_t vertices_at = commands_at + sizeof(MonstroDrawCommand) * data->command_count;
-   size_t indices_at = vertices_at + sizeof(MonstroVertex) * data->vertex_count;
-   size_t total = indices_at + sizeof(uint32_t) * data->index_count;
-   uint8_t *block = (uint8_t *)std::malloc(total);
-   if (!block)
-      return nullptr;
-
-   MonstroDrawData *copy = (MonstroDrawData *)block;
-   *copy = *data;
-   MonstroDrawCommand *commands = (MonstroDrawCommand *)(block + commands_at);
-   MonstroVertex *vertices = (MonstroVertex *)(block + vertices_at);
-   uint32_t *indices = (uint32_t *)(block + indices_at);
-   if (data->command_count)
-      std::memcpy(commands, data->commands, sizeof(MonstroDrawCommand) * data->command_count);
-   if (data->vertex_count)
-      std::memcpy(vertices, data->vertices, sizeof(MonstroVertex) * data->vertex_count);
-   if (data->index_count)
-      std::memcpy(indices, data->indices, sizeof(uint32_t) * data->index_count);
-   copy->commands = commands;
-   copy->vertices = vertices;
-   copy->indices = indices;
-   return copy;
-}
-
-void monstro_draw_data_free(MonstroDrawData *copy) { std::free(copy); }
-
 float monstro_get_delta_time(MonstroContext *ctx) { return requireContext(ctx, __func__)->delta_time; }
 
 float monstro_get_time(MonstroContext *ctx) { return requireContext(ctx, __func__)->time; }

@@ -100,10 +100,6 @@ void monstro_begin_frame(MonstroContext* ctx, float delta_time);
 void monstro_begin_frame_into(MonstroContext* ctx, float delta_time, const MonstroFrameBuffers* buffers);
 const MonstroDrawData* monstro_end_frame(MonstroContext* ctx);
 
-/* A self-contained copy in one allocation, NULL when memory runs out. Free it with monstro_draw_data_free. */
-MonstroDrawData* monstro_draw_data_copy(const MonstroDrawData* data);
-void monstro_draw_data_free(MonstroDrawData* copy);
-
 float monstro_get_delta_time(MonstroContext* ctx);
 float monstro_get_time(MonstroContext* ctx);
 

@@ -90,8 +90,8 @@ contexts still use the environment.
 `monstro_begin_frame` borrows a canvas and `monstro_end_frame` returns it.  The
 draw data `monstro_end_frame` returns lives in that canvas and **stays valid
 until the canvas is lent again**.  With the default single canvas, that is the
-next `monstro_begin_frame` of *any* context on the environment, so render (or
-copy) a context's frame before building the next one:
+next `monstro_begin_frame` of *any* context on the environment, so render a
+context's frame before building the next one:
 
 ```c
 monstro_begin_frame(hud, dt);    /* ... */  const MonstroDrawData* a = monstro_end_frame(hud);
@@ -100,16 +100,10 @@ monstro_begin_frame(panel, dt);  /* ... */  const MonstroDrawData* b = monstro_e
 /* a now shows panel's frame: the canvas has been reused */
 ```
 
-To keep a frame longer, copy it.  The copy is one allocation:
-
-```c
-MonstroDrawData* kept = monstro_draw_data_copy(a);   /* NULL only when memory runs out */
-/* ... */
-monstro_draw_data_free(kept);
-```
-
-`frame_id` in the draw data numbers the environment's frames, so code that
-holds draw data can tell whether its canvas has built another frame since.
+Consume the draw data -- upload or render it -- before the canvas builds the
+next frame; Monstro keeps no copy of it.  `frame_id` in the draw data numbers
+the environment's frames, so code that holds draw data can tell whether its
+canvas has built another frame since.
 
 With `MonstroEnvConfig.canvas_count` set to N, the canvases are lent in turn,
 so the draw data of the last N frames stays valid, and up to N frames (of
@@ -490,9 +484,8 @@ keeps no pointer to them afterwards.
 Monstro only ever **writes** host buffers, never reads them back, so
 write-combined GPU memory is fine; the content hash is taken from the values
 as they are written.  Their capacity is yours: a frame that needs more stops
-the program naming the host buffer, its capacity and what was needed.  Do not
-copy draw data built into host vertex buffers with `monstro_draw_data_copy`
-(it stops the program); the vertices are already yours.
+the program naming the host buffer, its capacity and what was needed.  The
+host keeps its own buffers: Monstro writes a frame into them and forgets them.
 
 ---
 
@@ -710,8 +703,8 @@ These checks are always on, in release builds too.  They catch:
   needed, so you can simplify that UI or size the capacity for it
   deliberately.
 
-Allocation failures are different: `monstro_init`, `monstro_context_create`
-and `monstro_draw_data_copy` return `NULL` when memory runs out, and font
+Allocation failures are different: `monstro_init` and
+`monstro_context_create` return `NULL` when memory runs out, and font
 loading returns `NULL` when the data or file cannot be read as a font.
 
 ### Capacities
@@ -2239,8 +2232,7 @@ contexts are cheap; the canvas and atlas are paid once.
 
 **Render a frame before building the next.** Draw data lives in the canvas
 until the canvas is lent again, which with one canvas is the next
-`monstro_begin_frame` of any context.  Render it, copy it with
-`monstro_draw_data_copy`, or raise `canvas_count`.
+`monstro_begin_frame` of any context.  Upload or render it first.
 
 **`end` calls go inside the `if` block.** When a `begin_*` function returns
 `false` (window closed, off-screen, etc.), the window was not processed and you

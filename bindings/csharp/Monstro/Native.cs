@@ -342,12 +342,6 @@ public static unsafe partial class Native
     public static extern MonstroDrawData* monstro_end_frame(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern MonstroDrawData* monstro_draw_data_copy(MonstroDrawData* data);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
-    public static extern void monstro_draw_data_free(MonstroDrawData* copy);
-
-    [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
     public static extern float monstro_get_delta_time(MonstroContext ctx);
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]

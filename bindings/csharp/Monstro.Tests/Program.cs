@@ -88,7 +88,7 @@ unsafe class Program
                 Check("a frame unlike the last is changed", data.Changed);
                 if (frame == 0)
                 {
-                    DrawDataCopy copy = data.Copy();
+                    ulong firstFrame = data.FrameId;
                     ui.BeginFrame(640, 480, 0);
                     Check("the view is stale once its canvas builds another frame", !data.IsValid);
                     bool threw = false;
@@ -96,8 +96,7 @@ unsafe class Program
                     catch (InvalidOperationException) { threw = true; }
                     Check("a stale view throws", threw);
                     DrawData empty = ui.EndFrame();
-                    Check("empty frame", empty.Indices.Length == 0 && empty.FrameId == copy.FrameId + 1);
-                    Check("copied data survives the next frame", copy.Indices.Length == 3 && copy.Vertices[0].position[0] == 10);
+                    Check("empty frame", empty.Indices.Length == 0 && empty.FrameId == firstFrame + 1);
                 }
             }
 
@@ -187,12 +186,12 @@ unsafe class Program
                 Check("push leaves the shared theme", hud.Style.button.rounding == 7);
                 ui.PopStyle();
                 ui.Label("shared");
-                DrawDataCopy uiFrame = ui.EndFrame().Copy();
+                ulong uiHash = ui.EndFrame().ContentHash;
                 other.BeginFrame(640, 480, 0.01f);
                 Check("push leaves the next context", other.Style.button.rounding == 7);
                 other.Label("shared");
                 DrawData otherFrame = other.EndFrame();
-                Check("two contexts share the font atlas", otherFrame.ContentHash == uiFrame.ContentHash);
+                Check("two contexts share the font atlas", otherFrame.ContentHash == uiHash);
                 Throws<InvalidOperationException>("environment disposal waits for its contexts", env.Dispose);
             }
 
@@ -213,18 +212,22 @@ unsafe class Program
             using var env = new Env(config);
             env.LoadFont("sans", args[1], 16);
             using var ui = env.CreateContext();
-            void Draw()
+            // The reference frame comes from an environment of its own, so its draw data stays valid meanwhile.
+            using var ownEnv = new Env();
+            ownEnv.LoadFont("sans", args[1], 16);
+            using var ownUi = ownEnv.CreateContext();
+            static void Draw(Context c)
             {
-                ui.SetNextWindowPosition(20, 20);
-                ui.SetNextWindowSize(300, 200);
-                ui.BeginWindow("Host");
-                ui.Label("streams");
-                ui.Button("Go");
-                ui.EndWindow();
+                c.SetNextWindowPosition(20, 20);
+                c.SetNextWindowSize(300, 200);
+                c.BeginWindow("Host");
+                c.Label("streams");
+                c.Button("Go");
+                c.EndWindow();
             }
-            ui.BeginFrame(400, 300, 0.01f);
-            Draw();
-            DrawDataCopy own = ui.EndFrame().Copy();
+            ownUi.BeginFrame(400, 300, 0.01f);
+            Draw(ownUi);
+            DrawData own = ownUi.EndFrame();
             byte[] positions = new byte[4096 * 8];
             byte[] attributes = new byte[4096 * 12];
             uint[] indices = new uint[4096 * 3];
@@ -232,14 +235,15 @@ unsafe class Program
             Array.Fill(attributes, (byte)0xcd);
             var buffers = new FrameBuffers(new Memory<byte>[] { positions, attributes }, indices);
             ui.BeginFrame(400, 300, 0.01f, buffers);
-            Draw();
+            Draw(ui);
             DrawData host = ui.EndFrame();
-            Check("host frame equals the own frame", host.ContentHash == own.ContentHash && !host.Changed && host.DrawnIntoHostVertexBuffers &&
+            Check("host frame equals the own frame", own.IsValid && host.ContentHash == own.ContentHash && host.DrawnIntoHostVertexBuffers &&
                                                      host.DrawnIntoHostIndices && host.Vertices.IsEmpty && host.IndexCount == own.Indices.Length);
             bool same = indices.AsSpan(0, own.Indices.Length).SequenceEqual(own.Indices);
-            for (int i = 0; i < own.Vertices.Length; i++)
+            ReadOnlySpan<MonstroVertex> ownVertices = own.Vertices;
+            for (int i = 0; i < ownVertices.Length; i++)
             {
-                MonstroVertex v = own.Vertices[i];
+                MonstroVertex v = ownVertices[i];
                 same &= BitConverter.ToSingle(positions, i * 8) == v.position[0] && BitConverter.ToSingle(positions, i * 8 + 4) == v.position[1];
                 same &= BitConverter.ToUInt32(attributes, i * 12) == v.color;
                 same &= BitConverter.ToSingle(attributes, i * 12 + 4) == v.texcoord[0] && BitConverter.ToSingle(attributes, i * 12 + 8) == v.texcoord[1];

@@ -314,9 +314,9 @@ typedef struct MonstroDrawCommand {
 
 /*
  * A finished frame, in draw order. It lives in the canvas that built it and
- * stays valid until that canvas is lent for another frame; copy it with
- * monstro_draw_data_copy to keep it longer. vertices is null when the frame
- * was drawn into host vertex buffers (MonstroFrameBuffers). content_hash covers
+ * stays valid until that canvas is lent for another frame: consume it before
+ * then. vertices is null when the frame was drawn into host vertex buffers
+ * (MonstroFrameBuffers), which the host keeps itself. content_hash covers
  * the commands and every vertex and index written, so an equal hash means an
  * identical frame; changed compares it with the context's previous frame.
  * frame_id numbers the environment's frames: draw data held from an earlier
