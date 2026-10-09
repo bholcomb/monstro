@@ -222,10 +222,12 @@ TEST(one_canvas_is_lent_to_each_context_in_turn)
       MonstroDrawData *kept = monstro_draw_data_copy(da);
       CHECK(da->vertex_count == 4);
 
+      uint64_t a_frame = da->frame_id;
       b.begin();
       const MonstroDrawData *db = b.end();
       // One canvas: b's frame reused it, so a's draw data now shows b's frame. The copy kept a's.
       CHECK(db == da);
+      CHECK(da->frame_id == a_frame + 1 && kept->frame_id == a_frame);
       CHECK(da->vertex_count == 0);
       CHECK(kept->vertex_count == 4 && kept->vertices[2].position[0] == 10.0f);
 

@@ -75,6 +75,7 @@ struct Env
 
    Canvas *canvases = nullptr;
    uint32_t next_canvas = 0;
+   uint64_t frames_lent = 0;
 
    int context_count = 0;
    int open_frames = 0;

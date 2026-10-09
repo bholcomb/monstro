@@ -215,6 +215,7 @@ const MonstroDrawData *Canvas::finish(uint64_t previous_hash)
    draw_data.content_hash = hash;
    draw_data.changed = hash != previous_hash;
    draw_data.atlas_version = env->atlas.version;
+   draw_data.frame_id = frame_id;
    return &draw_data;
 }
 

@@ -214,6 +214,7 @@ Canvas *Env::lendCanvas(Context *ctx, int frame_number, const MonstroFrameBuffer
       {
          next_canvas = (candidate + 1) % config.canvas_count;
          canvas->lend(ctx, frame_number, buffers);
+         canvas->frame_id = ++frames_lent;
          open_frames++;
          return canvas;
       }

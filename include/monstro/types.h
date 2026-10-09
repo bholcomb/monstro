@@ -319,6 +319,8 @@ typedef struct MonstroDrawCommand {
  * was drawn into host vertex buffers (MonstroFrameBuffers). content_hash covers
  * the commands and every vertex and index written, so an equal hash means an
  * identical frame; changed compares it with the context's previous frame.
+ * frame_id numbers the environment's frames: draw data held from an earlier
+ * frame_id has been overwritten once its canvas built another frame.
  */
 typedef struct MonstroDrawData {
     const MonstroVertex* vertices;
@@ -331,6 +333,7 @@ typedef struct MonstroDrawData {
     uint64_t content_hash;
     bool changed;
     uint64_t atlas_version;
+    uint64_t frame_id;
 } MonstroDrawData;
 
 /*

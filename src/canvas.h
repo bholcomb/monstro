@@ -56,7 +56,8 @@ struct Canvas
    Env *env = nullptr;
    int index = 0;
    Context *borrower = nullptr;
-   int frame = 0;
+   int frame = 0;         // the borrower's frame number, for messages
+   uint64_t frame_id = 0; // the environment's count of frames lent, for the draw data
 
    // The window being drawn: commands are tagged with it and sorted by window order at the end of the frame.
    const Window *owner = nullptr;
