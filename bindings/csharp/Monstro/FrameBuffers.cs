@@ -50,6 +50,10 @@ public sealed unsafe class FrameBuffers : IDisposable
     /// <summary>
     /// Wraps host memory that stays put and alive until these buffers are disposed: a pointer per layout buffer,
     /// each holding vertex_capacity strides, or none; and indices for index_capacity indices, or none.
+    /// Monstro writes through these pointers on every draw call of a frame, not only during BeginFrame, so a
+    /// managed array must be pinned for the buffers' whole lifetime (allocated with
+    /// GC.AllocateArray(n, pinned: true), or held by a pinned GCHandle); a plain array that the garbage
+    /// collector can move is not safe. Most hosts should use the allocating constructor instead.
     /// </summary>
     public FrameBuffers(in MonstroVertexLayout layout, in MonstroFrameBuffers buffers)
     {

@@ -67,7 +67,11 @@ pinned and no frame allocates: `new FrameBuffers(layout, vertexCapacity,
 indexCapacity)` allocates them once on the pinned object heap, and `new
 FrameBuffers(layout, MonstroFrameBuffers)` wraps raw pointers to memory the host
 keeps in place and alive until it disposes them (native or mapped GPU memory,
-or its own pinned arrays). A capacity of 0, or no pointer, leaves vertices or
+or its own pinned arrays). Monstro writes through those pointers on every draw
+call until `EndFrame`, so a managed array passed this way must stay pinned for
+the buffers' whole lifetime (allocated with `GC.AllocateArray(n, pinned: true)`
+or held by a pinned `GCHandle`); an ordinary array the garbage collector can
+move is not safe. Most hosts should use the allocating constructor. A capacity of 0, or no pointer, leaves vertices or
 indices in the canvas. One frame at a time writes into the buffers, from
 `BeginFrame` to `EndFrame`; `VertexBuffer(b)` and `Indices` are spans over them
 for the renderer. The draw data then reports
