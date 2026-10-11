@@ -60,32 +60,32 @@ typedef struct MonstroContextConfig {
 /* Environment                                                               */
 /* ------------------------------------------------------------------------- */
 
-MonstroEnvConfig monstro_env_config_default(void);
+MONSTRO_API MonstroEnvConfig monstro_env_config_default(void);
 
 /* Creates an environment; config may be NULL for the defaults. Returns NULL only when memory runs out. */
-MonstroEnv* monstro_init(const MonstroEnvConfig* config);
+MONSTRO_API MonstroEnv* monstro_init(const MonstroEnvConfig* config);
 /* Destroys the environment with its fonts, themes and canvases. Destroy its contexts first. */
-void monstro_shutdown(MonstroEnv* env);
+MONSTRO_API void monstro_shutdown(MonstroEnv* env);
 
-MonstroEnvConfig monstro_env_get_config(MonstroEnv* env);
+MONSTRO_API MonstroEnvConfig monstro_env_get_config(MonstroEnv* env);
 
-MonstroSettings monstro_env_get_settings(MonstroEnv* env);
-void monstro_env_set_settings(MonstroEnv* env, const MonstroSettings* settings);
+MONSTRO_API MonstroSettings monstro_env_get_settings(MonstroEnv* env);
+MONSTRO_API void monstro_env_set_settings(MonstroEnv* env, const MonstroSettings* settings);
 
 /* ------------------------------------------------------------------------- */
 /* Context                                                                   */
 /* ------------------------------------------------------------------------- */
 
-MonstroContextConfig monstro_context_config_default(void);
+MONSTRO_API MonstroContextConfig monstro_context_config_default(void);
 
 /* Creates a context on env; config may be NULL for the defaults. Returns NULL only when memory runs out. */
-MonstroContext* monstro_context_create(MonstroEnv* env, const MonstroContextConfig* config);
-void monstro_context_destroy(MonstroContext* ctx);
+MONSTRO_API MonstroContext* monstro_context_create(MonstroEnv* env, const MonstroContextConfig* config);
+MONSTRO_API void monstro_context_destroy(MonstroContext* ctx);
 
-MonstroEnv* monstro_context_get_env(MonstroContext* ctx);
+MONSTRO_API MonstroEnv* monstro_context_get_env(MonstroContext* ctx);
 
-void monstro_set_display_size(MonstroContext* ctx, float width, float height);
-void monstro_get_display_size(MonstroContext* ctx, float* out_width, float* out_height);
+MONSTRO_API void monstro_set_display_size(MonstroContext* ctx, float width, float height);
+MONSTRO_API void monstro_get_display_size(MonstroContext* ctx, float* out_width, float* out_height);
 
 /* ------------------------------------------------------------------------- */
 /* Frames                                                                    */
@@ -97,17 +97,17 @@ void monstro_get_display_size(MonstroContext* ctx, float* out_width, float* out_
  * until that canvas is lent again. The canvases are lent in turn, so with
  * canvas_count N the draw data of the last N frames stays valid.
  */
-void monstro_begin_frame(MonstroContext* ctx, float delta_time);
+MONSTRO_API void monstro_begin_frame(MonstroContext* ctx, float delta_time);
 /* Builds the frame into host storage; see MonstroFrameBuffers. The buffers are used for this frame only. */
-void monstro_begin_frame_into(MonstroContext* ctx, float delta_time, const MonstroFrameBuffers* buffers);
-const MonstroDrawData* monstro_end_frame(MonstroContext* ctx);
+MONSTRO_API void monstro_begin_frame_into(MonstroContext* ctx, float delta_time, const MonstroFrameBuffers* buffers);
+MONSTRO_API const MonstroDrawData* monstro_end_frame(MonstroContext* ctx);
 
-float monstro_get_delta_time(MonstroContext* ctx);
-float monstro_get_time(MonstroContext* ctx);
+MONSTRO_API float monstro_get_delta_time(MonstroContext* ctx);
+MONSTRO_API float monstro_get_time(MonstroContext* ctx);
 
-void monstro_push_id(MonstroContext* ctx, const char* name);
-void monstro_pop_id(MonstroContext* ctx);
-uint64_t monstro_get_id(MonstroContext* ctx, const char* name);
+MONSTRO_API void monstro_push_id(MonstroContext* ctx, const char* name);
+MONSTRO_API void monstro_pop_id(MonstroContext* ctx);
+MONSTRO_API uint64_t monstro_get_id(MonstroContext* ctx, const char* name);
 
 #ifdef __cplusplus
 }

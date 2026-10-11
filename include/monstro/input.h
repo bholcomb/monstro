@@ -33,57 +33,57 @@ extern "C" {
  * the program.
  */
 
-void monstro_set_mouse_pos(MonstroContext* ctx, float x, float y);
-void monstro_set_mouse_button(MonstroContext* ctx, MonstroMouseButton button, bool down);
+MONSTRO_API void monstro_set_mouse_pos(MonstroContext* ctx, float x, float y);
+MONSTRO_API void monstro_set_mouse_button(MonstroContext* ctx, MonstroMouseButton button, bool down);
 /* Adds a wheel movement; movements in a row are summed. */
-void monstro_set_mouse_wheel(MonstroContext* ctx, float wheel_x, float wheel_y);
+MONSTRO_API void monstro_set_mouse_wheel(MonstroContext* ctx, float wheel_x, float wheel_y);
 
-void monstro_set_key(MonstroContext* ctx, MonstroKey key, bool down);
+MONSTRO_API void monstro_set_key(MonstroContext* ctx, MonstroKey key, bool down);
 /* Modifiers and typed text are not queued: they are current state, taken as they are. */
-void monstro_set_key_mods(MonstroContext* ctx, MonstroModFlags mods);
-void monstro_add_input_text(MonstroContext* ctx, const char* utf8_text);
+MONSTRO_API void monstro_set_key_mods(MonstroContext* ctx, MonstroModFlags mods);
+MONSTRO_API void monstro_add_input_text(MonstroContext* ctx, const char* utf8_text);
 
 /*
  * Mouse State Queries
  */
 
-MonstroVec2 monstro_get_mouse_pos(MonstroContext* ctx);
-MonstroVec2 monstro_get_mouse_delta(MonstroContext* ctx);
+MONSTRO_API MonstroVec2 monstro_get_mouse_pos(MonstroContext* ctx);
+MONSTRO_API MonstroVec2 monstro_get_mouse_delta(MonstroContext* ctx);
 
-bool monstro_is_mouse_down(MonstroContext* ctx, MonstroMouseButton button);
-bool monstro_is_mouse_clicked(MonstroContext* ctx, MonstroMouseButton button, bool repeat);
-bool monstro_is_mouse_released(MonstroContext* ctx, MonstroMouseButton button);
-bool monstro_is_mouse_double_clicked(MonstroContext* ctx, MonstroMouseButton button);
-bool monstro_is_mouse_dragging(MonstroContext* ctx, MonstroMouseButton button);
-MonstroVec2 monstro_get_mouse_drag_delta(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API bool monstro_is_mouse_down(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API bool monstro_is_mouse_clicked(MonstroContext* ctx, MonstroMouseButton button, bool repeat);
+MONSTRO_API bool monstro_is_mouse_released(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API bool monstro_is_mouse_double_clicked(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API bool monstro_is_mouse_dragging(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API MonstroVec2 monstro_get_mouse_drag_delta(MonstroContext* ctx, MonstroMouseButton button);
 
-float monstro_get_mouse_wheel(MonstroContext* ctx);
-float monstro_get_mouse_wheel_h(MonstroContext* ctx);
+MONSTRO_API float monstro_get_mouse_wheel(MonstroContext* ctx);
+MONSTRO_API float monstro_get_mouse_wheel_h(MonstroContext* ctx);
 
 /*
  * Keyboard State Queries
  */
 
-bool monstro_is_key_down(MonstroContext* ctx, MonstroKey key);
-bool monstro_is_key_pressed(MonstroContext* ctx, MonstroKey key, bool repeat);
-bool monstro_is_key_released(MonstroContext* ctx, MonstroKey key);
-MonstroModFlags monstro_get_key_mods(MonstroContext* ctx);
-const char* monstro_get_input_text(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_key_down(MonstroContext* ctx, MonstroKey key);
+MONSTRO_API bool monstro_is_key_pressed(MonstroContext* ctx, MonstroKey key, bool repeat);
+MONSTRO_API bool monstro_is_key_released(MonstroContext* ctx, MonstroKey key);
+MONSTRO_API MonstroModFlags monstro_get_key_mods(MonstroContext* ctx);
+MONSTRO_API const char* monstro_get_input_text(MonstroContext* ctx);
 
 /*
  * Input Capture Flags
  */
 
-bool monstro_want_capture_mouse(MonstroContext* ctx);
-bool monstro_want_capture_keyboard(MonstroContext* ctx);
-bool monstro_want_text_input(MonstroContext* ctx);
+MONSTRO_API bool monstro_want_capture_mouse(MonstroContext* ctx);
+MONSTRO_API bool monstro_want_capture_keyboard(MonstroContext* ctx);
+MONSTRO_API bool monstro_want_text_input(MonstroContext* ctx);
 
 /*
  * Cursor
  */
 
-void monstro_set_mouse_cursor(MonstroContext* ctx, MonstroMouseCursor cursor);
-MonstroMouseCursor monstro_get_mouse_cursor(MonstroContext* ctx);
+MONSTRO_API void monstro_set_mouse_cursor(MonstroContext* ctx, MonstroMouseCursor cursor);
+MONSTRO_API MonstroMouseCursor monstro_get_mouse_cursor(MonstroContext* ctx);
 
 #ifdef __cplusplus
 }

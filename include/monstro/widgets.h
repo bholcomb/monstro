@@ -89,59 +89,59 @@ typedef enum MonstroButtonFlags {
  * edit rather than on every change. A tap, pressed and released between two
  * frames, starts and ends in one frame: both edges are reported in it.
  */
-bool monstro_is_item_hovered(MonstroContext* ctx);
-bool monstro_is_item_active(MonstroContext* ctx);
-bool monstro_is_item_clicked(MonstroContext* ctx, MonstroMouseButton button);
+MONSTRO_API bool monstro_is_item_hovered(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_active(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_clicked(MonstroContext* ctx, MonstroMouseButton button);
 /* The item changed its value this frame. */
-bool monstro_is_item_edited(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_edited(MonstroContext* ctx);
 /* The item became active this frame. */
-bool monstro_is_item_activated(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_activated(MonstroContext* ctx);
 /* The item stopped being active this frame. */
-bool monstro_is_item_deactivated(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_deactivated(MonstroContext* ctx);
 /* The item stopped being active this frame and changed its value while it was. */
-bool monstro_is_item_deactivated_after_edit(MonstroContext* ctx);
-MonstroRect monstro_get_item_rect(MonstroContext* ctx);
-MonstroVec2 monstro_get_item_rect_min(MonstroContext* ctx);
-MonstroVec2 monstro_get_item_rect_max(MonstroContext* ctx);
-MonstroVec2 monstro_get_item_rect_size(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_item_deactivated_after_edit(MonstroContext* ctx);
+MONSTRO_API MonstroRect monstro_get_item_rect(MonstroContext* ctx);
+MONSTRO_API MonstroVec2 monstro_get_item_rect_min(MonstroContext* ctx);
+MONSTRO_API MonstroVec2 monstro_get_item_rect_max(MonstroContext* ctx);
+MONSTRO_API MonstroVec2 monstro_get_item_rect_size(MonstroContext* ctx);
 
 /* ------------------------------------------------------------------------- */
 /* Disabled State                                                            */
 /* ------------------------------------------------------------------------- */
 
-void monstro_begin_disabled(MonstroContext* ctx, bool disabled);
-void monstro_end_disabled(MonstroContext* ctx);
-bool monstro_is_disabled(MonstroContext* ctx);
+MONSTRO_API void monstro_begin_disabled(MonstroContext* ctx, bool disabled);
+MONSTRO_API void monstro_end_disabled(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_disabled(MonstroContext* ctx);
 
 /* ------------------------------------------------------------------------- */
 /* Button                                                                    */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_button_ex(MonstroContext* ctx, const char* label, float width, float height,
+MONSTRO_API bool monstro_button_ex(MonstroContext* ctx, const char* label, float width, float height,
                        MonstroButtonFlags flags, const char* tooltip);
-bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip);
-bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, float height, const char* tooltip);
-bool monstro_image_button_ex(MonstroContext* ctx, const char* str_id, uint64_t texture_id,
+MONSTRO_API bool monstro_button(MonstroContext* ctx, const char* label, const char* tooltip);
+MONSTRO_API bool monstro_button_sized(MonstroContext* ctx, const char* label, float width, float height, const char* tooltip);
+MONSTRO_API bool monstro_image_button_ex(MonstroContext* ctx, const char* str_id, uint64_t texture_id,
                              float width, float height, MonstroButtonFlags flags, const char* tooltip);
-bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t texture_id, float width, float height, const char* tooltip);
-bool monstro_invisible_button_ex(MonstroContext* ctx, const char* str_id, float width, float height,
+MONSTRO_API bool monstro_image_button(MonstroContext* ctx, const char* str_id, uint64_t texture_id, float width, float height, const char* tooltip);
+MONSTRO_API bool monstro_invisible_button_ex(MonstroContext* ctx, const char* str_id, float width, float height,
                                  MonstroButtonFlags flags);
-bool monstro_invisible_button(MonstroContext* ctx, const char* str_id, float width, float height);
+MONSTRO_API bool monstro_invisible_button(MonstroContext* ctx, const char* str_id, float width, float height);
 
 /* ------------------------------------------------------------------------- */
 /* Label / Text                                                              */
 /* ------------------------------------------------------------------------- */
 
-void monstro_label(MonstroContext* ctx, const char* text);
-void monstro_label_sized(MonstroContext* ctx, const char* text, float width, float height);
-void monstro_label_wrapped(MonstroContext* ctx, const char* text, float wrap_width);
-void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor color);
+MONSTRO_API void monstro_label(MonstroContext* ctx, const char* text);
+MONSTRO_API void monstro_label_sized(MonstroContext* ctx, const char* text, float width, float height);
+MONSTRO_API void monstro_label_wrapped(MonstroContext* ctx, const char* text, float wrap_width);
+MONSTRO_API void monstro_label_colored(MonstroContext* ctx, const char* text, MonstroColor color);
 
 /* ------------------------------------------------------------------------- */
 /* Image                                                                     */
 /* ------------------------------------------------------------------------- */
 
-void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float height);
+MONSTRO_API void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float height);
 
 /* ------------------------------------------------------------------------- */
 /* Icon -- see include/monstro/icons.h for the full icon API                 */
@@ -151,26 +151,26 @@ void monstro_image(MonstroContext* ctx, uint64_t texture_id, float width, float 
 /* Checkbox                                                                  */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const char* tooltip);
+MONSTRO_API bool monstro_checkbox(MonstroContext* ctx, const char* label, bool* value, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Radio Button                                                              */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, int button_value, const char* tooltip);
+MONSTRO_API bool monstro_radio_button(MonstroContext* ctx, const char* label, int* value, int button_value, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Slider                                                                    */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_slider_float(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_slider_float(MonstroContext* ctx, const char* label, float* value,
                           float min, float max, const char* format, const char* tooltip);
-bool monstro_slider_int(MonstroContext* ctx, const char* label, int* value,
+MONSTRO_API bool monstro_slider_int(MonstroContext* ctx, const char* label, int* value,
                         int min, int max, const char* format, const char* tooltip);
-bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_slider_float_ex(MonstroContext* ctx, const char* label, float* value,
                              float min, float max, const char* format,
                              float width, float height, MonstroSliderFlags flags, const char* tooltip);
-bool monstro_slider_int_ex(MonstroContext* ctx, const char* label, int* value,
+MONSTRO_API bool monstro_slider_int_ex(MonstroContext* ctx, const char* label, int* value,
                            int min, int max, const char* format,
                            float width, float height, MonstroSliderFlags flags, const char* tooltip);
 
@@ -178,11 +178,11 @@ bool monstro_slider_int_ex(MonstroContext* ctx, const char* label, int* value,
 /* Knob (Rotary Slider)                                                      */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_knob(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_knob(MonstroContext* ctx, const char* label, float* value,
                   float min, float max, const char* format, const char* tooltip);
-bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_knob_sized(MonstroContext* ctx, const char* label, float* value,
                         float min, float max, const char* format, float diameter, const char* tooltip);
-bool monstro_knob_ex(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_knob_ex(MonstroContext* ctx, const char* label, float* value,
                      float min, float max, const char* format, float diameter,
                      MonstroKnobFlags flags, const char* tooltip);
 
@@ -191,85 +191,85 @@ bool monstro_knob_ex(MonstroContext* ctx, const char* label, float* value,
 /* ------------------------------------------------------------------------- */
 
 /* overlay is plain text; NULL shows the percentage and "" shows no text. */
-void monstro_progress_bar(MonstroContext* ctx, float fraction, float width, float height, const char* overlay);
-void monstro_progress_bar_ex(MonstroContext* ctx, float fraction, float width, float height, const char* overlay,
+MONSTRO_API void monstro_progress_bar(MonstroContext* ctx, float fraction, float width, float height, const char* overlay);
+MONSTRO_API void monstro_progress_bar_ex(MonstroContext* ctx, float fraction, float width, float height, const char* overlay,
                              MonstroProgressFlags flags);
 
 /* ------------------------------------------------------------------------- */
 /* Text Input                                                                */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
+MONSTRO_API bool monstro_input_text(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
                         MonstroInputTextFlags flags, const char* tooltip);
-bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
+MONSTRO_API bool monstro_input_text_multiline(MonstroContext* ctx, const char* label, char* buf, size_t buf_size,
                                   float width, float height, MonstroInputTextFlags flags, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Numeric Input                                                             */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_input_int(MonstroContext* ctx, const char* label, int* value,
+MONSTRO_API bool monstro_input_int(MonstroContext* ctx, const char* label, int* value,
                        int step, int step_fast, const char* tooltip);
-bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
+MONSTRO_API bool monstro_input_float(MonstroContext* ctx, const char* label, float* value,
                          float step, float step_fast, const char* format, const char* tooltip);
-bool monstro_input_double(MonstroContext* ctx, const char* label, double* value,
+MONSTRO_API bool monstro_input_double(MonstroContext* ctx, const char* label, double* value,
                           double step, double step_fast, const char* format, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Selectable                                                                */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
+MONSTRO_API bool monstro_selectable(MonstroContext* ctx, const char* label, bool* selected,
                         MonstroSelectableFlags flags, const char* tooltip);
-bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* selected,
+MONSTRO_API bool monstro_selectable_sized(MonstroContext* ctx, const char* label, bool* selected,
                               float width, float height, MonstroSelectableFlags flags, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Combo Box                                                                 */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* preview_value, const char* tooltip);
-void monstro_end_combo(MonstroContext* ctx);
-bool monstro_combo(MonstroContext* ctx, const char* label, int* current_item,
+MONSTRO_API bool monstro_begin_combo(MonstroContext* ctx, const char* label, const char* preview_value, const char* tooltip);
+MONSTRO_API void monstro_end_combo(MonstroContext* ctx);
+MONSTRO_API bool monstro_combo(MonstroContext* ctx, const char* label, int* current_item,
                    const char* const items[], int items_count, const char* tooltip);
 
 /* ------------------------------------------------------------------------- */
 /* Menu                                                                      */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_begin_menu_bar(MonstroContext* ctx);
-void monstro_end_menu_bar(MonstroContext* ctx);
-bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled);
-void monstro_end_menu(MonstroContext* ctx);
-bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, bool enabled);
+MONSTRO_API bool monstro_begin_menu_bar(MonstroContext* ctx);
+MONSTRO_API void monstro_end_menu_bar(MonstroContext* ctx);
+MONSTRO_API bool monstro_begin_menu(MonstroContext* ctx, const char* label, bool enabled);
+MONSTRO_API void monstro_end_menu(MonstroContext* ctx);
+MONSTRO_API bool monstro_menu_item(MonstroContext* ctx, const char* label, bool* selected, bool enabled);
 
 /* ------------------------------------------------------------------------- */
 /* Popup                                                                     */
 /* ------------------------------------------------------------------------- */
 
-void monstro_open_popup(MonstroContext* ctx, const char* label);
-void monstro_open_popup_ex(MonstroContext* ctx, const char* label, bool modal);
-void monstro_close_current_popup(MonstroContext* ctx);
-bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFlags extra_flags);
-bool monstro_begin_popup_modal(MonstroContext* ctx, const char* label, bool* p_open, MonstroWindowFlags flags);
-bool monstro_begin_popup_context_item(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
-bool monstro_begin_popup_context_window(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button, bool also_over_items);
-bool monstro_begin_popup_context_void(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
-void monstro_end_popup(MonstroContext* ctx);
-bool monstro_is_popup_open(MonstroContext* ctx, const char* str_id);
+MONSTRO_API void monstro_open_popup(MonstroContext* ctx, const char* label);
+MONSTRO_API void monstro_open_popup_ex(MonstroContext* ctx, const char* label, bool modal);
+MONSTRO_API void monstro_close_current_popup(MonstroContext* ctx);
+MONSTRO_API bool monstro_begin_popup(MonstroContext* ctx, const char* label, MonstroWindowFlags extra_flags);
+MONSTRO_API bool monstro_begin_popup_modal(MonstroContext* ctx, const char* label, bool* p_open, MonstroWindowFlags flags);
+MONSTRO_API bool monstro_begin_popup_context_item(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
+MONSTRO_API bool monstro_begin_popup_context_window(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button, bool also_over_items);
+MONSTRO_API bool monstro_begin_popup_context_void(MonstroContext* ctx, const char* label, MonstroMouseButton mouse_button);
+MONSTRO_API void monstro_end_popup(MonstroContext* ctx);
+MONSTRO_API bool monstro_is_popup_open(MonstroContext* ctx, const char* str_id);
 
 /* ------------------------------------------------------------------------- */
 /* Tree / Collapsible                                                        */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_begin_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
-bool monstro_begin_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags);
-void monstro_end_tree_node(MonstroContext* ctx);
-bool monstro_tree_leaf(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
-bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_visible);
+MONSTRO_API bool monstro_begin_tree_node(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
+MONSTRO_API bool monstro_begin_tree_node_id(MonstroContext* ctx, uint64_t id, const char* label, MonstroTreeFlags flags);
+MONSTRO_API void monstro_end_tree_node(MonstroContext* ctx);
+MONSTRO_API bool monstro_tree_leaf(MonstroContext* ctx, const char* label, MonstroTreeFlags flags);
+MONSTRO_API bool monstro_collapsing_header(MonstroContext* ctx, const char* label, bool* p_visible);
 
-float monstro_get_tree_indent(MonstroContext* ctx);
-void monstro_set_tree_indent(MonstroContext* ctx, float indent);
+MONSTRO_API float monstro_get_tree_indent(MonstroContext* ctx);
+MONSTRO_API void monstro_set_tree_indent(MonstroContext* ctx, float indent);
 
 /* ------------------------------------------------------------------------- */
 /* Group                                                                     */
@@ -282,17 +282,17 @@ typedef enum MonstroGroupFlags {
     MONSTRO_GROUP_DEFAULT    = MONSTRO_GROUP_BORDER
 } MonstroGroupFlags;
 
-void monstro_begin_group(MonstroContext* ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags);
-void monstro_end_group(MonstroContext* ctx);
+MONSTRO_API void monstro_begin_group(MonstroContext* ctx, MonstroLayoutDirection layout, MonstroGroupFlags flags);
+MONSTRO_API void monstro_end_group(MonstroContext* ctx);
 
 /* ------------------------------------------------------------------------- */
 /* Tabs                                                                      */
 /* ------------------------------------------------------------------------- */
 
-bool monstro_begin_tab_bar(MonstroContext* ctx, const char* str_id, MonstroTabBarFlags flags);
-void monstro_end_tab_bar(MonstroContext* ctx);
-bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open);
-void monstro_end_tab_item(MonstroContext* ctx);
+MONSTRO_API bool monstro_begin_tab_bar(MonstroContext* ctx, const char* str_id, MonstroTabBarFlags flags);
+MONSTRO_API void monstro_end_tab_bar(MonstroContext* ctx);
+MONSTRO_API bool monstro_begin_tab_item(MonstroContext* ctx, const char* label, bool* p_open);
+MONSTRO_API void monstro_end_tab_item(MonstroContext* ctx);
 
 /*
  * Page tabs: a row of count tabs sharing width x height evenly (width 0 fills
@@ -301,7 +301,7 @@ void monstro_end_tab_item(MonstroContext* ctx);
  * click on another tab writes that tab's index and returns true. Each tab's
  * ID is its label's within str_id. *selected must be a tab's index.
  */
-bool monstro_page_tabs(MonstroContext* ctx, const char* str_id, const char* const labels[], int count,
+MONSTRO_API bool monstro_page_tabs(MonstroContext* ctx, const char* str_id, const char* const labels[], int count,
                        int* selected, float width, float height);
 
 /* ------------------------------------------------------------------------- */
@@ -326,30 +326,30 @@ typedef enum MonstroTableColumnFlags {
     MONSTRO_TABLE_COLUMN_DEFAULT_HIDDEN = 1 << 3
 } MonstroTableColumnFlags;
 
-bool monstro_begin_table(MonstroContext* ctx, const char* str_id, int column_count,
+MONSTRO_API bool monstro_begin_table(MonstroContext* ctx, const char* str_id, int column_count,
                          MonstroTableFlags flags, float width, float height);
-void monstro_end_table(MonstroContext* ctx);
+MONSTRO_API void monstro_end_table(MonstroContext* ctx);
 
-void monstro_table_setup_column(MonstroContext* ctx, const char* label,
+MONSTRO_API void monstro_table_setup_column(MonstroContext* ctx, const char* label,
                                 MonstroTableColumnFlags flags, float init_width);
-void monstro_table_headers_row(MonstroContext* ctx);
+MONSTRO_API void monstro_table_headers_row(MonstroContext* ctx);
 
-void monstro_table_next_row(MonstroContext* ctx);
-bool monstro_table_next_column(MonstroContext* ctx);
-bool monstro_table_set_column_index(MonstroContext* ctx, int column);
+MONSTRO_API void monstro_table_next_row(MonstroContext* ctx);
+MONSTRO_API bool monstro_table_next_column(MonstroContext* ctx);
+MONSTRO_API bool monstro_table_set_column_index(MonstroContext* ctx, int column);
 
 /* ------------------------------------------------------------------------- */
 /* Tooltip                                                                   */
 /* ------------------------------------------------------------------------- */
 
-void monstro_tooltip(MonstroContext* ctx, const char* text);
+MONSTRO_API void monstro_tooltip(MonstroContext* ctx, const char* text);
 
 /* ------------------------------------------------------------------------- */
 /* Separator                                                                 */
 /* ------------------------------------------------------------------------- */
 
-void monstro_separator(MonstroContext* ctx);
-void monstro_separator_text(MonstroContext* ctx, const char* text);
+MONSTRO_API void monstro_separator(MonstroContext* ctx);
+MONSTRO_API void monstro_separator_text(MonstroContext* ctx, const char* text);
 
 /* ------------------------------------------------------------------------- */
 /* Color Picker                                                              */
@@ -363,10 +363,10 @@ typedef enum MonstroColorPickerFlags {
     MONSTRO_COLOR_PICKER_NO_PREVIEW = 1 << 3
 } MonstroColorPickerFlags;
 
-bool monstro_color_picker(MonstroContext* ctx, const char* label, MonstroColor* color,
+MONSTRO_API bool monstro_color_picker(MonstroContext* ctx, const char* label, MonstroColor* color,
                           MonstroColorPickerFlags flags);
 
-bool monstro_color_button(MonstroContext* ctx, const char* label, MonstroColor color,
+MONSTRO_API bool monstro_color_button(MonstroContext* ctx, const char* label, MonstroColor color,
                           float width, float height);
 
 /* ------------------------------------------------------------------------- */
@@ -386,21 +386,21 @@ typedef enum MonstroFileDialogResult {
 
 typedef struct MonstroFileDialogState MonstroFileDialogState;
 
-MonstroFileDialogState* monstro_file_dialog_create(void);
-void monstro_file_dialog_destroy(MonstroFileDialogState* state);
+MONSTRO_API MonstroFileDialogState* monstro_file_dialog_create(void);
+MONSTRO_API void monstro_file_dialog_destroy(MonstroFileDialogState* state);
 
-void monstro_file_dialog_open(MonstroFileDialogState* state,
+MONSTRO_API void monstro_file_dialog_open(MonstroFileDialogState* state,
                               const char* title,
                               const char* start_path,
                               const char* filter,
                               MonstroFileDialogMode mode);
 
-MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext* ctx,
+MONSTRO_API MonstroFileDialogResult monstro_file_dialog_draw(MonstroContext* ctx,
                                                  MonstroFileDialogState* state);
 
-const char* monstro_file_dialog_get_path(const MonstroFileDialogState* state);
+MONSTRO_API const char* monstro_file_dialog_get_path(const MonstroFileDialogState* state);
 
-bool monstro_file_dialog_is_open(const MonstroFileDialogState* state);
+MONSTRO_API bool monstro_file_dialog_is_open(const MonstroFileDialogState* state);
 
 #ifdef __cplusplus
 }

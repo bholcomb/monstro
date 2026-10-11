@@ -5,6 +5,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* Marks the public functions. A Windows DLL exports only what is marked, so the
+ * library's build (MONSTRO_EXPORT) marks them dllexport there; elsewhere every
+ * function is visible already. Callers need no mark: they link to the import library. */
+#if defined(_WIN32) && defined(MONSTRO_EXPORT)
+#define MONSTRO_API __declspec(dllexport)
+#else
+#define MONSTRO_API
+#endif
+
 #ifdef __cplusplus
 namespace monstro { struct Env; struct Context; struct Canvas; struct Theme; }
 typedef monstro::Env MonstroEnv;
