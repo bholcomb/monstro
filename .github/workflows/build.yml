@@ -1,0 +1,114 @@
+# Builds monstro's shared library on every platform games ship it for and runs the tests there.
+# Pushes and pull requests build and test; a version tag (v*) also publishes a release holding
+# each platform's library and a SHA256SUMS file.
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Ubuntu 22.04's glibc and libstdc++ are the oldest the Linux library then needs.
+          - rid: linux-x64
+            os: ubuntu-22.04
+            shell: bash
+            python: python3
+            buildy: buildy
+          # PowerShell, not Git's bash, whose link.exe would stand in for MSVC's linker.
+          - rid: win-x64
+            os: windows-2025
+            shell: pwsh
+            python: python
+            buildy: build/buildy-source/buildy.exe
+          - rid: osx-arm64
+            os: macos-15
+            shell: bash
+            python: python3
+            buildy: build/buildy-source/buildy
+    runs-on: ${{ matrix.os }}
+    env:
+      # The oldest macOS on Apple silicon, so the library loads on every one.
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # buildy is committed for Linux only. Elsewhere it is built from its public source, at the
+      # commit the committed binary was built from.
+      - name: Check out buildy
+        if: runner.os != 'Linux'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: bholcomb/buildy
+          ref: c8d35c56f0c7062cb78df3a48380200545a66f7b
+          path: build/buildy-source
+      - name: Set up Go
+        if: runner.os != 'Linux'
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: build/buildy-source/src/go.mod
+          cache-dependency-path: build/buildy-source/src/go.sum
+      - name: Build buildy
+        if: runner.os != 'Linux'
+        working-directory: build/buildy-source/src
+        run: go build -o ${{ github.workspace }}/${{ matrix.buildy }} .
+
+      - uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: 8.0.x
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: x64
+
+      - name: Build and test
+        run: ${{ matrix.python }} ci/build.py --buildy ${{ matrix.buildy }}
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: monstro-${{ matrix.rid }}
+          path: build/ci/out/
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: monstro-*
+          path: release
+          merge-multiple: true
+      - name: Publish the release
+        working-directory: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-monstro.dll"
+          found="$(ls | sort | tr '\n' ' ' | sed 's/ $//')"
+          if [ "$found" != "$expected" ]; then
+            echo "Expected the files '$expected', found '$found'"
+            exit 1
+          fi
+          sha256sum $expected > SHA256SUMS
+          cat SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes "monstro's shared library for each platform, built and tested at $GITHUB_SHA." \
+            $expected SHA256SUMS

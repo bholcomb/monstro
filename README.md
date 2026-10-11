@@ -54,6 +54,28 @@ export LD_LIBRARY_PATH="${VULKEASE_ROOT:-$PWD/../vulkease}/dist/bin:$LD_LIBRARY_
 cd bin && ./monstro_basic
 ```
 
+### Continuous integration and releases
+
+`.github/workflows/build.yml` builds the shared library on Linux x64, Windows
+x64 (MSVC) and macOS arm64 with `ci/build.py`, and tests it there: on all
+three, that it loads and exports every function the binding imports; on Linux
+and macOS, the headless suite (it needs `fork`) and the .NET binding's checks.
+On Windows the binding's `DllImport("monstro")` finds the binding's own
+`Monstro.dll` before `monstro.dll` (file names ignore case), so a Windows host
+loads the library itself, with a `DllImportResolver`. Pushes and pull requests
+build and test. A pushed version tag also
+publishes a GitHub release holding `linux-x64-libmonstro.so`,
+`win-x64-monstro.dll`, `osx-arm64-libmonstro.dylib` and their `SHA256SUMS`:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+`python3 ci/build.py` runs the same build and tests locally; on Windows, run
+it from a Visual Studio developer prompt with `--buildy` naming a Windows
+buildy.
+
 ## Example
 
 ```c
