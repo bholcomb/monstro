@@ -8,7 +8,7 @@ namespace Monstro;
 
 public static unsafe partial class Native
 {
-    private const string Lib = "monstro";
+    private const string Lib = "libmonstro";
 
     public const MonstroAlign MONSTRO_ALIGN_LEFT = MonstroAlign.Left;
     public const MonstroAlign MONSTRO_ALIGN_RIGHT = MonstroAlign.Right;

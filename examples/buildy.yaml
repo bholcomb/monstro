@@ -25,7 +25,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_console
@@ -42,7 +42,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_toast
@@ -59,7 +59,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_property
@@ -76,7 +76,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_shortcut
@@ -93,7 +93,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_plot
@@ -110,7 +110,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_curve
@@ -127,7 +127,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_timeline
@@ -144,7 +144,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_node
@@ -161,7 +161,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_interaction
@@ -178,7 +178,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
     - name: monstro_cockpit
@@ -195,7 +195,7 @@ targets:
       libs:
         - monstro
       depends_on:
-        targets: [monstro]
+        targets: [libmonstro]
         artifacts: [ui_shaders]
 
 staging:
@@ -217,7 +217,7 @@ staging:
         - monstro_node
         - monstro_interaction
         - monstro_cockpit
-        - monstro
+        - libmonstro
 
     - folder: data/shaders
       artifacts:

@@ -34,8 +34,11 @@ buildy
 ./tests/run.sh   # headless tests, normal and with ASan/UBSan
 ```
 
-The library and tests need nothing else (`buildy --target monstro` or
-`--target monstro_tests`). The examples render with
+The library and tests need nothing else (`buildy --target libmonstro` or
+`--target monstro_tests`). The library is named `libmonstro` on every platform
+(`libmonstro.so`, `libmonstro.dylib`, `libmonstro.dll`), which the C# binding
+imports; on Windows, `monstro.dll` would be the binding's own `Monstro.dll`,
+since file names ignore case. The examples render with
 [VulkEase](https://github.com/bholcomb/vulkease), which needs Vulkan 1.4, so
 they need the LunarG Vulkan SDK and a built VulkEase checkout; without them
 the examples stop at compile time and say which is missing. Source the SDK's
@@ -62,14 +65,11 @@ cd bin && ./monstro_basic
 
 `.github/workflows/build.yml` builds the shared library on Linux x64, Windows
 x64 (MSVC) and macOS arm64 with `ci/build.py`, and tests it there: on all
-three, that it loads and exports every function the binding imports; on Linux
-and macOS, the headless suite (it needs `fork`) and the .NET binding's checks.
-On Windows the binding's `DllImport("monstro")` finds the binding's own
-`Monstro.dll` before `monstro.dll` (file names ignore case), so a Windows host
-loads the library itself, with a `DllImportResolver`. Pushes and pull requests
-build and test. A pushed version tag also
+three, that it loads and exports every function the binding imports, and the
+.NET binding's checks; on Linux and macOS, also the headless suite (it needs
+`fork`). Pushes and pull requests build and test. A pushed version tag also
 publishes a GitHub release holding `linux-x64-libmonstro.so`,
-`win-x64-monstro.dll`, `osx-arm64-libmonstro.dylib` and their `SHA256SUMS`:
+`win-x64-libmonstro.dll`, `osx-arm64-libmonstro.dylib` and their `SHA256SUMS`:
 
 ```bash
 git tag v0.1.0

@@ -2,7 +2,10 @@
 
 targets:
   shared_libraries:
-    - name: monstro
+    - name: libmonstro
+      # The library is libmonstro on every platform (libmonstro.so, .dylib, .dll): Windows file
+      # names ignore case, and monstro.dll would be the C# binding's own Monstro.dll.
+      output_prefix: ""
       language: cpp
       sources:
         - "*.cpp"

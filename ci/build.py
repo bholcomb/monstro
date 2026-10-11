@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """The CI build: monstro's shared library for this platform, built with buildy, then the tests that
-run here. The library lands in build/ci/out/ named for its platform (linux-x64-libmonstro.so,
-win-x64-monstro.dll, osx-arm64-libmonstro.dylib), as the release publishes it.
+run here. The library is libmonstro on every platform; it lands in build/ci/out/ named for its
+platform (linux-x64-libmonstro.so, win-x64-libmonstro.dll, osx-arm64-libmonstro.dylib), as the
+release publishes it.
 
 Run it from anywhere; Windows needs the MSVC developer environment (cl.exe, link.exe, dumpbin.exe)."""
 
@@ -19,7 +20,7 @@ WORK = ROOT / "build/ci"
 # Each platform CI builds: its .NET runtime identifier and the library's file name.
 PLATFORMS = {
     ("linux", "x86_64"): ("linux-x64", "libmonstro.so"),
-    ("win32", "AMD64"): ("win-x64", "monstro.dll"),
+    ("win32", "AMD64"): ("win-x64", "libmonstro.dll"),
     ("darwin", "arm64"): ("osx-arm64", "libmonstro.dylib"),
 }
 
@@ -42,7 +43,7 @@ def build_library(buildy, library):
     environment = config.split("\nenvironment:", 1)[1].split("\nstaging:", 1)[0]
     project = config.split("\nworkspace:", 1)[0]
     (workspace / "buildy.yaml").write_text(project + "\nworkspace:\n  modules:\n    - ../../../src\n\nenvironment:" + environment + "\n")
-    run(buildy, "--target", "monstro", "--config", "release", cwd=workspace)
+    run(buildy, "--target", "libmonstro", "--config", "release", cwd=workspace)
     built = sorted(workspace.glob(f"build/*-release/bin/{library}"))
     if len(built) != 1:
         raise SystemExit(f"Expected one {library} from buildy, found {[str(path) for path in built]}")
@@ -69,15 +70,18 @@ def load_check(built):
 
 def binding_tests(rid, library, built):
     """The .NET binding's checks against this library: every export, struct layouts against the
-    headers (the ABI probe), input, fonts and draw output. .NET finds both libraries beside the app.
-    Not on Windows: there DllImport("monstro") finds the binding's own Monstro.dll first (file names
-    ignore case), so a Windows host has to load the library itself, with a DllImportResolver."""
+    headers (the ABI probe), input, fonts and draw output. .NET finds both libraries beside the app."""
     dotnet = WORK / "dotnet"
     run("dotnet", "build", ROOT / "bindings/csharp/Monstro.Tests/Monstro.Tests.csproj", "-c", "Release",
         "--artifacts-path", dotnet, "--nologo", "-nr:false")
     app = dotnet / "bin/Monstro.Tests/release"
     probe = ROOT / "bindings/csharp/Monstro.Tests/abi.c"
-    if rid == "osx-arm64":
+    if rid == "win-x64":
+        # MSVC exports only what is named: the probe's three functions.
+        exports = [f"/EXPORT:monstro_binding_{name}" for name in ("sizeof", "offsetof", "constant")]
+        run("cl", "/nologo", "/LD", "/I", ROOT / "include", probe, f"/Fo{WORK}\\", f"/Fe{app / 'monstro-binding-test.dll'}",
+            "/link", *exports)
+    elif rid == "osx-arm64":
         run("cc", "-std=c11", "-dynamiclib", "-Wall", "-Wextra", "-Werror", probe, "-I", ROOT / "include",
             "-o", app / "libmonstro-binding-test.dylib")
     else:
@@ -108,8 +112,7 @@ def main():
     if rid != "win-x64":
         run("bash", ROOT / "tests/run.sh")
     load_check(built)
-    if rid != "win-x64":
-        binding_tests(rid, library, built)
+    binding_tests(rid, library, built)
     if rid == "win-x64":
         # A game ships this DLL to machines without the Visual C++ redistributable: the C runtime is
         # linked in (cl's default, /MT), never imported.

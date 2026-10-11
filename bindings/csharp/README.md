@@ -14,9 +14,12 @@ A .NET 8 binding over Monstro's C API, following the Mobius C# binding's two lay
   is the native handle for mixing the layers.
 
 Reference `Monstro/Monstro.csproj`. There are no managed package dependencies.
-The native library must be on the loader's search path: `libmonstro.so` on Linux,
-`monstro.dll` on Windows, or `libmonstro.dylib` on macOS. Only Linux x86_64 has been
-validated. Build and ship the native library separately from `Monstro.dll`.
+The binding imports `libmonstro`, the native library's name on every platform:
+`libmonstro.so` on Linux, `libmonstro.dll` on Windows, `libmonstro.dylib` on macOS
+(on Windows, `monstro.dll` would be this binding's own `Monstro.dll`, since file names
+ignore case). Put it beside the app or on the loader's search path. CI tests the
+binding on Linux x64, Windows x64 and macOS arm64. Build and ship the native library
+separately from `Monstro.dll`.
 No graphics API, window toolkit, or renderer is part of the binding.
 
 ```csharp

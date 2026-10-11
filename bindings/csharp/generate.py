@@ -202,7 +202,7 @@ public readonly struct {name} : IEquatable<{name}>
     for name, values in re.findall(r"#define (MONSTRO_COLOR_\w+)\s+\(\(MonstroColor\)\{\s*([^}]+)\}\)", macro_text):
         components = [value.strip() for value in values.split(",")]
         colors.append(f"    public static readonly MonstroColor {name} = new() {{ r = {components[0]}, g = {components[1]}, b = {components[2]}, a = {components[3]} }};")
-    native = header + "public static unsafe partial class Native\n{\n    private const string Lib = \"monstro\";\n\n" + "\n".join(aliases + colors) + "\n\n" + "\n".join(functions) + "}\n"
+    native = header + "public static unsafe partial class Native\n{\n    private const string Lib = \"libmonstro\";\n\n" + "\n".join(aliases + colors) + "\n\n" + "\n".join(functions) + "}\n"
     probe += ["size_t monstro_binding_sizeof(const char *name) {", *size_cases, "    return (size_t)-1;\n}",
               "size_t monstro_binding_offsetof(const char *type, const char *field) {", *offset_cases, "    return (size_t)-1;\n}",
               "int monstro_binding_constant(const char *name) {", *constant_cases, "    return -2147483647;\n}"]

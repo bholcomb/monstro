@@ -76,14 +76,14 @@ staging:
         - linux:
             - "${out_dir}/bin/libmonstro.so"
         - windows:
-            - "${out_dir}/bin/monstro.dll"
+            - "${out_dir}/bin/libmonstro.dll"
         - macos:
             - "${out_dir}/bin/libmonstro.dylib"
 
     - folder: "lib"
       files:
         - windows:
-            - "${out_dir}/lib/monstro.lib"
+            - "${out_dir}/lib/libmonstro.lib"
     
     # Public headers for library users
     - folder: "include"

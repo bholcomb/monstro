@@ -104,7 +104,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-monstro.dll"
+          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-libmonstro.dll"
           found="$(ls | sort | tr '\n' ' ' | sed 's/ $//')"
           if [ "$found" != "$expected" ]; then
             echo "Expected the files '$expected', found '$found'"
