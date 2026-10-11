@@ -32,21 +32,29 @@ build monstro_tests -O2
 build monstro_tests_sanitized -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -fno-sanitize-recover=undefined
 
 # The library keeps no mutable global state: only toolchain and read-only
-# third-party data may sit in writable sections.
-echo "== checking for mutable global state"
-c++ -std=c++17 -O2 -fPIC -shared -I"$root/include" -I"$root/externals" "$root"/src/*.cpp "$root"/src/widgets/*.cpp \
-   -o "$out/libmonstro_globals.so"
-globals=$(nm -C --defined-only "$out/libmonstro_globals.so" | awk '$2 ~ /^[bBdD]$/ {print $3}' |
-   grep -v -x -E 'completed\.0|__dso_handle|DW\.ref\.__gxx_personality_v0|_DYNAMIC|_GLOBAL_OFFSET_TABLE_|__TMC_END__|__do_global_dtors_aux_fini_array_entry|__frame_dummy_init_array_entry|stbi__stdio_callbacks' ||
-   true)
-if [ -n "$globals" ]; then
-   echo "mutable global state found:"
-   echo "$globals"
-   exit 1
+# third-party data may sit in writable sections. The check reads an ELF symbol
+# table, so it runs on Linux; the code is the same on every platform.
+if [ "$(uname -s)" = Linux ]; then
+   echo "== checking for mutable global state"
+   c++ -std=c++17 -O2 -fPIC -shared -I"$root/include" -I"$root/externals" "$root"/src/*.cpp "$root"/src/widgets/*.cpp \
+      -o "$out/libmonstro_globals.so"
+   globals=$(nm -C --defined-only "$out/libmonstro_globals.so" | awk '$2 ~ /^[bBdD]$/ {print $3}' |
+      grep -v -x -E 'completed\.0|__dso_handle|DW\.ref\.__gxx_personality_v0|_DYNAMIC|_GLOBAL_OFFSET_TABLE_|__TMC_END__|__do_global_dtors_aux_fini_array_entry|__frame_dummy_init_array_entry|stbi__stdio_callbacks' ||
+      true)
+   if [ -n "$globals" ]; then
+      echo "mutable global state found:"
+      echo "$globals"
+      exit 1
+   fi
 fi
 
 cd "$root"
 echo "== running monstro_tests"
 "$out/monstro_tests" "$@"
 echo "== running monstro_tests_sanitized"
-ASAN_OPTIONS=detect_leaks=1 "$out/monstro_tests_sanitized" "$@"
+# LeakSanitizer runs on Linux only; ASan stops at startup if asked for it elsewhere (macOS).
+leaks=0
+if [ "$(uname -s)" = Linux ]; then
+   leaks=1
+fi
+ASAN_OPTIONS=detect_leaks=$leaks "$out/monstro_tests_sanitized" "$@"
