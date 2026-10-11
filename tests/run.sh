@@ -2,7 +2,7 @@
 # Build and run the headless test suite: once normally and once under
 # AddressSanitizer and UndefinedBehaviorSanitizer. Run from anywhere; pass a
 # test-name filter as the first argument to run a subset. The normal build is
-# also a buildy target: ./buildy --target monstro_tests (run it from the root).
+# also a buildy target: buildy --target monstro_tests (run it from the root).
 
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"

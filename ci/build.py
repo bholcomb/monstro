@@ -89,15 +89,18 @@ def binding_tests(rid, library, built):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--buildy", type=Path, default=ROOT / "buildy",
-                        help="The buildy executable (default: the committed Linux one)")
+    parser.add_argument("--buildy", type=Path,
+                        help="The buildy executable (default: buildy on PATH; CI passes the pinned release's)")
     args = parser.parse_args()
     key = (sys.platform, platform.machine())
     if key not in PLATFORMS:
         parser.error(f"CI builds Linux x86_64, Windows x64 and macOS arm64, not {key}")
+    buildy = args.buildy.resolve() if args.buildy else shutil.which("buildy")
+    if buildy is None:
+        parser.error("No buildy on PATH: install one from a buildy release (https://github.com/bholcomb/buildy/releases), or pass --buildy")
     rid, library = PLATFORMS[key]
     shutil.rmtree(WORK, ignore_errors=True)
-    built = build_library(args.buildy.resolve(), library)
+    built = build_library(buildy, library)
 
     if rid == "linux-x64":
         run(sys.executable, ROOT / "bindings/csharp/generate.py", "--check")

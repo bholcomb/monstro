@@ -1,0 +1,10 @@
+{
+  "todo": "TODO: buildy has no release yet. When it does, set version (without the v) and each platform archive's SHA-256 from its SHA256SUMS.",
+  "repository": "bholcomb/buildy",
+  "version": null,
+  "sha256": {
+    "linux-x64": null,
+    "win-x64": null,
+    "osx-arm64": null
+  }
+}

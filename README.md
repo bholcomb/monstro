@@ -25,25 +25,29 @@ A C API immediate mode UI library with a C++ internal implementation.
 
 ## Building
 
+Monstro builds with [buildy](https://github.com/bholcomb/buildy): put a buildy
+from its releases on your `PATH` (CI uses the release pinned in
+`ci/buildy.json`).
+
 ```bash
-./buildy
+buildy
 ./tests/run.sh   # headless tests, normal and with ASan/UBSan
 ```
 
-The library and tests need nothing else (`./buildy --target monstro` or
+The library and tests need nothing else (`buildy --target monstro` or
 `--target monstro_tests`). The examples render with
 [VulkEase](https://github.com/bholcomb/vulkease), which needs Vulkan 1.4, so
 they need the LunarG Vulkan SDK and a built VulkEase checkout; without them
 the examples stop at compile time and say which is missing. Source the SDK's
 environment script first. VulkEase is found at `VULKEASE_ROOT`, by default
 `../vulkease` next to this repository, and its `dist/` must hold the library
-and headers (run `./buildy` there first; a debug build turns on the
+and headers (run `buildy` there first; a debug build turns on the
 validation layers).
 
 ```bash
 source /path/to/vulkan/1.4.350.1/setup-env.sh
 export VULKEASE_ROOT=/path/to/vulkease   # only if it is not ../vulkease
-./buildy
+buildy
 ```
 
 Run the examples from `bin/`, where their shaders and fonts are staged, in a
@@ -72,9 +76,11 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`python3 ci/build.py` runs the same build and tests locally; on Windows, run
-it from a Visual Studio developer prompt with `--buildy` naming a Windows
-buildy.
+Each job first runs `ci/fetch_buildy.py`, which downloads the buildy release
+pinned in `ci/buildy.json` (its version and each platform archive's SHA-256)
+and fails on a hash mismatch or while the pin is unset. `python3 ci/build.py`
+runs the same build and tests locally with the buildy on your `PATH` (or
+`--buildy PATH`); on Windows, run it from a Visual Studio developer prompt.
 
 ## Example
 
