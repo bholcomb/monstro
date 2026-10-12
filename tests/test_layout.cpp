@@ -380,6 +380,47 @@ TEST(widgets_that_fill_the_width_stop_at_the_content_edge)
    CHECK(rects[INDENTED_TEXT].x > rects[TEXT].x && rects[TEXT_AFTER_BUTTON].x > rects[TEXT].x);
 }
 
+// An indent moves what follows in by exactly its width, and the matching unindent moves it back: a tree node's
+// children start one tree indent in from it, and an item after monstro_indent one indent in from the items before.
+TEST(an_indent_moves_content_in_by_exactly_its_width)
+{
+   Ui ui;
+   const float indent = monstro_get_tree_indent(ui.ctx);
+   MonstroRect parent = {}, child = {}, grandchild = {}, sibling = {}, before = {}, indented = {}, after = {};
+   begin_page(ui);
+   if (monstro_begin_tree_node(ui.ctx, "Parent", MONSTRO_TREE_DEFAULT_OPEN))
+   {
+      parent = monstro_get_item_rect(ui.ctx);
+      if (monstro_begin_tree_node(ui.ctx, "Child", MONSTRO_TREE_DEFAULT_OPEN))
+      {
+         child = monstro_get_item_rect(ui.ctx);
+         monstro_tree_leaf(ui.ctx, "Grandchild", MONSTRO_TREE_NONE);
+         grandchild = monstro_get_item_rect(ui.ctx);
+         monstro_end_tree_node(ui.ctx);
+      }
+      monstro_tree_leaf(ui.ctx, "Sibling", MONSTRO_TREE_NONE);
+      sibling = monstro_get_item_rect(ui.ctx);
+      monstro_end_tree_node(ui.ctx);
+   }
+   monstro_button(ui.ctx, "Before", nullptr);
+   before = monstro_get_item_rect(ui.ctx);
+   monstro_indent(ui.ctx, 30.0f);
+   monstro_button(ui.ctx, "Indented", nullptr);
+   indented = monstro_get_item_rect(ui.ctx);
+   monstro_unindent(ui.ctx, 30.0f);
+   monstro_button(ui.ctx, "After", nullptr);
+   after = monstro_get_item_rect(ui.ctx);
+   monstro_end_window(ui.ctx);
+   ui.end();
+
+   CHECK(near(child.x, parent.x + indent));
+   CHECK(near(grandchild.x, parent.x + 2.0f * indent));
+   CHECK(near(sibling.x, parent.x + indent));
+   CHECK(near(before.x, parent.x));
+   CHECK(near(indented.x, before.x + 30.0f));
+   CHECK(near(after.x, before.x));
+}
+
 TEST(a_label_is_level_with_the_text_of_widgets_beside_it)
 {
    Ui ui;

@@ -1229,7 +1229,8 @@ if (monstro_begin_tree_node(ctx, "Scene", MONSTRO_TREE_DEFAULT_OPEN)) {
 
 `monstro_begin_tree_node` returns `true` when the node is open.  Call
 `monstro_end_tree_node` when it returns `true`.  Any widgets can be placed
-between begin and end -- sliders, buttons, nested trees, etc.
+between begin and end -- sliders, buttons, nested trees, etc.  They start one
+tree indent (`monstro_get_tree_indent`) in from the node.
 
 `monstro_tree_leaf` draws a terminal item and returns `true` when clicked.
 No end call is needed.
@@ -1373,6 +1374,10 @@ monstro_indent(ctx, 20.0f);
 monstro_label(ctx, "indented");
 monstro_unindent(ctx, 20.0f);
 ```
+
+What follows `monstro_indent` starts exactly the given width further in, and
+`monstro_unindent` with the same width moves it back.  A width of 0 or less is
+the tree indent.
 
 ### Columns
 

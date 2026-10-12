@@ -171,9 +171,8 @@ void monstro_indent(MonstroContext *ctx, float indent_width)
       indent_width = ctx->style().tree.indent;
    }
 
-   layout->myPosX += indent_width;
+   // The cursor alone moves: the layout's origin stays, so what follows starts exactly one indent in.
    layout->myCursorX += indent_width;
-   layout->mySizeX -= indent_width;
 }
 
 void monstro_unindent(MonstroContext *ctx, float indent_width)
@@ -188,9 +187,7 @@ void monstro_unindent(MonstroContext *ctx, float indent_width)
       indent_width = ctx->style().tree.indent;
    }
 
-   layout->myPosX -= indent_width;
    layout->myCursorX -= indent_width;
-   layout->mySizeX += indent_width;
 }
 
 void monstro_spacer(MonstroContext *ctx, float size)
