@@ -42,7 +42,9 @@ def main():
     with tempfile.TemporaryDirectory() as temporary:
         archive = Path(temporary) / archive_name
         print(f"+ curl {url}", flush=True)
-        subprocess.run(["curl", "--fail", "--location", "--silent", "--show-error", "--output", str(archive), url], check=True)
+        # GitHub's release downloads sometimes answer 5xx for a moment: retry a few times
+        subprocess.run(["curl", "--fail", "--location", "--silent", "--show-error", "--retry", "5", "--retry-all-errors",
+                        "--retry-delay", "5", "--output", str(archive), url], check=True)
         digest = hashlib.sha256(archive.read_bytes()).hexdigest()
         if digest != expected:
             raise SystemExit(f"{archive_name} has SHA-256 {digest}, not the pinned {expected}")
