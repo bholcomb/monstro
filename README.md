@@ -9,7 +9,18 @@ You describe the UI in code every frame. Monstro hands back vertices, indices
 and draw commands, and your renderer draws them, to the screen or onto render
 targets.
 
-![The cockpit example: an artificial horizon, readouts, a heading dial, gauges and bar meters, all drawn by Monstro](docs/images/cockpit.png)
+<p align="center">
+  <img src="docs/images/cockpit.png" height="340" alt="The cockpit example: an artificial horizon, readouts, a heading dial, gauges and bar meters">
+  <img src="docs/images/widgets.png" height="340" alt="The widget tour in the default theme: buttons, sliders, knobs, progress bars, radio buttons, a combo box and text and number fields">
+</p>
+
+Themes are artwork, not just colours. The same widget tour in two themes made
+from [Kenney](https://kenney.nl)'s CC0 UI packs:
+
+<p align="center">
+  <img src="docs/images/theme-scifi.png" width="49%" alt="The widget tour in the Sci-Fi theme: grey plates, blue title strip, glowing slider caps">
+  <img src="docs/images/theme-rpg.png" width="49%" alt="The widget tour in the RPG theme: brown wooden buttons on a beige panel, parchment fields">
+</p>
 
 ## Example
 
