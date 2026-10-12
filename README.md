@@ -145,12 +145,9 @@ To build from source, see [docs/BUILD.md](docs/BUILD.md).
 
 ## Status
 
-No version is tagged yet, and the API may still change. Some declared flags do
-nothing yet: table sorting, scrolling and hidden columns
-(`MONSTRO_TABLE_SORTABLE`, `MONSTRO_TABLE_SCROLL_X`, `MONSTRO_TABLE_SCROLL_Y`,
-`MONSTRO_TABLE_COLUMN_NO_SORT`, `MONSTRO_TABLE_COLUMN_DEFAULT_HIDDEN`),
-reorderable tabs (`MONSTRO_TAB_BAR_REORDERABLE`), and the button flags
-`MONSTRO_BUTTON_FLATTEN_CHILDREN` and `MONSTRO_BUTTON_ALIGN_TEXT_BASELINE`.
+Monstro is young, and its API may still change before 1.0. Table sorting and
+scrolling, and reorderable tabs, are declared in the API but not implemented
+yet.
 
 ## Documentation
 
