@@ -1,6 +1,6 @@
 # Builds monstro's shared library on every platform games ship it for and runs the tests there.
 # Pushes and pull requests build and test; a version tag (v*) also publishes a release holding
-# each platform's library and a SHA256SUMS file.
+# each platform's library (with the DLL's import library on Windows) and a SHA256SUMS file.
 #
 # Every platform builds with the buildy release pinned in ci/buildy.json.
 
@@ -104,7 +104,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-libmonstro.dll"
+          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-libmonstro.dll win-x64-libmonstro.lib"
           found="$(ls | sort | tr '\n' ' ' | sed 's/ $//')"
           if [ "$found" != "$expected" ]; then
             echo "Expected the files '$expected', found '$found'"

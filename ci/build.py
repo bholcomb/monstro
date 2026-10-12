@@ -2,7 +2,8 @@
 """The CI build: monstro's shared library for this platform, built with buildy, then the tests that
 run here. The library is libmonstro on every platform; it lands in build/ci/out/ named for its
 platform (linux-x64-libmonstro.so, win-x64-libmonstro.dll, osx-arm64-libmonstro.dylib), as the
-release publishes it.
+release publishes it. On Windows the DLL's import library, which C and C++ programs link against,
+lands beside it (win-x64-libmonstro.lib).
 
 Run it from anywhere; Windows needs the MSVC developer environment (cl.exe, link.exe, dumpbin.exe)."""
 
@@ -125,6 +126,12 @@ def main():
     release.parent.mkdir()
     shutil.copy2(built, release)
     print(f"Built {release}")
+    if rid == "win-x64":
+        implib = built.parents[1] / "lib/libmonstro.lib"
+        if not implib.is_file():
+            raise SystemExit(f"buildy built {built} without its import library {implib}")
+        shutil.copy2(implib, release.with_suffix(".lib"))
+        print(f"Built {release.with_suffix('.lib')}")
 
 
 if __name__ == "__main__":
