@@ -1,135 +1,160 @@
 # Monstro
 
-A C API immediate mode UI library with a C++ internal implementation.
+[![build](https://github.com/bholcomb/monstro/actions/workflows/build.yml/badge.svg)](https://github.com/bholcomb/monstro/actions/workflows/build.yml)
+
+Monstro is an immediate-mode GUI library with complete theming.
+
+You describe the UI in code every frame. Monstro hands back vertices, indices
+and draw commands, and your renderer draws them. Use it for tool and editor
+windows, in-game menus and HUDs, or cockpit screens drawn onto render targets.
 
 ## Features
 
-- Immediate mode UI paradigm
-- Graphics API agnostic - generates abstract draw commands
-- Comprehensive widget set
-- Flexible styling system
-- Font rendering with TTF and bitmap font support, in one shared atlas
-- One environment shared by many small UI contexts
-- Interaction a host can rely on: one hovered item (the one on top), no hover
-  where an item is clipped away, activated and deactivated edges, IDs that
-  survive live labels, and queued input so no click is lost between frames
-  and a tap fires in the next frame (see the
-  [guide](docs/GUIDE.md#interaction-rules))
-- Fails hard and loudly on misuse and exhausted capacities instead of throwing
-  or silently dropping output (see the [guide](docs/GUIDE.md#errors-and-limits))
-- What game cockpit screens need: page tabs whose selection the host keeps,
-  vertical sliders and progress bars, knobs that point where the pointer is,
-  lit buttons with centred text, ellipses, text turned about a point (a
-  horizon's pitch ladder), host textures such as camera feeds, and no geometry
-  for anything wholly clipped away (see the `cockpit` example)
-
-## Building
-
-Monstro builds with [buildy](https://github.com/bholcomb/buildy): put a buildy
-from its releases on your `PATH` (CI uses the release pinned in
-`ci/buildy.json`).
-
-```bash
-buildy
-./tests/run.sh   # headless tests, normal and with ASan/UBSan
-```
-
-The library and tests need nothing else (`buildy --target libmonstro` or
-`--target monstro_tests`). The library is named `libmonstro` on every platform
-(`libmonstro.so`, `libmonstro.dylib`, `libmonstro.dll`), which the C# binding
-imports; on Windows, `monstro.dll` would be the binding's own `Monstro.dll`,
-since file names ignore case. The examples render with
-[VulkEase](https://github.com/bholcomb/vulkease), which needs Vulkan 1.4, so
-they need the LunarG Vulkan SDK and a built VulkEase checkout; without them
-the examples stop at compile time and say which is missing. Source the SDK's
-environment script first. VulkEase is found at `VULKEASE_ROOT`, by default
-`../vulkease` next to this repository, and its `dist/` must hold the library
-and headers (run `buildy` there first; a debug build turns on the
-validation layers).
-
-```bash
-source /path/to/vulkan/1.4.350.1/setup-env.sh
-export VULKEASE_ROOT=/path/to/vulkease   # only if it is not ../vulkease
-buildy
-```
-
-Run the examples from `bin/`, where their shaders and fonts are staged, in a
-shell with the SDK environment and VulkEase on the library path:
-
-```bash
-export LD_LIBRARY_PATH="${VULKEASE_ROOT:-$PWD/../vulkease}/dist/bin:$LD_LIBRARY_PATH"
-cd bin && ./monstro_basic
-```
-
-### Continuous integration and releases
-
-`.github/workflows/build.yml` builds the shared library on Linux x64, Windows
-x64 (MSVC) and macOS arm64 with `ci/build.py`, and tests it there: on all
-three, that it loads and exports every function the binding imports, and the
-.NET binding's checks; on Linux and macOS, also the headless suite (it needs
-`fork`). Pushes and pull requests build and test. A pushed version tag also
-publishes a GitHub release holding `linux-x64-libmonstro.so`,
-`win-x64-libmonstro.dll`, `osx-arm64-libmonstro.dylib` and their `SHA256SUMS`:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-Each job first runs `ci/fetch_buildy.py`, which downloads the buildy release
-pinned in `ci/buildy.json` (its version and each platform archive's SHA-256)
-and fails on a hash mismatch or while the pin is unset. `python3 ci/build.py`
-runs the same build and tests locally with the buildy on your `PATH` (or
-`--buildy PATH`); on Windows, run it from a Visual Studio developer prompt.
+- **C API.** One header, `monstro.h`, for C11 and C++17. No hidden global
+  state: every call names the environment or the UI it acts on.
+- **Theming.** Three built-in themes (default, dark and light) and as many of
+  your own as you register. Every widget type has its own style, and a style
+  value can be a colour, an image, a sprite from an atlas or a nine-patch, so a
+  theme can be artwork rather than flat colours. A theme also picks its font,
+  TrueType or bitmap. Push overrides for part of a frame without changing the
+  theme.
+- **Any graphics backend.** Monstro never touches the GPU. Draw its output with
+  Vulkan, OpenGL, Direct3D, Metal or an engine's own renderer: anything that
+  draws indexed, textured triangles with a scissor rectangle. It can also write
+  each frame straight into your own vertex and index buffers, in the vertex
+  layout you choose. The examples render with Vulkan.
+- **.NET bindings.** A .NET 8 binding with the whole C API, one to one, and a
+  managed layer on top whose draw data is a zero-copy view of the native frame.
+- **Many UIs, of many kinds.** One environment holds the fonts, atlas and
+  themes; each UI (a screen, a panel, a tool window) is a small context on it,
+  so a game can run many screens at once. The widgets cover desktop tools and
+  game screens alike: windows, menus, popups and modals, tooltips, buttons,
+  checkboxes, radio buttons, sliders, knobs, progress bars, text and number
+  fields, combo boxes, trees, tabs, tables, a colour picker and a file dialog,
+  plus cockpit controls such as vertical sliders and bars, page tabs and knobs
+  that follow the pointer. A drawing API (shapes, ellipses, curves, paths,
+  rotated text and images) builds the rest: gauges, graphs, node editors,
+  artificial horizons.
+- **Platforms.** Prebuilt for Linux x64, Windows x64 and macOS on Apple
+  Silicon.
 
 ## Example
 
 ```c
 #include <monstro.h>
 
-// One environment holds the fonts, themes and frame scratch every UI shares
-MonstroEnv* env = monstro_init(NULL);
-monstro_font_load_ttf_from_file(env, "default", "font.ttf", 16.0f, 32, 96);
-MonstroTextureData atlas = monstro_env_get_atlas(env);
-monstro_env_set_atlas_texture(env, upload_texture(atlas.data, atlas.width, atlas.height));
+/* Your renderer provides these two. */
+uint64_t upload_texture(const MonstroTextureData* pixels);
+void render(const MonstroDrawData* draw);
 
-// One context per UI
-MonstroContext* ctx = monstro_context_create(env, NULL);
-monstro_set_display_size(ctx, width, height);
+static float throttle = 0.5f;
+static bool lights = true;
 
-// Main loop
-while (running) {
-    monstro_begin_frame(ctx, delta_time);
+void run(void)
+{
+    MonstroEnv* env = monstro_init(NULL); /* fonts, themes and the atlas, shared by every UI */
+    monstro_font_load_ttf_from_file(env, "sans", "FreeSans.ttf", 16.0f, 32, 96);
+    MonstroTextureData atlas = monstro_env_get_atlas(env);
+    monstro_env_set_atlas_texture(env, upload_texture(&atlas));
 
-    if (monstro_begin_window(ctx, "Demo", NULL, MONSTRO_WINDOW_DEFAULT)) {
-        if (monstro_button(ctx, "Click Me!", NULL)) {
-            // Button was clicked
+    MonstroContext* ctx = monstro_context_create(env, NULL); /* one UI */
+    monstro_context_set_theme(ctx, monstro_theme_find(env, "dark"));
+    monstro_set_display_size(ctx, 1280.0f, 720.0f);
+
+    while (running) {
+        monstro_set_mouse_pos(ctx, mouse_x, mouse_y);
+        monstro_set_mouse_button(ctx, MONSTRO_MOUSE_BUTTON_LEFT, mouse_down);
+
+        monstro_begin_frame(ctx, dt);
+        if (monstro_begin_window(ctx, "Engine", NULL, MONSTRO_WINDOW_DEFAULT)) {
+            monstro_label(ctx, "Main drive");
+            monstro_slider_float(ctx, "Throttle", &throttle, 0.0f, 1.0f, "%.2f", NULL);
+            monstro_checkbox(ctx, "Running lights", &lights, NULL);
+            if (monstro_button(ctx, "Launch", "Leave the dock"))
+                launch();
+            monstro_end_window(ctx);
         }
-        monstro_end_window(ctx);
+        render(monstro_end_frame(ctx)); /* vertices, indices and draw commands */
     }
 
-    const MonstroDrawData* draw = monstro_end_frame(ctx);
-
-    // Vertices, indices and draw commands, valid until the next frame begins
-    for (uint32_t i = 0; i < draw->command_count; i++) {
-        const MonstroDrawCommand* cmd = &draw->commands[i];
-        // ... draw cmd->index_count indices from cmd->index_offset,
-        //     base vertex cmd->vertex_offset, texture cmd->texture_id
-    }
+    monstro_context_destroy(ctx);
+    monstro_shutdown(env);
 }
-
-monstro_context_destroy(ctx);
-monstro_shutdown(env);
 ```
 
-See the [guide](docs/GUIDE.md) for the environment and context model, the
-renderer integration and host buffers.
+A theme of your own starts from a built-in one:
 
-## .NET bindings
+```c
+MonstroStyle style;
+monstro_style_set_dark(&style);
+style.window.rounding = 6.0f;
+style.button.normal.type = MONSTRO_STYLE_ITEM_COLOR;
+style.button.normal.data.color = monstro_color_rgb(0.1f, 0.5f, 0.3f);
+style.button.hover.type = MONSTRO_STYLE_ITEM_SPRITE; /* or an image or a nine-patch */
+style.button.hover.data.sprite = (MonstroSprite){skin_texture, {0.0f, 0.0f}, {0.25f, 0.125f}};
 
-The .NET 8 binding is in [`bindings/csharp/`](bindings/csharp/README.md), with a
-one-to-one C API mirror with typed handles, disposable environment and context
-wrappers with zero-copy draw data, and native-backed tests.
+MonstroTheme* hud = monstro_theme_register(env, "hud", &style);
+monstro_context_set_theme(left_screen, hud); /* any number of UIs share a theme */
+monstro_context_set_theme(right_screen, hud);
+```
+
+In C#:
+
+```csharp
+using Monstro;
+
+using var env = new Env();
+env.LoadFont("sans", "FreeSans.ttf", 16);
+env.AtlasTexture = UploadTexture(env.Atlas);
+
+using var ui = env.CreateContext();
+while (running)
+{
+    ui.SetMousePosition(mouseX, mouseY);
+    ui.SetMouseButton(MonstroMouseButton.Left, mouseDown);
+
+    ui.BeginFrame(1280, 720, dt);
+    if (ui.BeginWindow("Engine"))
+    {
+        ui.SliderFloat("Throttle", ref throttle, 0, 1);
+        ui.Checkbox("Running lights", ref lights);
+        if (ui.Button("Launch")) Launch();
+    }
+    ui.EndWindow();
+    DrawData draw = ui.EndFrame();
+    if (draw.Changed) Render(draw.Vertices, draw.Indices, draw.Commands);
+}
+```
+
+## Getting Monstro
+
+Each [release](https://github.com/bholcomb/monstro/releases) holds the shared
+library for every platform, with a `SHA256SUMS` file:
+
+| Platform | File |
+| --- | --- |
+| Linux x64 | `linux-x64-libmonstro.so` |
+| Windows x64 | `win-x64-libmonstro.dll`, and its import library `win-x64-libmonstro.lib` |
+| macOS 11 or later, Apple Silicon | `osx-arm64-libmonstro.dylib` |
+
+Rename the file to `libmonstro.so`, `libmonstro.dll` or `libmonstro.dylib`, the
+name the .NET binding loads (and the import library to `libmonstro.lib`), and
+use the headers in `include/` from the same tag. For .NET, reference
+[`bindings/csharp/Monstro/Monstro.csproj`](bindings/csharp/Monstro/Monstro.csproj)
+and put the library beside your app.
+
+To build from source, see [docs/BUILD.md](docs/BUILD.md).
+
+## Documentation
+
+- [User guide](docs/GUIDE.md): the environment and context model, renderer and
+  input integration, every widget, layout, theming and custom drawing.
+- [C# binding](bindings/csharp/README.md): its two layers and how they map to
+  the C API.
+- [Examples](examples/): a widget tour, a cockpit display, and reusable
+  components (console, node editor, plots, curve editor, timeline, property
+  inspector, shortcut editor, toasts).
+- [Building from source](docs/BUILD.md).
 
 ## License
 

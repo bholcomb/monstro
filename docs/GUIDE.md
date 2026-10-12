@@ -2385,7 +2385,8 @@ All examples share a common application shell (`examples/common/example_app.h`)
 that handles GLFW window creation, Vulkan rendering via VulkEase, the Monstro
 environment and context, input forwarding, and the main loop.  To create a new example,
 define an `ExampleAppDesc` with init/update callbacks and call
-`example_app_run`.
+`example_app_run`.  To build and run them, see
+[Building Monstro](BUILD.md#examples).
 
 ### basic
 
