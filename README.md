@@ -9,7 +9,7 @@ You describe the UI in code every frame. Monstro hands back vertices, indices
 and draw commands, and your renderer draws them, to the screen or onto render
 targets.
 
-<!-- screenshot: docs/images/... -->
+![The cockpit example: an artificial horizon, readouts, a heading dial, gauges and bar meters, all drawn by Monstro](docs/images/cockpit.png)
 
 ## Example
 
