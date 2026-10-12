@@ -337,6 +337,59 @@ float monstro_font_measure_prefix(MonstroFont *font, const char *text_utf8, size
    return measure_unwrapped(font, text_utf8, text_utf8 + bytes).x;
 }
 
+MonstroTextLine monstro_font_wrap_line(MonstroFont *font, const char *text_utf8, float wrap_width)
+{
+   float icon_size = font->line_height;
+   float width = 0.0f;
+   // Where the line breaks if it fills: at the start of the last run of spaces that follows something on it.
+   const char *last_space = nullptr;
+   float width_at_last_space = 0.0f;
+   bool after_space = false;
+
+   const char *s = text_utf8;
+   while (*s)
+   {
+      const char *item = s;
+      float advance = 0.0f;
+      bool is_space = false;
+      uint32_t icon_id;
+      if (parse_icon_tag(&s, &icon_id))
+      {
+         advance = icon_size;
+      }
+      else
+      {
+         uint32_t codepoint = decode_utf8(&s);
+         if (codepoint == '\n')
+            return {item, s, width, true};
+         if (codepoint == '\r')
+            continue;
+         is_space = codepoint == ' ';
+         if (codepoint >= font->first_code_point && codepoint < font->first_code_point + font->glyph_count)
+            advance = font->glyphs[codepoint - font->first_code_point].advance[0];
+      }
+
+      if (is_space && !after_space && width > 0.0f)
+      {
+         last_space = item;
+         width_at_last_space = width;
+      }
+      after_space = is_space;
+
+      if (wrap_width > 0.0f && width + advance > wrap_width && width > 0.0f)
+      {
+         if (!last_space)
+            return {item, item, width, false};
+         const char *next = last_space;
+         while (*next == ' ')
+            next++;
+         return {last_space, next, width_at_last_space, false};
+      }
+      width += advance;
+   }
+   return {s, s, width, false};
+}
+
 MonstroVec2 monstro_font_measure_text_wrapped(MonstroFont *font, const char *text_utf8, float wrap_width)
 {
    MonstroVec2 result = {0.0f, 0.0f};
@@ -346,62 +399,19 @@ MonstroVec2 monstro_font_measure_text_wrapped(MonstroFont *font, const char *tex
       return result;
    }
 
-   float width = 0;
    float max_width = 0;
-   int line_count = 1;
-   float icon_size = font->line_height;
-
+   int line_count = 0;
    const char *s = text_utf8;
-   while (*s)
+   for (;;)
    {
-      uint32_t icon_id;
-      if (parse_icon_tag(&s, &icon_id))
-      {
-         if (width + icon_size > wrap_width && width > 0)
-         {
-            if (width > max_width)
-               max_width = width;
-            width = 0;
-            line_count++;
-         }
-         width += icon_size;
-         continue;
-      }
-
-      uint32_t codepoint = decode_utf8(&s);
-
-      if (codepoint == '\n')
-      {
-         if (width > max_width)
-            max_width = width;
-         width = 0;
-         line_count++;
-         continue;
-      }
-
-      if (codepoint == '\r')
-         continue;
-
-      float advance = 0;
-      if (codepoint >= font->first_code_point && codepoint < font->first_code_point + font->glyph_count)
-      {
-         MonstroGlyph *g = &font->glyphs[codepoint - font->first_code_point];
-         advance = g->advance[0];
-      }
-
-      if (width + advance > wrap_width && width > 0)
-      {
-         if (width > max_width)
-            max_width = width;
-         width = 0;
-         line_count++;
-      }
-
-      width += advance;
+      MonstroTextLine line = monstro_font_wrap_line(font, s, wrap_width);
+      line_count++;
+      if (line.width > max_width)
+         max_width = line.width;
+      if (!*line.next && !line.hard_break)
+         break;
+      s = line.next;
    }
-
-   if (width > max_width)
-      max_width = width;
 
    result.x = max_width;
    result.y = font->line_height * line_count;

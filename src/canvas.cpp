@@ -758,62 +758,49 @@ void Canvas::addTextRun(MonstroFont *font, MonstroVec2 pos, uint32_t color, cons
                         const Turn *turn)
 {
    uint64_t atlas_texture = env->atlas.texture_id;
-   float pen_x = pos.x;
    float line_y = 0;
    float line_height = monstro_font_get_line_height(font);
    float ascent = monstro_font_get_ascent(font);
-   bool wrap = wrap_width > 0.0f;
 
    const char *s = text;
-   while (*s)
+   for (;;)
    {
-      uint32_t icon_id;
-      if (parse_icon_tag(&s, &icon_id))
+      MonstroTextLine line = monstro_font_wrap_line(font, s, wrap_width);
+      float pen_x = pos.x;
+      while (s < line.end)
       {
-         const IconEntry *icon = icon_id ? env->icons.find(icon_id) : nullptr;
-         if (!icon)
-            continue;
-         float icon_sz = line_height;
-         if (wrap && pen_x - pos.x + icon_sz > wrap_width && pen_x > pos.x)
+         uint32_t icon_id;
+         if (parse_icon_tag(&s, &icon_id))
          {
-            pen_x = pos.x;
-            line_y += line_height;
+            const IconEntry *icon = icon_id ? env->icons.find(icon_id) : nullptr;
+            if (!icon)
+               continue;
+            float icon_sz = line_height;
+            MonstroRect icon_rect = {pen_x, pos.y + line_y, icon_sz, icon_sz};
+            addGlyph(icon->in_atlas ? atlas_texture : icon->texture_id, icon_rect, icon->uv_min, icon->uv_max,
+                     icon->is_monochrome ? color : 0xFFFFFFFF, turn);
+            pen_x += icon_sz;
+            continue;
          }
-         MonstroRect icon_rect = {pen_x, pos.y + line_y, icon_sz, icon_sz};
-         addGlyph(icon->in_atlas ? atlas_texture : icon->texture_id, icon_rect, icon->uv_min, icon->uv_max,
-                  icon->is_monochrome ? color : 0xFFFFFFFF, turn);
-         pen_x += icon_sz;
-         continue;
-      }
 
-      uint32_t codepoint = decode_utf8(&s);
-      if (codepoint == '\n')
-      {
-         pen_x = pos.x;
-         line_y += line_height;
-         continue;
-      }
-      if (codepoint == '\r')
-         continue;
+         uint32_t codepoint = decode_utf8(&s);
+         MonstroGlyph glyph;
+         if (codepoint == '\r' || !monstro_font_get_glyph(font, codepoint, &glyph))
+            continue;
 
-      MonstroGlyph glyph;
-      if (!monstro_font_get_glyph(font, codepoint, &glyph))
-         continue;
-
-      if (wrap && pen_x - pos.x + glyph.advance[0] > wrap_width && pen_x > pos.x)
-      {
-         pen_x = pos.x;
-         line_y += line_height;
+         if (glyph.size[0] > 0 && glyph.size[1] > 0)
+         {
+            MonstroRect rect = {pen_x + glyph.offset[0], pos.y + line_y + glyph.offset[1] + ascent, glyph.size[0],
+                                glyph.size[1]};
+            addGlyph(atlas_texture, rect, {glyph.min_tex_coord[0], glyph.min_tex_coord[1]},
+                     {glyph.max_tex_coord[0], glyph.max_tex_coord[1]}, color, turn);
+         }
+         pen_x += glyph.advance[0];
       }
-
-      if (glyph.size[0] > 0 && glyph.size[1] > 0)
-      {
-         MonstroRect rect = {pen_x + glyph.offset[0], pos.y + line_y + glyph.offset[1] + ascent, glyph.size[0],
-                             glyph.size[1]};
-         addGlyph(atlas_texture, rect, {glyph.min_tex_coord[0], glyph.min_tex_coord[1]},
-                  {glyph.max_tex_coord[0], glyph.max_tex_coord[1]}, color, turn);
-      }
-      pen_x += glyph.advance[0];
+      if (!*line.next && !line.hard_break)
+         break;
+      s = line.next;
+      line_y += line_height;
    }
 }
 

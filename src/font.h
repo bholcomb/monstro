@@ -21,4 +21,17 @@ struct MonstroFont
 // Width of the first `bytes` bytes of text, which end on a code point boundary.
 float monstro_font_measure_prefix(MonstroFont *font, const char *text_utf8, size_t bytes);
 
+// One line of text that starts at a given point: the line is the text up to end, it is width wide, and the next
+// line starts at next. A line ends at a newline (hard_break) or where it would grow wider than wrap_width (no limit
+// when that is not positive): after its last word, or within a word too long for a whole line. The spaces where
+// it breaks belong to neither line. Measuring and drawing break lines here, so they always agree.
+struct MonstroTextLine
+{
+   const char *end;
+   const char *next;
+   float width;
+   bool hard_break;
+};
+MonstroTextLine monstro_font_wrap_line(MonstroFont *font, const char *text_utf8, float wrap_width);
+
 #endif

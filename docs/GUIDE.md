@@ -581,6 +581,9 @@ MonstroVec2 size = monstro_font_measure_text(font, "Hello World", 0.0f);
 MonstroVec2 wrapped = monstro_font_measure_text_wrapped(font, long_text, 200.0f);
 ```
 
+Wrapped text breaks at newlines and at spaces; a word longer than a whole line
+breaks where the line is full. Measuring and drawing break lines the same way.
+
 ---
 
 ## Core Concepts

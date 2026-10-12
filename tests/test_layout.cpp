@@ -1,6 +1,7 @@
 // Where widgets put their parts: labels, values and fields stay in the room they are given.
 #include "harness.h"
 #include <cmath>
+#include <vector>
 
 static bool near(float a, float b, float tolerance = 0.01f) { return std::fabs(a - b) < tolerance; }
 
@@ -203,4 +204,56 @@ TEST(the_item_after_columns_follows_their_last_row)
 
    // The next item comes straight after the last row, as it would after the same labels one under another.
    CHECK(near(after.y, last_cell.y + last_cell.h) && after.x == first_cell.x);
+}
+
+// The glyph quads drawn in vertices first..last (only glyphs: four vertices each), counted per line of text drawn
+// from top down in lines line_height apart.
+static std::vector<int> glyphs_per_line(const MonstroDrawData *data, uint32_t first, uint32_t last, float top,
+                                        float line_height)
+{
+   std::vector<int> lines;
+   for (uint32_t i = first; i + 3 < last; i += 4)
+   {
+      float middle = (data->vertices[i].position[1] + data->vertices[i + 2].position[1]) * 0.5f;
+      size_t line = (size_t)std::floor((middle - top) / line_height);
+      if (lines.size() <= line)
+         lines.resize(line + 1, 0);
+      lines[line]++;
+   }
+   return lines;
+}
+
+TEST(wrapped_text_breaks_between_words_and_measures_as_drawn)
+{
+   Ui ui;
+   const float line_height = monstro_font_get_line_height(ui.font);
+   struct Case
+   {
+      const char *text;
+      const char *fits; // the text that sets the wrap width
+      std::vector<int> glyphs;
+   };
+   const Case cases[] = {
+       // The second word does not fit after the first, so it starts the next line whole.
+       {"aaaa bbbbbbbb", "aaaa bbbb", {4, 8}},
+       // An underscore joins a word: it is not a place to break.
+       {"the monstro_label_wrapped function", "monstro_label_wrapped", {3, 21, 8}},
+       // A word longer than a whole line breaks where the line is full.
+       {"aaaaaaaaaaaa", "aaaaa", {5, 5, 2}},
+   };
+   for (const Case &c : cases)
+   {
+      float wrap_width = monstro_font_measure_text(ui.font, c.fits, 0.0f).x + 0.5f;
+      begin_page(ui);
+      uint32_t first = ui.vertexCount();
+      monstro_draw_text_wrapped(monstro_get_window_canvas(ui.ctx), ui.font, {50, 50}, 0xffffffff, c.text, wrap_width);
+      uint32_t last = ui.vertexCount();
+      monstro_end_window(ui.ctx);
+      const MonstroDrawData *data = ui.end();
+
+      CHECK(glyphs_per_line(data, first, last, 50.0f, line_height) == c.glyphs);
+      MonstroVec2 measured = monstro_font_measure_text_wrapped(ui.font, c.text, wrap_width);
+      CHECK(near(measured.y, line_height * (float)c.glyphs.size()));
+      CHECK(measured.x <= wrap_width);
+   }
 }
