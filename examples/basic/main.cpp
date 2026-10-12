@@ -319,7 +319,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_begin_columns_ex(ctx, "cols_form", 3, col_widths);
       monstro_label(ctx, "Name:");
       monstro_next_column(ctx);
-      monstro_input_text(ctx, "col_name##Name", d->textInput, sizeof(d->textInput), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      monstro_input_text(ctx, "col_name##", d->textInput, sizeof(d->textInput), MONSTRO_INPUT_TEXT_NONE, nullptr);
       monstro_next_column(ctx);
       if (monstro_button(ctx, "Clear", nullptr))
       {
@@ -329,7 +329,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
 
       monstro_label(ctx, "Volume:");
       monstro_next_column(ctx);
-      monstro_slider_float(ctx, "col_vol##Vol", &d->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
+      monstro_slider_float(ctx, "col_vol##", &d->sliderValue, 0.0f, 1.0f, "%.2f", nullptr);
       monstro_next_column(ctx);
       if (monstro_button(ctx, "vol_reset##Reset", nullptr))
       {
@@ -404,10 +404,17 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
          monstro_table_setup_column(ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, 80.0f);
          monstro_table_headers_row(ctx);
 
+         // Without padding, labels and buttons are one line tall at the top of their cells: level, and inside
+         // the row.
          MonstroStyleButton btn_s = *monstro_get_button_style(ctx);
          btn_s.padding[0] = 0.0f;
          btn_s.padding[1] = 0.0f;
          monstro_push_button_style(ctx, &btn_s);
+
+         MonstroStyleText label_s = *monstro_get_text_style(ctx);
+         label_s.padding[0] = 0.0f;
+         label_s.padding[1] = 0.0f;
+         monstro_push_text_style(ctx, &label_s);
 
          monstro_table_next_row(ctx);
          monstro_table_next_column(ctx);
@@ -442,7 +449,7 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
             printf("Reset Gamma\n");
          }
 
-         monstro_pop_style(ctx, 1);
+         monstro_pop_style(ctx, 2);
 
          monstro_end_table(ctx);
       }
@@ -472,6 +479,8 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
          MonstroStyleProperty prop_s = *monstro_get_property_style(ctx);
          prop_s.padding[0] = 0.0f;
          prop_s.padding[1] = 0.0f;
+         prop_s.edit.padding[0] = 0.0f;
+         prop_s.edit.padding[1] = 0.0f;
          monstro_push_property_style(ctx, &prop_s);
 
          MonstroStyleText text_s = *monstro_get_text_style(ctx);

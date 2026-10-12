@@ -1389,14 +1389,14 @@ float widths[] = { 100.0f, 0.0f, 80.0f };
 monstro_begin_columns_ex(ctx, "form", 3, widths);
     monstro_label(ctx, "Name:");
     monstro_next_column(ctx);
-    monstro_input_text(ctx, "n##Name", name, sizeof(name), 0, NULL);
+    monstro_input_text(ctx, "n##", name, sizeof(name), 0, NULL);
     monstro_next_column(ctx);
     monstro_button(ctx, "Clear", NULL);
     monstro_next_column(ctx);   /* wraps to column 0 of next row */
 
     monstro_label(ctx, "Volume:");
     monstro_next_column(ctx);
-    monstro_slider_float(ctx, "v##Vol", &vol, 0, 1, "%.2f", NULL);
+    monstro_slider_float(ctx, "v##", &vol, 0, 1, "%.2f", NULL);
     monstro_next_column(ctx);
     monstro_button(ctx, "Reset", NULL);
     monstro_next_column(ctx);
