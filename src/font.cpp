@@ -188,6 +188,8 @@ MonstroFont *monstro_font_load_bitmap(MonstroEnv *env, const char *name, const v
       glyphs[i].max_tex_coord[1] = (cy + cell_h) / (float)atlas->height;
       glyphs[i].size[0] = font_size_px;
       glyphs[i].size[1] = font_size_px;
+      // Offsets are from the baseline, which is the ascent (the whole cell) below the top of the line
+      glyphs[i].offset[1] = -font_size_px;
       glyphs[i].advance[0] = font_size_px * 0.6f;
    }
 

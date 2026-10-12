@@ -1,6 +1,7 @@
 // Drawing output.
 #include "harness.h"
 #include <cmath>
+#include <cstring>
 
 TEST(rounded_rect_corners_lie_on_their_arcs)
 {
@@ -76,4 +77,31 @@ TEST(text_aligns_left_centre_and_right_as_named)
    CHECK(none.x == left.x && none.y == left.y);
    CHECK(preset_default.x == left.x && preset_default.y == middle.y);
    CHECK(preset_centre.x == centre.x && preset_centre.y == middle.y);
+}
+
+// A bitmap font's glyph fills the line its text starts on, from the top of the text to font_size below it, as a
+// TrueType font's glyphs sit within their line.
+TEST(bitmap_font_text_draws_on_its_own_line)
+{
+   Ui ui(false);
+   const float size = 16.0f;
+   static uint8_t pixels[16 * 8 * 4];
+   memset(pixels, 0xff, sizeof(pixels));
+   MonstroFont *font = monstro_font_load_bitmap(ui.env, "cells", pixels, 16, 8, 2, 1, 'A', size);
+   CHECK(font != nullptr);
+
+   ui.begin();
+   uint32_t first = ui.vertexCount();
+   monstro_draw_text(monstro_get_window_canvas(ui.ctx), font, {100.0f, 100.0f}, 0xffffffff, "A");
+   const MonstroDrawData *data = ui.end();
+
+   CHECK(data->vertex_count > first);
+   float top = INFINITY, bottom = -INFINITY;
+   for (uint32_t i = first; i < data->vertex_count; i++)
+   {
+      top = std::fmin(top, data->vertices[i].position[1]);
+      bottom = std::fmax(bottom, data->vertices[i].position[1]);
+   }
+   CHECK(near(top, 100.0f));
+   CHECK(near(bottom, 100.0f + size));
 }
