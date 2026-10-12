@@ -1,9 +1,9 @@
 {
   "repository": "bholcomb/buildy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "sha256": {
-    "linux-x64": "66506cdbc133f696c93f70f7daabbaf91258b2db316ebb631114c6b09772d943",
-    "win-x64": "68e87174e7a9e029716d2648243a07af21604c61d534d7a22c992044586d4e0d",
-    "osx-arm64": "2c6bb677528094957f41d8238482aa20c5dbd18f8e7959bcb2f09c9ef97daf98"
+    "linux-x64": "491a60f8fb281a8c258968f2856ef371e230f2b85133604fc5aad6c32e51a33d",
+    "win-x64": "62746814366b12e8b61021c457b6882abb9ce038ce6f6f1bd968c03a23ed170c",
+    "osx-arm64": "8fcf9161dd449d353bd133f6aa4bc2b422656395f94f0476240e1ff21a9b5f7f"
   }
 }
