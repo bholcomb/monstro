@@ -35,7 +35,25 @@ struct BasicDemo
    VETexture iconAtlasTexture;
    uint64_t iconAtlasTextureId;
    MonstroIconId firstIconId;
+
+   // The Theme menu picks a theme during a frame; it takes effect before the next one.
+   const char *nextTheme;
 };
+
+// The Theme menu: the themes monstro_init registers.
+static const char *const THEMES[] = {"default", "dark", "light"};
+
+static bool is_theme_name(const char *name)
+{
+   for (const char *theme : THEMES)
+   {
+      if (strcmp(theme, name) == 0)
+      {
+         return true;
+      }
+   }
+   return false;
+}
 
 static void basic_init(ExampleApp *app, void *ud)
 {
@@ -68,6 +86,18 @@ static void basic_init(ExampleApp *app, void *ud)
    d->firstIconId = 1;
    monstro_register_icon_atlas(app->env, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h, cols,
                                rows);
+}
+
+// A context's theme changes only between frames.
+static void basic_before_frame(ExampleApp *app, void *ud, float dt)
+{
+   (void)dt;
+   BasicDemo *d = (BasicDemo *)ud;
+   if (d->nextTheme)
+   {
+      monstro_context_set_theme(app->ui, monstro_theme_find(app->env, d->nextTheme));
+      d->nextTheme = nullptr;
+   }
 }
 
 static void basic_update(ExampleApp *app, void *ud, float dt)
@@ -127,6 +157,19 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
             if (monstro_menu_item(ctx, "Paste", nullptr, true))
             {
                printf("Menu: Paste clicked\n");
+            }
+            monstro_end_menu(ctx);
+         }
+         if (monstro_begin_menu(ctx, "Theme", true))
+         {
+            const char *current = monstro_theme_get_name(monstro_context_get_theme(ctx));
+            for (const char *theme : THEMES)
+            {
+               bool selected = strcmp(theme, current) == 0;
+               if (monstro_menu_item(ctx, theme, &selected, true))
+               {
+                  d->nextTheme = theme;
+               }
             }
             monstro_end_menu(ctx);
          }
@@ -688,10 +731,19 @@ static void basic_shutdown(ExampleApp *app, void *ud)
 
 int main(int argc, char *argv[])
 {
-   (void)argc;
-   (void)argv;
-
    BasicDemo demo = {};
+   // --theme NAME starts in that theme, for screenshots.
+   for (int i = 1; i < argc; i++)
+   {
+      if (strcmp(argv[i], "--theme") == 0 && i + 1 < argc && is_theme_name(argv[i + 1]))
+      {
+         demo.nextTheme = argv[++i];
+         continue;
+      }
+      fprintf(stderr, "usage: monstro_basic [--theme default|dark|light]\n");
+      return 2;
+   }
+
    strncpy(demo.tableNames[0], "Alpha", sizeof(demo.tableNames[0]));
    strncpy(demo.tableNames[1], "Beta", sizeof(demo.tableNames[1]));
    strncpy(demo.tableNames[2], "Gamma", sizeof(demo.tableNames[2]));
@@ -709,6 +761,7 @@ int main(int argc, char *argv[])
    desc.height = 1024;
    desc.user_data = &demo;
    desc.init = basic_init;
+   desc.before_frame = basic_before_frame;
    desc.update = basic_update;
    desc.shutdown = basic_shutdown;
 

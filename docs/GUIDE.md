@@ -2408,7 +2408,8 @@ define an `ExampleAppDesc` with init/update callbacks and call
 The kitchen-sink demo (`examples/basic/main.cpp`).  Exercises most of the
 widget catalog in a single window: labels, buttons, checkboxes, sliders, knobs,
 text input, tables, trees, tabs, color picker, child scroll regions, file
-dialog, menus, and more.  Also serves as the reference for GLFW/Vulkan
+dialog, menus, and more.  Its Theme menu switches between the built-in themes
+(`--theme NAME` starts in one).  Also serves as the reference for GLFW/Vulkan
 integration.
 
 ### interaction

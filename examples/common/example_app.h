@@ -11,6 +11,8 @@
  *        void example_update(ExampleApp* app, void* user_data, float dt);
  *        void example_shutdown(ExampleApp* app, void* user_data);
  *   3. Call example_app_run() from main().
+ *   Optionally, set before_frame: it runs each frame before monstro_begin_frame,
+ *   where a context's theme can change.
  */
 #ifndef MONSTRO_EXAMPLE_APP_H
 #define MONSTRO_EXAMPLE_APP_H
@@ -78,6 +80,7 @@ struct ExampleAppDesc
    float font_size;
    void *user_data;
    ExampleInitFn init;
+   ExampleUpdateFn before_frame; // optional: runs outside the frame, before monstro_begin_frame
    ExampleUpdateFn update;
    ExampleShutdownFn shutdown;
 };
@@ -542,6 +545,8 @@ static int example_app_run(const ExampleAppDesc &desc)
       float dt = (float)(now - lastTime);
       lastTime = now;
 
+      if (desc.before_frame)
+         desc.before_frame(&app, desc.user_data, dt);
       monstro_begin_frame(app.ui, dt);
       if (desc.update)
          desc.update(&app, desc.user_data, dt);
