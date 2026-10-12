@@ -1,10 +1,9 @@
 {
-  "todo": "TODO: buildy has no release yet. When it does, set version (without the v) and each platform archive's SHA-256 from its SHA256SUMS.",
   "repository": "bholcomb/buildy",
-  "version": null,
+  "version": "0.2.0",
   "sha256": {
-    "linux-x64": null,
-    "win-x64": null,
-    "osx-arm64": null
+    "linux-x64": "66506cdbc133f696c93f70f7daabbaf91258b2db316ebb631114c6b09772d943",
+    "win-x64": "68e87174e7a9e029716d2648243a07af21604c61d534d7a22c992044586d4e0d",
+    "osx-arm64": "2c6bb677528094957f41d8238482aa20c5dbd18f8e7959bcb2f09c9ef97daf98"
   }
 }
