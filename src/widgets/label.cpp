@@ -13,6 +13,9 @@ void monstro_label(MonstroContext *ctx, const char *text)
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
+   // Space before the label, as other widgets leave before themselves, so its text is level with theirs.
+   monstro_add_item(ctx, style->text.padding[0], style->text.padding[1]);
+
    MonstroVec2 text_size = monstro_font_measure_text(font, text, 0.0f);
    if (text_size.x == 0.0f && text_size.y == 0.0f)
    {
@@ -49,6 +52,9 @@ void monstro_label_sized(MonstroContext *ctx, const char *text, float width, flo
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
+   // Space before the label, as other widgets leave before themselves, so its text is level with theirs.
+   monstro_add_item(ctx, style->text.padding[0], style->text.padding[1]);
+
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect text_rect = {pos.x, pos.y, width, height};
 
@@ -71,6 +77,9 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
    MonstroStyle *style = &ctx->style();
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
+
+   // Space before the label, as other widgets leave before themselves, so its text is level with theirs.
+   monstro_add_item(ctx, style->text.padding[0], style->text.padding[1]);
 
    float padding_x = style->text.padding[0];
    float padding_y = style->text.padding[1];
@@ -121,6 +130,9 @@ void monstro_label_colored(MonstroContext *ctx, const char *text, MonstroColor c
    MonstroStyle *style = &ctx->style();
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
+
+   // Space before the label, as other widgets leave before themselves, so its text is level with theirs.
+   monstro_add_item(ctx, style->text.padding[0], style->text.padding[1]);
 
    MonstroVec2 text_size = monstro_font_measure_text(font, text, 0.0f);
    if (text_size.x == 0.0f && text_size.y == 0.0f)

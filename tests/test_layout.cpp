@@ -202,8 +202,9 @@ TEST(the_item_after_columns_follows_their_last_row)
    monstro_end_window(ui.ctx);
    ui.end();
 
-   // The next item comes straight after the last row, as it would after the same labels one under another.
-   CHECK(near(after.y, last_cell.y + last_cell.h) && after.x == first_cell.x);
+   // The next item comes straight after the last row, as it would after the same labels one under another: past
+   // the space a label leaves before itself (the default text padding).
+   CHECK(near(after.y, last_cell.y + last_cell.h + 4.0f) && after.x == first_cell.x);
 }
 
 // The glyph quads drawn in vertices first..last (only glyphs: four vertices each), counted per line of text drawn
@@ -298,4 +299,54 @@ TEST(a_wrapped_label_stops_where_full_width_widgets_do)
    CHECK(near(label.x + label.w, field.x + field.w));
    CHECK(!glyphs.empty() && glyphs.x0 >= label.x && glyphs.x1 <= field.x + field.w);
    CHECK(label.h > 2.0f * monstro_font_get_line_height(ui.font));
+}
+
+TEST(a_label_is_level_with_the_text_of_widgets_beside_it)
+{
+   Ui ui;
+   char text[8] = "x";
+   for (int arrangement = 0; arrangement < 2; arrangement++)
+   {
+      for (int variant = 0; variant < 3; variant++)
+      {
+         // A label, a button and a text field side by side: in three columns of one row, then in one horizontal
+         // layout. Each shows the same glyph, so the glyphs' tops match when their text is level.
+         uint32_t white = begin_page(ui);
+         monstro_set_cursor_screen_pos(ui.ctx, 50, 50);
+         if (arrangement == 0)
+            monstro_begin_columns(ui.ctx, "row", 3);
+         else
+            monstro_begin_layout(ui.ctx, MONSTRO_LAYOUT_HORIZONTAL);
+         uint32_t marks[4];
+         marks[0] = ui.vertexCount();
+         if (variant == 0)
+            monstro_label(ui.ctx, "x");
+         else if (variant == 1)
+            monstro_label_colored(ui.ctx, "x", monstro_color_rgb(1.0f, 0.3f, 0.3f));
+         else
+            monstro_label_wrapped(ui.ctx, "x", 100.0f);
+         marks[1] = ui.vertexCount();
+         if (arrangement == 0)
+            monstro_next_column(ui.ctx);
+         monstro_button(ui.ctx, "x", nullptr);
+         marks[2] = ui.vertexCount();
+         if (arrangement == 0)
+            monstro_next_column(ui.ctx);
+         monstro_input_text(ui.ctx, "field##", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+         marks[3] = ui.vertexCount();
+         if (arrangement == 0)
+            monstro_end_columns(ui.ctx);
+         else
+            monstro_end_layout(ui.ctx);
+         monstro_end_window(ui.ctx);
+         const MonstroDrawData *data = ui.end();
+
+         Bounds label = glyph_bounds(data, white, marks[0], marks[1]);
+         Bounds button = glyph_bounds(data, white, marks[1], marks[2]);
+         Bounds field = glyph_bounds(data, white, marks[2], marks[3]);
+         CHECK(!label.empty() && !button.empty() && !field.empty());
+         CHECK(near(label.y0, button.y0, 0.5f) && near(label.y0, field.y0, 0.5f));
+         CHECK(near(label.y1, button.y1, 0.5f) && near(label.y1, field.y1, 0.5f));
+      }
+   }
 }
