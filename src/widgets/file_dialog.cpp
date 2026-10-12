@@ -68,6 +68,23 @@ static void add_filter_option(MonstroFileDialogState *state, const char *label, 
    opt->pattern[sizeof(opt->pattern) - 1] = '\0';
 }
 
+/* The next field of a '|'-separated filter spec, as strtok_r splits it (Windows has no strtok_r): a run
+ * of separators ends one field, so empty fields are skipped. Null after the last field. */
+static char *next_filter_field(char **cursor)
+{
+   char *start = *cursor + strspn(*cursor, "|");
+   if (*start == '\0')
+   {
+      *cursor = start;
+      return nullptr;
+   }
+   char *end = start + strcspn(start, "|");
+   if (*end != '\0')
+      *end++ = '\0';
+   *cursor = end;
+   return start;
+}
+
 static void parse_filter_options(MonstroFileDialogState *state)
 {
    state->filter_option_count = 0;
@@ -89,15 +106,15 @@ static void parse_filter_options(MonstroFileDialogState *state)
    strncpy(spec, state->filter_spec, sizeof(spec) - 1);
    spec[sizeof(spec) - 1] = '\0';
 
-   char *save = nullptr;
-   char *label = strtok_r(spec, "|", &save);
+   char *cursor = spec;
+   char *label = next_filter_field(&cursor);
    while (label)
    {
-      char *pattern = strtok_r(nullptr, "|", &save);
+      char *pattern = next_filter_field(&cursor);
       if (!pattern)
          break;
       add_filter_option(state, label, pattern);
-      label = strtok_r(nullptr, "|", &save);
+      label = next_filter_field(&cursor);
    }
 
    if (state->filter_option_count == 0)
