@@ -2,41 +2,14 @@
 
 [![build](https://github.com/bholcomb/monstro/actions/workflows/build.yml/badge.svg)](https://github.com/bholcomb/monstro/actions/workflows/build.yml)
 
-Monstro is an immediate-mode GUI library with complete theming.
+**An immediate-mode GUI for C and C#, themable down to the pixel and drawn by
+any renderer: from editor tool windows to in-game cockpit screens.**
 
 You describe the UI in code every frame. Monstro hands back vertices, indices
-and draw commands, and your renderer draws them. Use it for tool and editor
-windows, in-game menus and HUDs, or cockpit screens drawn onto render targets.
+and draw commands, and your renderer draws them, to the screen or onto render
+targets.
 
-## Features
-
-- **C API.** One header, `monstro.h`, for C11 and C++17. No hidden global
-  state: every call names the environment or the UI it acts on.
-- **Theming.** Three built-in themes (default, dark and light) and as many of
-  your own as you register. Every widget type has its own style, and a style
-  value can be a colour, an image, a sprite from an atlas or a nine-patch, so a
-  theme can be artwork rather than flat colours. A theme also picks its font,
-  TrueType or bitmap. Push overrides for part of a frame without changing the
-  theme.
-- **Any graphics backend.** Monstro never touches the GPU. Draw its output with
-  Vulkan, OpenGL, Direct3D, Metal or an engine's own renderer: anything that
-  draws indexed, textured triangles with a scissor rectangle. It can also write
-  each frame straight into your own vertex and index buffers, in the vertex
-  layout you choose. The examples render with Vulkan.
-- **.NET bindings.** A .NET 8 binding with the whole C API, one to one, and a
-  managed layer on top whose draw data is a zero-copy view of the native frame.
-- **Many UIs, of many kinds.** One environment holds the fonts, atlas and
-  themes; each UI (a screen, a panel, a tool window) is a small context on it,
-  so a game can run many screens at once. The widgets cover desktop tools and
-  game screens alike: windows, menus, popups and modals, tooltips, buttons,
-  checkboxes, radio buttons, sliders, knobs, progress bars, text and number
-  fields, combo boxes, trees, tabs, tables, a colour picker and a file dialog,
-  plus cockpit controls such as vertical sliders and bars, page tabs and knobs
-  that follow the pointer. A drawing API (shapes, ellipses, curves, paths,
-  rotated text and images) builds the rest: gauges, graphs, node editors,
-  artificial horizons.
-- **Platforms.** Prebuilt for Linux x64, Windows x64 and macOS on Apple
-  Silicon.
+<!-- screenshot: docs/images/... -->
 
 ## Example
 
@@ -126,12 +99,35 @@ while (running)
 }
 ```
 
+## Why Monstro?
+
+- **A C API with no hidden state.** One header, `monstro.h`, for C11 and C++17;
+  every call names the environment or the UI it acts on.
+- **Complete theming.** Three built-in themes and as many of your own, with a
+  style for every widget type. A style value can be a colour, an image, an
+  atlas sprite or a nine-patch, so a theme can be artwork, with its own
+  TrueType or bitmap font.
+- **Any renderer.** Monstro never touches the GPU and ships no backend: draw
+  its indexed, textured triangles with Vulkan, OpenGL, Direct3D, Metal or an
+  engine's renderer, or have it write straight into your own vertex and index
+  buffers. The examples render with Vulkan.
+- **Many UIs at once.** One environment holds the fonts, atlas and themes; each
+  UI (a screen, a panel, a tool window) is a lightweight context on it.
+- **Widgets for tools and games.** Windows, menus, popups, tabs, trees, tables,
+  text fields, a colour picker and a file dialog, plus cockpit controls:
+  vertical sliders and bars, knobs, page tabs. A drawing API (shapes, curves,
+  paths, rotated text and images) builds the rest: gauges, graphs, node
+  editors.
+- **.NET binding.** A .NET 8 binding with the whole C API, one to one, and a
+  managed layer whose draw data is a zero-copy view of the native frame.
+
 ## Getting Monstro
 
+Monstro is prebuilt for Linux x64, Windows x64 and macOS on Apple Silicon.
 Each [release](https://github.com/bholcomb/monstro/releases) holds an archive
-for every platform, with a `SHA256SUMS` file. An archive unpacks to one
-directory, `monstro-<version>-<platform>/`, holding the public headers in
-`include/`, the library and `LICENSE`:
+for each, with a `SHA256SUMS` file. An archive unpacks to one directory,
+`monstro-<version>-<platform>/`, holding the public headers in `include/`, the
+library and `LICENSE`:
 
 | Platform | Archive | Library |
 | --- | --- | --- |
@@ -146,6 +142,15 @@ For .NET, reference
 and put the library beside your app.
 
 To build from source, see [docs/BUILD.md](docs/BUILD.md).
+
+## Status
+
+No version is tagged yet, and the API may still change. Some declared flags do
+nothing yet: table sorting, scrolling and hidden columns
+(`MONSTRO_TABLE_SORTABLE`, `MONSTRO_TABLE_SCROLL_X`, `MONSTRO_TABLE_SCROLL_Y`,
+`MONSTRO_TABLE_COLUMN_NO_SORT`, `MONSTRO_TABLE_COLUMN_DEFAULT_HIDDEN`),
+reorderable tabs (`MONSTRO_TAB_BAR_REORDERABLE`), and the button flags
+`MONSTRO_BUTTON_FLATTEN_CHILDREN` and `MONSTRO_BUTTON_ALIGN_TEXT_BASELINE`.
 
 ## Documentation
 
