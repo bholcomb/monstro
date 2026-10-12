@@ -204,9 +204,9 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
 
    float avail_w = win->size.x - style->window.padding[0] * 2.0f;
    monstro::Layout *layout = win->getCurrentLayout();
-   if (layout && layout->myAvailableWidth > 0.0f)
+   if (layout && layout->fillWidth() > 0.0f)
    {
-      avail_w = layout->myAvailableWidth;
+      avail_w = layout->fillWidth();
    }
 
    float row_h = text_size.y + ts->padding[1] * 2.0f;

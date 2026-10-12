@@ -94,8 +94,7 @@ static void clear_borders(MonstroStyle *s)
    s->window.group_border = 0.0f;
 }
 
-// Room for the art's rims, and the scrollbars as wide as their art. The padding across stays small: widgets that
-// fill the window's width start a padding in from its left edge and run its full width, past the right one.
+// Room for the art's rims, and the scrollbars as wide as their art.
 static void set_sizes(MonstroStyle *s, float padding_down, float scrollbar)
 {
    s->window.padding[0] = 6.0f;

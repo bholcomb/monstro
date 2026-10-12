@@ -183,10 +183,9 @@ bool Window::begin(bool *p_open)
       Layout *content = getCurrentLayout();
       content->myScrollOffsetX = -scroll_x;
       content->myScrollOffsetY = -scroll_y;
-      content->myAvailableWidth = content_view_width;
+      content->myContentRight = getContentRight();
       content->myAvailableHeight = content_view_height;
       MonstroVec2 cursor = getCursorScreenPos();
-      content->myVisibleMaxScreenX = cursor.x + content_view_width;
       content->myVisibleMaxScreenY = cursor.y + content_view_height;
    }
 
@@ -615,8 +614,7 @@ void Window::pushContentClipRect()
       // The content starts a padding in from the window's edge, so the clip reaches a padding past the view,
       // up to a scrollbar where there is one.
       const MonstroStyle &style = ctx->style();
-      if (!show_scrollbar_y)
-         content_rect.w += style.window.padding[0];
+      content_rect.w = getContentRight();
       if (!show_scrollbar_x)
          content_rect.h += style.window.padding[1];
       canvas().pushClipRect(content_rect);
@@ -877,6 +875,11 @@ void Window::setCursorScreenPos(float x, float y)
 
 MonstroRect Window::getRect() const { return {pos.x, pos.y, size.x, size.y}; }
 
+float Window::getContentRight() const
+{
+   return content_view_width + (show_scrollbar_y ? 0.0f : ctx->style().window.padding[0]);
+}
+
 MonstroRect Window::getContentRect() const
 {
    float header_h = getTitleBarHeight() + getMenuBarHeight();
@@ -1006,9 +1009,8 @@ void Window::beginLayout(float x, float y, MonstroLayoutDirection direction)
       const Layout &outer = canvas().layouts.top();
       layout.myScrollOffsetX = outer.myScrollOffsetX;
       layout.myScrollOffsetY = outer.myScrollOffsetY;
-      layout.myAvailableWidth = outer.myAvailableWidth;
+      layout.myContentRight = outer.myContentRight;
       layout.myAvailableHeight = outer.myAvailableHeight;
-      layout.myVisibleMaxScreenX = outer.myVisibleMaxScreenX;
       layout.myVisibleMaxScreenY = outer.myVisibleMaxScreenY;
    }
    canvas().layouts.push(layout);

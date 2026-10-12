@@ -50,9 +50,9 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
 
    float label_spacing = label_size.x > 0 ? style->combo.spacing[0] : 0.0f;
    monstro::Layout *layout = win->getCurrentLayout();
-   if (layout && layout->myAvailableWidth > 0.0f)
+   if (layout && layout->fillWidth() > 0.0f)
    {
-      float avail = layout->myAvailableWidth - label_size.x - label_spacing;
+      float avail = layout->fillWidth() - label_size.x - label_spacing;
       if (avail > combo_width)
          combo_width = avail;
    }

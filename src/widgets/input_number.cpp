@@ -129,10 +129,10 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
    float btn_w = has_buttons ? text_h : 0.0f;
    float field_w = 80.0f;
    monstro::Layout *layout = win->getCurrentLayout();
-   if (layout && layout->myAvailableWidth > 0.0f)
+   if (layout && layout->fillWidth() > 0.0f)
    {
       float buttons_w = has_buttons ? btn_w * 2.0f : 0.0f;
-      float avail = layout->myAvailableWidth - label_w - ps->padding[0] - buttons_w;
+      float avail = layout->fillWidth() - label_w - ps->padding[0] - buttons_w;
       if (avail > 0.0f)
          field_w = avail;
    }

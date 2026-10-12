@@ -91,7 +91,7 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
       monstro::Layout *layout = win->getCurrentLayout();
       if (layout)
       {
-         wrap_width = layout->myAvailableWidth - padding_x * 2.0f;
+         wrap_width = layout->fillWidth() - padding_x * 2.0f;
       }
       if (wrap_width <= 0.0f)
          wrap_width = 200.0f;

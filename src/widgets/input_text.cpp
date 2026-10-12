@@ -110,9 +110,9 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
 
    float field_w = 120.0f;
    monstro::Layout *layout = win->getCurrentLayout();
-   if (layout && layout->myAvailableWidth > 0.0f)
+   if (layout && layout->fillWidth() > 0.0f)
    {
-      float avail = layout->myAvailableWidth - label_w - es->padding[0];
+      float avail = layout->fillWidth() - label_w - es->padding[0];
       if (avail > 0.0f)
          field_w = avail;
    }
@@ -487,9 +487,9 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
    if (width <= 0.0f)
    {
       monstro::Layout *layout = win->getCurrentLayout();
-      if (layout && layout->myAvailableWidth > 0.0f)
+      if (layout && layout->fillWidth() > 0.0f)
       {
-         float avail = layout->myAvailableWidth - label_w - es->padding[0];
+         float avail = layout->fillWidth() - label_w - es->padding[0];
          if (avail > 0.0f)
             field_w = avail;
       }

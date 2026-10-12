@@ -67,9 +67,9 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    if (width <= 0.0f && !vertical)
    {
       monstro::Layout *layout = win->getCurrentLayout();
-      if (layout && layout->myAvailableWidth > 0.0f)
+      if (layout && layout->fillWidth() > 0.0f)
       {
-         float avail = layout->myAvailableWidth - label_w - label_gap;
+         float avail = layout->fillWidth() - label_w - label_gap;
          if (avail > 0.0f)
             slider_w = avail;
       }

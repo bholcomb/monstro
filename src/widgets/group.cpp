@@ -20,11 +20,13 @@ void monstro_begin_group(MonstroContext *ctx, MonstroLayoutDirection layout, Mon
 
    win->beginLayout(layout);
 
+   // The group's padding is inside its edges on both sides: what fills its width stops a padding short.
    monstro::Layout *l = win->getCurrentLayout();
    if (l)
    {
       l->myPosX += pad_x;
       l->myPosY += pad_y;
+      l->myContentRight -= pad_x;
    }
 }
 

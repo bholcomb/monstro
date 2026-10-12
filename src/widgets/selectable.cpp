@@ -89,9 +89,9 @@ static float resolve_selectable_width(MonstroContext *ctx, monstro::Window *win,
    else if (flags & MONSTRO_SELECTABLE_DRAW_FILL_WIDTH)
    {
       monstro::Layout *layout = win->getCurrentLayout();
-      if (layout && layout->myAvailableWidth > 0.0f)
+      if (layout && layout->fillWidth() > 0.0f)
       {
-         resolved = layout->myAvailableWidth;
+         resolved = layout->fillWidth();
       }
    }
 

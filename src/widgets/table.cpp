@@ -40,10 +40,7 @@ static void enter_cell(MonstroContext *ctx, MonstroTableFrame *table, int column
    monstro_set_cursor_screen_pos(ctx, cell_x, table->row_y + ts->cell_padding[1]);
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (layout)
-   {
-      layout->myAvailableWidth = cell_w;
-      layout->myVisibleMaxScreenX = cell_x + cell_w;
-   }
+      layout->myContentRight = layout->myPosX + layout->myCursorX + cell_w;
 }
 
 // The open table, for calls that belong between monstro_begin_table and monstro_end_table.
@@ -80,9 +77,9 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
    if (table_w <= 0.0f)
    {
       monstro::Layout *layout = win->getCurrentLayout();
-      if (layout && layout->myAvailableWidth > 0.0f)
+      if (layout && layout->fillWidth() > 0.0f)
       {
-         table_w = layout->myAvailableWidth;
+         table_w = layout->fillWidth();
       }
       else
       {
@@ -110,8 +107,7 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
    table->table_w = table_w;
    table->row_y = pos.y;
    monstro::Layout *layout = win->getCurrentLayout();
-   table->outer_available_width = layout ? layout->myAvailableWidth : 0.0f;
-   table->outer_visible_max_screen_x = layout ? layout->myVisibleMaxScreenX : 0.0f;
+   table->outer_content_right = layout ? layout->myContentRight : 0.0f;
    for (int i = 0; i < column_count; i++)
       table->columns[i] = MonstroTableColumn{};
 
@@ -165,8 +161,7 @@ void monstro_end_table(MonstroContext *ctx)
    monstro::Layout *layout = ctx->getCurrentLayout();
    if (layout)
    {
-      layout->myAvailableWidth = table->outer_available_width;
-      layout->myVisibleMaxScreenX = table->outer_visible_max_screen_x;
+      layout->myContentRight = table->outer_content_right;
    }
    monstro_set_cursor_screen_pos(ctx, table->table_x, table->table_y);
    monstro_add_item(ctx, table->table_w, table_h);

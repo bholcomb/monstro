@@ -77,6 +77,9 @@ struct Window
 
    MonstroRect getRect() const;
    MonstroRect getContentRect() const;
+   // The content region's right edge from the window's left, as the content is clipped: at the vertical scrollbar
+   // where there is one, else a padding in from the window's right edge.
+   float getContentRight() const;
    float getTitleBarHeight() const;
    MonstroRect getTitleBarRect() const;
    float getMenuBarHeight() const;

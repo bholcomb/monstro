@@ -13,7 +13,7 @@ void monstro_separator(MonstroContext *ctx)
    monstro::Layout *layout = win->getCurrentLayout();
    if (!layout)
       return;
-   float avail_w = layout->myAvailableWidth;
+   float avail_w = layout->fillWidth();
    if (avail_w <= 0.0f)
       avail_w = win->size.x - ctx->style().window.padding[0] * 2.0f;
 
@@ -43,7 +43,7 @@ void monstro_separator_text(MonstroContext *ctx, const char *text)
    monstro::Layout *layout = win->getCurrentLayout();
    if (!layout)
       return;
-   float avail_w = layout->myAvailableWidth;
+   float avail_w = layout->fillWidth();
    if (avail_w <= 0.0f)
       avail_w = win->size.x - ctx->style().window.padding[0] * 2.0f;
 

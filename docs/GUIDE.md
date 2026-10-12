@@ -1349,6 +1349,11 @@ monstro_end_layout(ctx);
 
 ### Percentage sizing
 
+Widgets that fill the width (text and number fields, sliders, combos, separators, rows) run from where they start
+to the content region's right edge: the vertical scrollbar, or a window padding in from the window's edge. Their
+start may be a padding in, under an indent or after other items in a row; `monstro_get_content_region_avail` and
+`monstro_percent` across measure the same room, from the cursor.
+
 ```c
 float half = monstro_percent(ctx, 50.0f, MONSTRO_LAYOUT_HORIZONTAL);
 monstro_button_sized(ctx, "Half Width", half, 30.0f, NULL);

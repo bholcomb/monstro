@@ -61,7 +61,10 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
    state->header_start_y = pos.y;
    state->header_height = bar_height;
 
-   MonstroRect bar_rect = {pos.x, pos.y, win->size.x - (pos.x - win->pos.x), bar_height};
+   // The strip behind the tabs fills the width, to the content region's right edge.
+   monstro::Layout *layout = win->getCurrentLayout();
+   float bar_w = layout ? layout->fillWidth() : 0.0f;
+   MonstroRect bar_rect = {pos.x, pos.y, bar_w, bar_height};
    ctx->canvas->addStyleItem(style->tab.background, bar_rect, 0, MONSTRO_CORNER_NONE);
 
    monstro_add_item(ctx, 0.0f, bar_height);
@@ -237,7 +240,7 @@ bool monstro_page_tabs(MonstroContext *ctx, const char *str_id, const char *cons
    if (bar_w <= 0.0f)
    {
       monstro::Layout *layout = win->getCurrentLayout();
-      bar_w = layout && layout->myAvailableWidth > 0.0f ? layout->myAvailableWidth : 120.0f * (float)count;
+      bar_w = layout && layout->fillWidth() > 0.0f ? layout->fillWidth() : 120.0f * (float)count;
    }
    float bar_h = height > 0.0f ? height : (font ? monstro_font_get_line_height(font) : 16.0f) + ts->padding[1] * 2.0f;
 

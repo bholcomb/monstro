@@ -1,6 +1,7 @@
 // Where widgets put their parts: labels, values and fields stay in the room they are given.
 #include "harness.h"
 #include <cmath>
+#include <cstdio>
 #include <vector>
 
 static bool near(float a, float b, float tolerance = 0.01f) { return std::fabs(a - b) < tolerance; }
@@ -292,13 +293,91 @@ TEST(a_wrapped_label_stops_where_full_width_widgets_do)
       glyphs = glyph_bounds(data, white, first, last);
    }
 
-   // The field stops at the scrollbar, a scrollbar's width in from the window's padding.
-   const float scrollbar_x = 400.0f - 4.0f - 10.0f;
+   // The field stops at the scrollbar, which stands at the content view's right edge: the window's width less a
+   // padding each side and the scrollbar's width.
+   const float scrollbar_x = 400.0f - 4.0f * 2.0f - 10.0f;
    CHECK(near(field.x + field.w, scrollbar_x));
    // The label is as wide as the field, and its text stays inside it, left of the scrollbar, on more than one line.
    CHECK(near(label.x + label.w, field.x + field.w));
    CHECK(!glyphs.empty() && glyphs.x0 >= label.x && glyphs.x1 <= field.x + field.w);
    CHECK(label.h > 2.0f * monstro_font_get_line_height(ui.font));
+}
+
+// Widgets that fill the width run from wherever they start to the content region's right edge, not past it: from a
+// window's padding, under an indent and after a button in a row, in a window with a vertical scrollbar.
+TEST(widgets_that_fill_the_width_stop_at_the_content_edge)
+{
+   Ui ui;
+   MonstroStyle style;
+   monstro_style_set_default(&style);
+   style.window.padding[0] = style.window.padding[1] = 6.0f;
+   style.window.scrollbar_size[0] = 14.0f;
+   monstro_context_set_theme(ui.ctx, monstro_theme_register(ui.env, "padded", &style));
+
+   enum
+   {
+      TEXT,
+      COMBO,
+      SLIDER,
+      NUMBER,
+      SEPARATOR_TEXT,
+      INDENTED_TEXT,
+      INDENTED_NUMBER,
+      TEXT_AFTER_BUTTON,
+      COUNT
+   };
+   MonstroRect rects[COUNT] = {};
+   char text[32] = "text";
+   int item = 0;
+   float value = 0.5f, number = 1.0f;
+   const char *items[] = {"One", "Two"};
+   for (int frame = 0; frame < 3; frame++) // the scrollbar shows from the second frame, when the content is known
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 0, 0, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(
+          ui.ctx, "page", nullptr,
+          (MonstroWindowFlags)(MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_VERTICAL_SCROLLBAR));
+      monstro_input_text(ui.ctx, "Text", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      rects[TEXT] = monstro_get_item_rect(ui.ctx);
+      monstro_combo(ui.ctx, "Combo", &item, items, 2, nullptr);
+      rects[COMBO] = monstro_get_item_rect(ui.ctx);
+      monstro_slider_float(ui.ctx, "Slider", &value, 0.0f, 1.0f, "%.2f", nullptr);
+      rects[SLIDER] = monstro_get_item_rect(ui.ctx);
+      monstro_input_float(ui.ctx, "Number", &number, 0.1f, 1.0f, "%.2f", nullptr);
+      rects[NUMBER] = monstro_get_item_rect(ui.ctx);
+      monstro_separator_text(ui.ctx, "Section");
+      rects[SEPARATOR_TEXT] = monstro_get_item_rect(ui.ctx);
+      monstro_indent(ui.ctx, 20.0f);
+      monstro_input_text(ui.ctx, "Indented", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      rects[INDENTED_TEXT] = monstro_get_item_rect(ui.ctx);
+      monstro_input_float(ui.ctx, "Indented number", &number, 0.1f, 1.0f, "%.2f", nullptr);
+      rects[INDENTED_NUMBER] = monstro_get_item_rect(ui.ctx);
+      monstro_unindent(ui.ctx, 20.0f);
+      monstro_begin_layout(ui.ctx, MONSTRO_LAYOUT_HORIZONTAL);
+      monstro_button(ui.ctx, "Clear", nullptr);
+      monstro_input_text(ui.ctx, "After", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      rects[TEXT_AFTER_BUTTON] = monstro_get_item_rect(ui.ctx);
+      monstro_end_layout(ui.ctx);
+      for (int i = 0; i < 20; i++)
+         monstro_label(ui.ctx, "filler");
+      monstro_end_window(ui.ctx);
+      ui.end();
+   }
+
+   // The scrollbar stands at the content view's right edge: the window's width less a padding each side and its own.
+   const float content_right = 400.0f - 6.0f * 2.0f - 14.0f;
+   for (int i = 0; i < COUNT; i++)
+   {
+      float right = rects[i].x + rects[i].w;
+      if (!near(right, content_right))
+      {
+         std::printf("  item %d ends at %.1f, the content edge is at %.1f\n", i, right, content_right);
+         CHECK(false);
+      }
+   }
+   CHECK(rects[INDENTED_TEXT].x > rects[TEXT].x && rects[TEXT_AFTER_BUTTON].x > rects[TEXT].x);
 }
 
 TEST(a_label_is_level_with_the_text_of_widgets_beside_it)
