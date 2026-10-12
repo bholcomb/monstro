@@ -21,7 +21,7 @@ struct TestCase
 TestCase g_tests[512];
 int g_test_count = 0;
 int g_failures = 0;
-const char *g_font_path = "examples/basic/data/freeSans.ttf";
+const char *g_font_path = "examples/fonts/DejaVuSans.ttf";
 
 bool run_fatal_case(const TestCase &test)
 {

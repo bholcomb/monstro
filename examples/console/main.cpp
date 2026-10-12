@@ -1,6 +1,7 @@
 #include "../common/example_app.h"
 #include "console.h"
 #include <cstdio>
+#include <cstdlib>
 
 static Console g_console;
 
@@ -26,8 +27,20 @@ static void cmd_spam(const char *, void *ud)
    console_log(c, CONSOLE_LOG_DEBUG, "This is a debug message");
 }
 
-static void on_init(ExampleApp *, void *)
+static void on_init(ExampleApp *app, void *)
 {
+   // The console's text is a bitmap font: DejaVu Sans Mono in a 16 x 6 grid from space, by tools/make_bitmap_font.c.
+   MonstroFont *mono =
+       monstro_font_load_bitmap_from_file(app->env, "mono", "data/fonts/DejaVuSansMono-bitmap.png", 16, 6, 32, 16.0f);
+   if (!mono)
+   {
+      fprintf(stderr, "cannot load data/fonts/DejaVuSansMono-bitmap.png; run the example from bin/\n");
+      abort();
+   }
+   MonstroStyle style = *monstro_theme_get_style(monstro_context_get_theme(app->ui));
+   style.font = mono;
+   monstro_context_set_theme(app->ui, monstro_theme_register(app->env, "console", &style));
+
    console_init(&g_console);
    console_add_command(&g_console, "help", cmd_help, &g_console);
    console_add_command(&g_console, "clear", cmd_clear, &g_console);

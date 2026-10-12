@@ -180,7 +180,7 @@ def binding_tests(rid, library, built):
         run("cc", "-std=c11", "-shared", "-fPIC", "-Wall", "-Wextra", "-Werror", probe, "-I", ROOT / "include",
             "-o", app / "libmonstro-binding-test.so")
     shutil.copy2(built, app / library)
-    run("dotnet", app / "Monstro.Tests.dll", app / library, ROOT / "examples/basic/data/freeSans.ttf")
+    run("dotnet", app / "Monstro.Tests.dll", app / library, ROOT / "examples/fonts/DejaVuSans.ttf")
 
 
 def main():

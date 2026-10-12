@@ -542,19 +542,23 @@ and text batch into the same commands.
 ### Loading bitmap fonts
 
 ```c
-MonstroFont* bmp_font = monstro_font_load_bitmap_from_file(
+MonstroFont* mono = monstro_font_load_bitmap_from_file(
     env,
-    "pixel",
-    "fonts/bitmap_8x8.png",
+    "mono",
+    "data/fonts/DejaVuSansMono-bitmap.png",
     16,    /* grid columns */
-    16,    /* grid rows */
-    0,     /* first codepoint */
-    8.0f   /* font size in pixels */
+    6,     /* grid rows */
+    32,    /* first codepoint: space */
+    16.0f  /* font size in pixels */
 );
 ```
 
-The image is copied into the atlas.  `monstro_font_load_bitmap` takes RGBA8
-pixels instead of a path.
+The image is a grid of equal cells, one code point per cell from the first,
+left to right and top to bottom; each cell is drawn as a square of the font
+size and advances 0.6 of it.  The image is copied into the atlas.
+`monstro_font_load_bitmap` takes RGBA8 pixels instead of a path.
+`tools/make_bitmap_font.c` renders a TrueType font into such a grid; the
+console example's font is made with it.
 
 ### Multiple fonts
 

@@ -281,11 +281,11 @@ static void cargo_page(MonstroContext *ctx, MonstroCanvas *canvas, Ship *s)
 
 static void cockpit_init(ExampleApp *app, void *)
 {
-   g_small = monstro_font_load_ttf_from_file(app->env, "screen-small", "data/fonts/freeSans.ttf", 16.0f, 32, 96);
-   g_large = monstro_font_load_ttf_from_file(app->env, "screen-large", "data/fonts/freeSans.ttf", 26.0f, 32, 96);
+   g_small = monstro_font_load_ttf_from_file(app->env, "screen-small", "data/fonts/DejaVuSans.ttf", 16.0f, 32, 96);
+   g_large = monstro_font_load_ttf_from_file(app->env, "screen-large", "data/fonts/DejaVuSans.ttf", 26.0f, 32, 96);
    if (!g_small || !g_large)
    {
-      fprintf(stderr, "cannot load data/fonts/freeSans.ttf; run the example from bin/\n");
+      fprintf(stderr, "cannot load data/fonts/DejaVuSans.ttf; run the example from bin/\n");
       abort();
    }
    g_ship.lift = 0.5f;

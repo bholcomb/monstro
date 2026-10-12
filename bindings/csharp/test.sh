@@ -10,4 +10,4 @@ cc -std=c11 -shared -fPIC -Wall -Wextra -Werror \
     "$here/Monstro.Tests/abi.c" -I "$here/../../include" \
     -o "$probe/libmonstro-binding-test.so"
 LD_LIBRARY_PATH="$(dirname "$native"):$probe${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-    dotnet "$probe/Monstro.Tests.dll" "$native" "$here/../../examples/basic/data/freeSans.ttf"
+    dotnet "$probe/Monstro.Tests.dll" "$native" "$here/../../examples/fonts/DejaVuSans.ttf"

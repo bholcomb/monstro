@@ -225,5 +225,6 @@ staging:
 
     - folder: data/fonts
       files:
-        - "basic/data/consola.png"
-        - "basic/data/freeSans.ttf"
+        - "fonts/DejaVuSans.ttf"
+        - "fonts/DejaVuSansMono-bitmap.png"
+        - "fonts/LICENSE-DejaVu.txt"

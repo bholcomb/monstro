@@ -518,7 +518,7 @@ static int example_app_run(const ExampleAppDesc &desc)
 
    // One environment holds the fonts, themes and canvas; the example's UI is one context on it.
    app.env = monstro_init(nullptr);
-   const char *fp = desc.font_path ? desc.font_path : "data/fonts/freeSans.ttf";
+   const char *fp = desc.font_path ? desc.font_path : "data/fonts/DejaVuSans.ttf";
    float fs = desc.font_size > 0 ? desc.font_size : 16.0f;
    app.font = monstro_font_load_ttf_from_file(app.env, "default", fp, fs, 32, 96);
    if (!app.font)

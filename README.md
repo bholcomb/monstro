@@ -26,7 +26,7 @@ static bool lights = true;
 void run(void)
 {
     MonstroEnv* env = monstro_init(NULL); /* fonts, themes and the atlas, shared by every UI */
-    monstro_font_load_ttf_from_file(env, "sans", "FreeSans.ttf", 16.0f, 32, 96);
+    monstro_font_load_ttf_from_file(env, "sans", "DejaVuSans.ttf", 16.0f, 32, 96);
     MonstroTextureData atlas = monstro_env_get_atlas(env);
     monstro_env_set_atlas_texture(env, upload_texture(&atlas));
 
@@ -77,7 +77,7 @@ In C#:
 using Monstro;
 
 using var env = new Env();
-env.LoadFont("sans", "FreeSans.ttf", 16);
+env.LoadFont("sans", "DejaVuSans.ttf", 16);
 env.AtlasTexture = UploadTexture(env.Atlas);
 
 using var ui = env.CreateContext();
