@@ -399,8 +399,9 @@ unsafe class Program
             Check("page tabs report a tapped tab", clicked && shown == 0);
             Frame();
             Check("page tabs show the host's page until it changes", !clicked && shown == 1);
-            Tap(slider.x + 15, slider.y + 50);
-            Check("vertical slider tapped a quarter down", sliderChanged && Math.Abs(lift - 75) < 0.01f);
+            // At 75: the 16 px cursor's centre travels 184 px of the 200, from 8 px in at either end
+            Tap(slider.x + 15, slider.y + 8 + 0.25f * 184);
+            Check("vertical slider tapped at 75", sliderChanged && Math.Abs(lift - 75) < 0.01f);
             Tap(knob.x + 50, knob.y + 10);
             Check("absolute knob tapped at the top", knobChanged && Math.Abs(trim - 6) < 0.01f);
             Throws<ArgumentOutOfRangeException>("page tabs selection out of range", () =>
