@@ -45,21 +45,6 @@ static bool knob_behavior(MonstroContext *ctx, MonstroRect r, uint64_t id, bool 
    return held;
 }
 
-static void draw_style_item_circle(monstro::Canvas *canvas, MonstroStyleItem *item, MonstroVec2 center, float radius)
-{
-   if (item->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addCircleFilled(center, radius, monstro_color_to_u32(item->data.color), KNOB_ARC_SEGMENTS);
-   }
-   else if (item->type == MONSTRO_STYLE_ITEM_IMAGE)
-   {
-      MonstroRect rect = {center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f};
-      MonstroVec2 uv_min = {0.0f, 0.0f};
-      MonstroVec2 uv_max = {1.0f, 1.0f};
-      canvas->addImageRounded(item->data.texture_id, rect, uv_min, uv_max, 0xFFFFFFFF, radius, MONSTRO_CORNER_ALL);
-   }
-}
-
 // The value at the pointer's angle about the knob's centre, over the sweep from the minimum at the lower left,
 // clockwise over the top, to the maximum at the lower right. In the gap at the bottom it is the nearer end.
 static float knob_value_at(float dx, float dy, float min_val, float max_val)
@@ -165,7 +150,7 @@ bool monstro_knob_ex(MonstroContext *ctx, const char *label, float *value, float
    float body_radius = knob_radius - ks->track_width;
    if (body_radius < 1.0f)
       body_radius = 1.0f;
-   draw_style_item_circle(canvas, body_style, center, body_radius);
+   canvas->addStyleItemCircle(*body_style, center, body_radius, KNOB_ARC_SEGMENTS);
 
    if (ks->border > 0.0f)
    {
@@ -191,14 +176,10 @@ bool monstro_knob_ex(MonstroContext *ctx, const char *label, float *value, float
       MonstroVec2 p2 = {center.x + cos_a * body_radius, center.y + sin_a * body_radius};
       canvas->addLine(p1, p2, monstro_color_to_u32(ind_style->data.color), ks->indicator_width);
    }
-   else if (ind_style->type == MONSTRO_STYLE_ITEM_IMAGE)
+   else
    {
-      float img_size = body_radius * 2.0f;
-      MonstroRect img_rect = {center.x - body_radius, center.y - body_radius, img_size, img_size};
-      MonstroVec2 uv_min = {0.0f, 0.0f};
-      MonstroVec2 uv_max = {1.0f, 1.0f};
-      canvas->addImageRounded(ind_style->data.texture_id, img_rect, uv_min, uv_max, 0xFFFFFFFF, body_radius,
-                              MONSTRO_CORNER_ALL);
+      // Art for the indicator covers the knob's body.
+      canvas->addStyleItemCircle(*ind_style, center, body_radius, KNOB_ARC_SEGMENTS);
    }
 
    // The value to the right of the knob, in room for the widest of its minimum, maximum and value, so that the

@@ -81,11 +81,7 @@ bool monstro_begin_combo(MonstroContext *ctx, const char *label, const char *pre
       label_color = style->combo.label_hover;
    }
 
-   if (bg_style->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(combo_rect, monstro_color_to_u32(bg_style->data.color), style->combo.rounding,
-                            MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg_style, combo_rect, style->combo.rounding, MONSTRO_CORNER_ALL);
 
    canvas->addRect(combo_rect, monstro_color_to_u32(style->combo.border_color), style->combo.rounding,
                    MONSTRO_CORNER_ALL, style->combo.border);

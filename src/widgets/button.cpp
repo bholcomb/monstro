@@ -69,23 +69,12 @@ static void draw_button_background(monstro::Canvas *canvas, MonstroRect r, Monst
    if (held)
       background = &style->button.active;
 
-   switch (background->type)
+   canvas->addStyleItem(*background, r, style->button.rounding, MONSTRO_CORNER_ALL);
+   // Art brings its own edge: it gets the border only when one is set.
+   if (background->type == MONSTRO_STYLE_ITEM_COLOR || style->button.border > 0.0f)
    {
-   case MONSTRO_STYLE_ITEM_COLOR:
-      canvas->addRectFilled(r, monstro_color_to_u32(background->data.color), style->button.rounding,
-                            MONSTRO_CORNER_ALL);
       canvas->addRect(r, monstro_color_to_u32(style->button.border_color), style->button.rounding, MONSTRO_CORNER_ALL,
                       style->button.border);
-      break;
-   case MONSTRO_STYLE_ITEM_IMAGE:
-   {
-      MonstroVec2 uv_min = {0.0f, 0.0f};
-      MonstroVec2 uv_max = {1.0f, 1.0f};
-      canvas->addImage(background->data.texture_id, r, uv_min, uv_max, 0xFFFFFFFF);
-      break;
-   }
-   default:
-      break;
    }
 }
 

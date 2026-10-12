@@ -35,10 +35,7 @@ static bool spinner_button(MonstroContext *ctx, monstro::Canvas *canvas, Monstro
    else if (hovered)
       bg = &bs->hover;
 
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(rect, monstro_color_to_u32(bg->data.color), bs->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg, rect, bs->rounding, MONSTRO_CORNER_ALL);
    if (bs->border > 0.0f)
    {
       canvas->addRect(rect, monstro_color_to_u32(bs->border_color), bs->rounding, MONSTRO_CORNER_ALL, bs->border);
@@ -310,10 +307,7 @@ static bool number_impl(MonstroContext *ctx, const char *label, NumberKind kind,
 
    // Drawing
    MonstroStyleItem *bg = is_active ? &es->active : (hovered ? &es->hover : &es->normal);
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(field_rect, monstro_color_to_u32(bg->data.color), ps->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg, field_rect, ps->rounding, MONSTRO_CORNER_ALL);
    if (ps->border > 0.0f)
    {
       canvas->addRect(field_rect, monstro_color_to_u32(ps->border_color), ps->rounding, MONSTRO_CORNER_ALL, ps->border);

@@ -920,8 +920,17 @@ void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint3
    float re_x = rect.x + rect.w;
    float re_y = rect.y + rect.h;
 
-   float xp[4] = {rp_x, rp_x + patch->border_left, re_x - patch->border_right, re_x};
-   float yp[4] = {rp_y, rp_y + patch->border_top, re_y - patch->border_bottom, re_y};
+   // A rect smaller than the borders draws them scaled down alike, so its corners keep their shape and meet.
+   float across = patch->border_left + patch->border_right;
+   float down = patch->border_top + patch->border_bottom;
+   float fit = 1.0f;
+   if (across > rect.w)
+      fit = std::max(rect.w, 0.0f) / across;
+   if (down > rect.h)
+      fit = std::min(fit, std::max(rect.h, 0.0f) / down);
+
+   float xp[4] = {rp_x, rp_x + patch->border_left * fit, re_x - patch->border_right * fit, re_x};
+   float yp[4] = {rp_y, rp_y + patch->border_top * fit, re_y - patch->border_bottom * fit, re_y};
 
    float tex_w = (float)patch->texture_width;
    float tex_h = (float)patch->texture_height;
@@ -949,6 +958,38 @@ void Canvas::addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint3
          ii += 6;
       }
    }
+}
+
+void Canvas::addStyleItem(const MonstroStyleItem &item, MonstroRect rect, float rounding, MonstroCornerFlags corners)
+{
+   switch (item.type)
+   {
+   case MONSTRO_STYLE_ITEM_COLOR:
+      addRectFilled(rect, monstro_color_to_u32(item.data.color), rounding, corners);
+      return;
+   case MONSTRO_STYLE_ITEM_IMAGE:
+      addImageRounded(item.data.texture_id, rect, {0.0f, 0.0f}, {1.0f, 1.0f}, 0xFFFFFFFF, rounding, corners);
+      return;
+   case MONSTRO_STYLE_ITEM_SPRITE:
+      addImageRounded(item.data.sprite.texture_id, rect, item.data.sprite.uv_min, item.data.sprite.uv_max, 0xFFFFFFFF,
+                      rounding, corners);
+      return;
+   case MONSTRO_STYLE_ITEM_NINEPATCH:
+      addNinePatch(&item.data.ninepatch, rect, 0xFFFFFFFF);
+      return;
+   }
+   MONSTRO_FATAL("style item type %d is not a MonstroStyleItemType (window '%s')", (int)item.type,
+                 owner_name ? owner_name : "?");
+}
+
+void Canvas::addStyleItemCircle(const MonstroStyleItem &item, MonstroVec2 center, float radius, int num_segments)
+{
+   if (item.type == MONSTRO_STYLE_ITEM_COLOR)
+   {
+      addCircleFilled(center, radius, monstro_color_to_u32(item.data.color), num_segments);
+      return;
+   }
+   addStyleItem(item, {center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f}, radius, MONSTRO_CORNER_ALL);
 }
 
 /* ------------------------------------------------------------------------- */

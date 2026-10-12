@@ -31,11 +31,7 @@ void monstro_progress_bar_ex(MonstroContext *ctx, float fraction, float width, f
    float t = clampf(fraction, 0.0f, 1.0f);
 
    // Background
-   MonstroStyleItem *bg = &ps->normal;
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(bar_rect, monstro_color_to_u32(bg->data.color), ps->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(ps->normal, bar_rect, ps->rounding, MONSTRO_CORNER_ALL);
 
    if (ps->border > 0.0f)
    {
@@ -53,11 +49,7 @@ void monstro_progress_bar_ex(MonstroContext *ctx, float fraction, float width, f
       if (t >= 1.0f)
          corners = MONSTRO_CORNER_ALL;
 
-      MonstroStyleItem *cursor = &ps->cursor_normal;
-      if (cursor->type == MONSTRO_STYLE_ITEM_COLOR)
-      {
-         canvas->addRectFilled(fill_rect, monstro_color_to_u32(cursor->data.color), ps->cursor_rounding, corners);
-      }
+      canvas->addStyleItem(ps->cursor_normal, fill_rect, ps->cursor_rounding, corners);
 
       if (ps->cursor_border > 0.0f)
       {

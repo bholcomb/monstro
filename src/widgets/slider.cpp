@@ -110,6 +110,12 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    *value = clampd(*value, min_val, max_val);
    float t = (float)((*value - min_val) / range);
 
+   // The slider's background, behind its bar. Until it could hold art it was never drawn: a colour with no alpha, as
+   // the built-in themes set, still draws nothing.
+   const MonstroStyleItem *background = held ? &ss->active : (hovered ? &ss->hover : &ss->normal);
+   if (background->type != MONSTRO_STYLE_ITEM_COLOR || background->data.color.a > 0.0f)
+      canvas->addStyleItem(*background, slider_rect, ss->rounding, MONSTRO_CORNER_ALL);
+
    // Background bar, along the middle of the slider
    MonstroRect bar_rect = vertical ? MonstroRect{slider_rect.x + (slider_rect.w - ss->bar_height) * 0.5f, slider_rect.y,
                                                  ss->bar_height, slider_rect.h}
@@ -149,11 +155,7 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    else if (hovered)
       cursor_style = &ss->cursor_hover;
 
-   if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(cursor_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding,
-                            MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*cursor_style, cursor_rect, ss->rounding, MONSTRO_CORNER_ALL);
 
    // Value text overlay on the slider bar
    if (format && font)

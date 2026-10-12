@@ -245,11 +245,7 @@ void monstro_table_headers_row(MonstroContext *ctx)
    float header_h = ts->header_height;
    MonstroRect header_rect = {table->table_x, table->table_y, table->table_w, header_h};
 
-   if (ts->header_normal.type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(header_rect, monstro_color_to_u32(ts->header_normal.data.color), ts->rounding,
-                            MONSTRO_CORNER_TOP);
-   }
+   canvas->addStyleItem(ts->header_normal, header_rect, ts->rounding, MONSTRO_CORNER_TOP);
 
    float cx = table->table_x;
    uint32_t text_col = monstro_color_to_u32(ts->header_text);

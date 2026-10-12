@@ -54,26 +54,14 @@ bool monstro_radio_button(MonstroContext *ctx, const char *label, int *value, in
    float cy = pos.y + total_h * 0.5f;
    MonstroVec2 center = {cx, cy};
 
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addCircleFilled(center, radius, monstro_color_to_u32(bg->data.color), 24);
-   }
+   canvas->addStyleItemCircle(*bg, center, radius, 24);
 
    canvas->addCircle(center, radius, monstro_color_to_u32(os->border_color), 24, os->border > 0.0f ? os->border : 1.0f);
 
    if (is_selected)
    {
       MonstroStyleItem *cursor = hovered ? &os->cursor_hover : &os->cursor_normal;
-      uint32_t dot_color;
-      if (cursor->type == MONSTRO_STYLE_ITEM_COLOR)
-      {
-         dot_color = monstro_color_to_u32(cursor->data.color);
-      }
-      else
-      {
-         dot_color = 0xFFFFFFFF;
-      }
-      canvas->addCircleFilled(center, radius * 0.5f, dot_color, 24);
+      canvas->addStyleItemCircle(*cursor, center, radius * 0.5f, 24);
    }
 
    if (font)

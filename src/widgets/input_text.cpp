@@ -375,10 +375,7 @@ bool monstro_input_text(MonstroContext *ctx, const char *label, char *buf, size_
    else if (hovered)
       bg = &es->hover;
 
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(field_rect, monstro_color_to_u32(bg->data.color), es->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg, field_rect, es->rounding, MONSTRO_CORNER_ALL);
    if (es->border > 0.0f)
    {
       canvas->addRect(field_rect, monstro_color_to_u32(es->border_color), es->rounding, MONSTRO_CORNER_ALL, es->border);
@@ -659,10 +656,7 @@ bool monstro_input_text_multiline(MonstroContext *ctx, const char *label, char *
    else if (hovered)
       bg = &es->hover;
 
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(field_rect, monstro_color_to_u32(bg->data.color), es->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg, field_rect, es->rounding, MONSTRO_CORNER_ALL);
    if (es->border > 0.0f)
    {
       canvas->addRect(field_rect, monstro_color_to_u32(es->border_color), es->rounding, MONSTRO_CORNER_ALL, es->border);

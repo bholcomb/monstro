@@ -194,9 +194,9 @@ static bool selectable_impl(MonstroContext *ctx, const char *label, bool *select
       text_color = held ? ss->text_pressed : (hovered ? ss->text_hover : ss->text_normal);
    }
 
-   if ((hovered || held || is_selected) && bg->type == MONSTRO_STYLE_ITEM_COLOR)
+   if (hovered || held || is_selected)
    {
-      canvas->addRectFilled(outer, monstro_color_to_u32(bg->data.color), ss->rounding, MONSTRO_CORNER_ALL);
+      canvas->addStyleItem(*bg, outer, ss->rounding, MONSTRO_CORNER_ALL);
    }
 
    // The text is placed in the inner rect, left of a toggle, as the style aligns it.

@@ -302,24 +302,25 @@ bool Window::end()
          }
       }
 
-      uint32_t grip_col;
-      if (grip_held)
+      // A colour scaler is a corner triangle, lit in the title bar's hover and active colours while they are
+      // colours; art for the scaler fills the grip's square.
+      const MonstroStyleItem *grip = &style->window.scaler;
+      if (grip_held && style->window.header.active.type == MONSTRO_STYLE_ITEM_COLOR)
+         grip = &style->window.header.active;
+      else if (grip_hovered && !grip_held && style->window.header.hover.type == MONSTRO_STYLE_ITEM_COLOR)
+         grip = &style->window.header.hover;
+
+      if (style->window.scaler.type == MONSTRO_STYLE_ITEM_COLOR)
       {
-         grip_col = monstro_color_to_u32(style->window.header.active.data.color);
-      }
-      else if (grip_hovered)
-      {
-         grip_col = monstro_color_to_u32(style->window.header.hover.data.color);
+         MonstroVec2 t1 = {pos.x + size.x, pos.y + size.y - grip_sz};
+         MonstroVec2 t2 = {pos.x + size.x - grip_sz, pos.y + size.y};
+         MonstroVec2 t3 = {pos.x + size.x, pos.y + size.y};
+         canvas().addTriangleFilled(t1, t2, t3, monstro_color_to_u32(grip->data.color));
       }
       else
       {
-         grip_col = monstro_color_to_u32(style->window.scaler.data.color);
+         canvas().addStyleItem(style->window.scaler, grip_rect, 0.0f, MONSTRO_CORNER_NONE);
       }
-
-      MonstroVec2 t1 = {pos.x + size.x, pos.y + size.y - grip_sz};
-      MonstroVec2 t2 = {pos.x + size.x - grip_sz, pos.y + size.y};
-      MonstroVec2 t3 = {pos.x + size.x, pos.y + size.y};
-      canvas().addTriangleFilled(t1, t2, t3, grip_col);
    }
 
    Canvas &c = canvas();
@@ -461,10 +462,7 @@ void Window::drawVerticalScrollbar(float header_h)
    MonstroRect content_rect = getContentRect();
    MonstroRect track_rect = {content_rect.x + content_rect.w, pos.y + header_h, bar_w, content_rect.h};
 
-   if (ss->normal.type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas().addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas().addStyleItem(ss->normal, track_rect, ss->rounding, MONSTRO_CORNER_ALL);
 
    float scroll_content_h = getScrollableContentHeight();
    float thumb_ratio = scroll_content_h > 0.0f ? (content_rect.h / scroll_content_h) : 1.0f;
@@ -513,11 +511,7 @@ void Window::drawVerticalScrollbar(float header_h)
    else if (thumb_hovered)
       cursor_style = &ss->cursor_hover;
 
-   if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas().addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
-                             MONSTRO_CORNER_ALL);
-   }
+   canvas().addStyleItem(*cursor_style, thumb_rect, ss->rounding_cursor, MONSTRO_CORNER_ALL);
    if (ss->border > 0.0f)
    {
       canvas().addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL,
@@ -545,10 +539,7 @@ void Window::drawHorizontalScrollbar(float header_h)
    MonstroRect content_rect = getContentRect();
    MonstroRect track_rect = {content_rect.x, pos.y + header_h + content_rect.h, content_rect.w, bar_h};
 
-   if (ss->normal.type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas().addRectFilled(track_rect, monstro_color_to_u32(ss->normal.data.color), ss->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas().addStyleItem(ss->normal, track_rect, ss->rounding, MONSTRO_CORNER_ALL);
 
    float scroll_content_w = getScrollableContentWidth();
    float thumb_ratio = scroll_content_w > 0.0f ? (content_rect.w / scroll_content_w) : 1.0f;
@@ -597,11 +588,7 @@ void Window::drawHorizontalScrollbar(float header_h)
    else if (thumb_hovered)
       cursor_style = &ss->cursor_hover;
 
-   if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas().addRectFilled(thumb_rect, monstro_color_to_u32(cursor_style->data.color), ss->rounding_cursor,
-                             MONSTRO_CORNER_ALL);
-   }
+   canvas().addStyleItem(*cursor_style, thumb_rect, ss->rounding_cursor, MONSTRO_CORNER_ALL);
    if (ss->border > 0.0f)
    {
       canvas().addRect(track_rect, monstro_color_to_u32(ss->border_color), ss->rounding, MONSTRO_CORNER_ALL,
@@ -669,23 +656,7 @@ void Window::drawBackground()
 
    if (!collapsed && (flags & MONSTRO_WINDOW_BACKGROUND))
    {
-      MonstroStyleItem *bg = &style->window.fixed_background;
-      MonstroRect r = getRect();
-      switch (bg->type)
-      {
-      case MONSTRO_STYLE_ITEM_COLOR:
-         canvas().addRectFilled(r, monstro_color_to_u32(bg->data.color), style->window.rounding, MONSTRO_CORNER_ALL);
-         break;
-      case MONSTRO_STYLE_ITEM_IMAGE:
-         canvas().addImage(bg->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
-         break;
-      case MONSTRO_STYLE_ITEM_SPRITE:
-         canvas().addImage(bg->data.sprite.texture_id, r, bg->data.sprite.uv_min, bg->data.sprite.uv_max, 0xFFFFFFFF);
-         break;
-      case MONSTRO_STYLE_ITEM_NINEPATCH:
-         canvas().addNinePatch(&bg->data.ninepatch, r, 0xFFFFFFFF);
-         break;
-      }
+      canvas().addStyleItem(style->window.fixed_background, getRect(), style->window.rounding, MONSTRO_CORNER_ALL);
    }
 
    if (flags & MONSTRO_WINDOW_ROOT)
@@ -726,8 +697,7 @@ void Window::drawForeground()
    if (collapsed)
    {
       MonstroRect title_rect = getTitleBarRect();
-      canvas().addRectFilled(title_rect, monstro_color_to_u32(style->window.header.active.data.color),
-                             style->window.rounding, MONSTRO_CORNER_ALL);
+      canvas().addStyleItem(style->window.header.active, title_rect, style->window.rounding, MONSTRO_CORNER_ALL);
 
       float btn_sz = title_rect.h * 0.6f;
       float arrow_x = title_rect.x + style->window.header.padding[0] + btn_sz * 0.5f;
@@ -762,8 +732,7 @@ void Window::drawForeground()
       if (flags & MONSTRO_WINDOW_TITLE_BAR)
       {
          MonstroRect title_rect = getTitleBarRect();
-         uint32_t header_color = monstro_color_to_u32(style->window.header.active.data.color);
-         canvas().addRectFilled(title_rect, header_color, style->window.rounding, MONSTRO_CORNER_TOP);
+         canvas().addStyleItem(style->window.header.active, title_rect, style->window.rounding, MONSTRO_CORNER_TOP);
 
          float btn_sz = title_rect.h * 0.6f;
          float content_left = title_rect.x + style->window.header.padding[0];
@@ -804,8 +773,8 @@ void Window::drawForeground()
             uint32_t close_col = monstro_color_to_u32(style->window.header.label_normal);
             if (close_hovered)
             {
-               canvas().addRectFilled(close_rect, monstro_color_to_u32(style->window.header.hover.data.color),
-                                      style->window.rounding, MONSTRO_CORNER_ALL);
+               canvas().addStyleItem(style->window.header.hover, close_rect, style->window.rounding,
+                                     MONSTRO_CORNER_ALL);
                if (ctx->mouse.isPressed(MONSTRO_MOUSE_BUTTON_LEFT))
                {
                   *p_open_ref = false;
@@ -840,25 +809,13 @@ void Window::drawForeground()
 
       if (flags & MONSTRO_WINDOW_BORDERS)
       {
-         MonstroStyleItem *border = &style->window.border_style;
-         MonstroRect r = getRect();
-         switch (border->type)
-         {
-         case MONSTRO_STYLE_ITEM_COLOR:
-            canvas().addRect(r, monstro_color_to_u32(border->data.color), style->window.rounding, MONSTRO_CORNER_ALL,
-                             style->window.border);
-            break;
-         case MONSTRO_STYLE_ITEM_IMAGE:
-            canvas().addImage(border->data.texture_id, r, {0, 0}, {1, 1}, 0xFFFFFFFF);
-            break;
-         case MONSTRO_STYLE_ITEM_SPRITE:
-            canvas().addImage(border->data.sprite.texture_id, r, border->data.sprite.uv_min, border->data.sprite.uv_max,
-                              0xFFFFFFFF);
-            break;
-         case MONSTRO_STYLE_ITEM_NINEPATCH:
-            canvas().addNinePatch(&border->data.ninepatch, r, 0xFFFFFFFF);
-            break;
-         }
+         // A colour border is an outline as thick as window.border; art is a frame laid over the whole window.
+         const MonstroStyleItem *border = &style->window.border_style;
+         if (border->type == MONSTRO_STYLE_ITEM_COLOR)
+            canvas().addRect(getRect(), monstro_color_to_u32(border->data.color), style->window.rounding,
+                             MONSTRO_CORNER_ALL, style->window.border);
+         else
+            canvas().addStyleItem(*border, getRect(), style->window.rounding, MONSTRO_CORNER_ALL);
 
          if (!(flags & MONSTRO_WINDOW_TITLE_BAR))
          {

@@ -2118,6 +2118,48 @@ style->window.fixed_background = item;
 The `border_*` values define where the cuts happen in pixel coordinates
 relative to the sprite sub-region.  The `texture_width`/`texture_height` fields
 are needed so Monstro can convert pixel borders to UV offsets.
+The borders are drawn as many screen pixels as they are texture pixels.  A
+rect smaller than its borders (a nearly empty progress bar, a short button
+with tall art) draws all four scaled down alike, so its corners keep their
+shape and meet.
+
+**Where widgets draw their items.**  Every widget draws each of its style
+items the same way: a colour fills the widget's rect with the style's
+rounding, an image or sprite is stretched over the rect and rounded the same, and a nine-patch draws its art, whose own corners
+stand in for the rounding.  Round widgets (the radio button and the knob) fill
+a colour as a circle and draw art over the circle's square, an image or sprite
+cut to the circle.  A widget's border (`border`, `border_color`) is drawn on
+top of the item; set `border` to 0 for art that has its own edge (a button
+outlines art only when `border` is set).
+
+| Widget | Items drawn |
+|---|---|
+| Window, popup, menu, combo list, tooltip | `window.fixed_background` over the whole window; `window.border_style` (a colour is an outline `window.border` thick, art a frame laid over the window); `window.header.active` for the title bar, `window.header.hover` under the close button; `window.scaler` for the resize grip (a colour is a corner triangle, art fills the grip's square) |
+| Group | `window.group_background` |
+| Button, image button | `button.normal`, `hover`, `active` |
+| Checkbox | `checkbox.normal`, `hover`, `active` for the box; `checkbox.cursor_normal`, `cursor_hover` for the mark, 3 pixels inside the box |
+| Radio button | `option.normal`, `hover`, `active` (selected) for the circle; `option.cursor_normal`, `cursor_hover` for the dot, half the circle's size |
+| Selectable, menu item, combo list item | `selectable.normal` ... `pressed_active`, while hovered, held or selected |
+| Slider | `slider.normal`, `hover`, `active` behind the whole slider (a colour with no alpha, as the built-in themes set, draws nothing); `slider.cursor_normal`, `cursor_hover`, `cursor_active` |
+| Knob | `knob.normal`, `hover`, `active` for the body; `knob.indicator_*` (a colour is a line, art covers the body) |
+| Progress bar | `progress.normal` for the track, `progress.cursor_normal` for the fill |
+| Scrollbars | `scrollv` and `scrollh`: `normal` for the track, `cursor_normal`, `cursor_hover`, `cursor_active` for the thumb |
+| Text input | `edit.normal`, `hover`, `active` |
+| Numeric input | `property.edit.normal`, `hover`, `active` for the field; `property.dec_button` and `inc_button` items for the spinner buttons |
+| Combo box | `combo.normal`, `hover`, `active` (open) |
+| Tree | rows: `tree.hover`, `active`, `selected`; a collapsing header: `tree.active`, `tree.hover` under the pointer and its close button |
+| Table | `table.header_normal` for the header row |
+| Tabs, page tabs | `tab.background` for the bar; `tab.tab_maximize_button.normal`, `hover`, `active` (selected) for the tabs and a tab's close button |
+
+Some backgrounds are plain `MonstroColor`s, not style items: a slider's bar
+(`bar_normal`, `bar_hover`, `bar_active`, `bar_filled`), a knob's track arcs
+(`track_normal`, `track_filled`), a table's rows (`row_color_even`,
+`row_color_odd`), the menu bar (`window.menu_border_color`), the modal dim
+(`window.modal_dim_color`), text selection and the text cursor.  The other
+style items in `MonstroStyle` (the menu, chart, tooltip and table background
+items, the contextual and menu buttons, the tab node buttons, the window
+header's buttons, the scrollbar, slider and combo buttons) are not drawn by
+any widget yet.
 
 **Temporarily overriding a style item:**
 

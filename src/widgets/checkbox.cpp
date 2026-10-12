@@ -81,11 +81,7 @@ bool monstro_checkbox(MonstroContext *ctx, const char *label, bool *value, const
    MonstroRect box_rect = {pos.x, pos.y + (total_h - box_size) * 0.5f, box_size, box_size};
 
    // Draw checkbox box background
-   if (bg_style->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(box_rect, monstro_color_to_u32(bg_style->data.color), style->checkbox.rounding,
-                            MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg_style, box_rect, style->checkbox.rounding, MONSTRO_CORNER_ALL);
 
    // Draw checkbox border
    canvas->addRect(box_rect, monstro_color_to_u32(style->checkbox.border_color), style->checkbox.rounding,
@@ -95,13 +91,9 @@ bool monstro_checkbox(MonstroContext *ctx, const char *label, bool *value, const
    if (*value)
    {
       MonstroStyleItem *cursor_style = hovered ? &style->checkbox.cursor_hover : &style->checkbox.cursor_normal;
-      if (cursor_style->type == MONSTRO_STYLE_ITEM_COLOR)
-      {
-         float pad = 3.0f;
-         MonstroRect check_rect = {box_rect.x + pad, box_rect.y + pad, box_rect.w - pad * 2.0f,
-                                   box_rect.h - pad * 2.0f};
-         canvas->addRectFilled(check_rect, monstro_color_to_u32(cursor_style->data.color), 0.0f, MONSTRO_CORNER_NONE);
-      }
+      float pad = 3.0f;
+      MonstroRect check_rect = {box_rect.x + pad, box_rect.y + pad, box_rect.w - pad * 2.0f, box_rect.h - pad * 2.0f};
+      canvas->addStyleItem(*cursor_style, check_rect, 0.0f, MONSTRO_CORNER_NONE);
    }
 
    MonstroVec2 text_pos = {pos.x + box_size + spacing, pos.y + (total_h - text_h) * 0.5f};

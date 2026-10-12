@@ -61,20 +61,7 @@ void monstro_end_group(MonstroContext *ctx)
 
    if (flags & MONSTRO_GROUP_BACKGROUND)
    {
-      MonstroStyleItem *bg = &style->window.group_background;
-      if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-      {
-         ctx->canvas->addRectFilled(group_rect, monstro_color_to_u32(bg->data.color), style->window.rounding,
-                                    MONSTRO_CORNER_ALL);
-      }
-      else if (bg->type == MONSTRO_STYLE_ITEM_IMAGE)
-      {
-         ctx->canvas->addImage(bg->data.texture_id, group_rect, {0, 0}, {1, 1}, 0xFFFFFFFF);
-      }
-      else if (bg->type == MONSTRO_STYLE_ITEM_NINEPATCH)
-      {
-         ctx->canvas->addNinePatch(&bg->data.ninepatch, group_rect, 0xFFFFFFFF);
-      }
+      ctx->canvas->addStyleItem(style->window.group_background, group_rect, style->window.rounding, MONSTRO_CORNER_ALL);
    }
 
    if (flags & MONSTRO_GROUP_BORDER)

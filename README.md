@@ -104,9 +104,9 @@ while (running)
 - **A C API with no hidden state.** One header, `monstro.h`, for C11 and C++17;
   every call names the environment or the UI it acts on.
 - **Complete theming.** Three built-in themes and as many of your own, with a
-  style for every widget type. A style value can be a colour, an image, an
-  atlas sprite or a nine-patch, so a theme can be artwork, with its own
-  TrueType or bitmap font.
+  style for every widget type. Every widget's backgrounds, frames and cursors
+  take a colour, an image, an atlas sprite or a nine-patch, so a theme can be
+  artwork, with its own TrueType or bitmap font.
 - **Any renderer.** Monstro never touches the GPU and ships no backend: draw
   its indexed, textured triangles with Vulkan, OpenGL, Direct3D, Metal or an
   engine's renderer, or have it write straight into your own vertex and index

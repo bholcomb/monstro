@@ -180,6 +180,12 @@ struct Canvas
    void addImageRounded(uint64_t texture_id, MonstroRect rect, MonstroVec2 uv_min, MonstroVec2 uv_max,
                         uint32_t tint_color, float rounding, MonstroCornerFlags corners);
    void addNinePatch(const MonstroNinePatch *patch, MonstroRect rect, uint32_t tint_color);
+   // A widget's style item over rect: a colour fills it, rounded at corners; an image or sprite is stretched over it
+   // and rounded the same; a nine-patch draws its art, whose own corners stand in for the rounding.
+   void addStyleItem(const MonstroStyleItem &item, MonstroRect rect, float rounding, MonstroCornerFlags corners);
+   // A round widget's style item: a colour fills the circle; art covers the circle's square, an image or sprite cut
+   // to the circle and a nine-patch as drawn.
+   void addStyleItemCircle(const MonstroStyleItem &item, MonstroVec2 center, float radius, int num_segments);
 
    void addCustomDraw(MonstroCustomDrawCallback callback, void *user_data);
 

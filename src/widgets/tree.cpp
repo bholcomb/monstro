@@ -96,10 +96,7 @@ static bool tree_item_internal(MonstroContext *ctx, uint64_t id, const char *lab
 
    if (hovered || force_selected)
    {
-      if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-      {
-         canvas->addRectFilled(row_rect, monstro_color_to_u32(bg->data.color), ts->rounding, MONSTRO_CORNER_ALL);
-      }
+      canvas->addStyleItem(*bg, row_rect, ts->rounding, MONSTRO_CORNER_ALL);
    }
 
    float content_x = pos.x + ts->padding[0];
@@ -238,10 +235,7 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
       text_col = ts->text_hover;
    }
 
-   if (bg->type == MONSTRO_STYLE_ITEM_COLOR)
-   {
-      canvas->addRectFilled(row_rect, monstro_color_to_u32(bg->data.color), ts->rounding, MONSTRO_CORNER_ALL);
-   }
+   canvas->addStyleItem(*bg, row_rect, ts->rounding, MONSTRO_CORNER_ALL);
 
    float content_x = pos.x + ts->padding[0];
    float content_y = pos.y + ts->padding[1];
@@ -271,8 +265,7 @@ bool monstro_collapsing_header(MonstroContext *ctx, const char *label, bool *p_v
 
       if (close_hovered)
       {
-         uint32_t hover_col = monstro_color_to_u32(ts->hover.data.color);
-         canvas->addRectFilled(close_rect, hover_col, ts->rounding, MONSTRO_CORNER_ALL);
+         canvas->addStyleItem(ts->hover, close_rect, ts->rounding, MONSTRO_CORNER_ALL);
          if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
          {
             *p_visible = false;

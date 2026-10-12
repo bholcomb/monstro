@@ -17,6 +17,21 @@ static MonstroTabBarState *find_or_create_tab_bar(MonstroContext *ctx, uint64_t 
    return state;
 }
 
+// The line under the selected tab: the tab border colour, or while that is transparent the selected tab's colour.
+// Art for the selected tab marks it itself: then there is no line in its colour.
+static void draw_tab_accent(monstro::Canvas *canvas, const MonstroStyleTab *ts, MonstroVec2 p1, MonstroVec2 p2)
+{
+   uint32_t accent = monstro_color_to_u32(ts->border_color);
+   const MonstroStyleItem &active = ts->tab_maximize_button.active;
+   if ((accent & 0xFF000000) == 0)
+   {
+      if (active.type != MONSTRO_STYLE_ITEM_COLOR)
+         return;
+      accent = monstro_color_to_u32(active.data.color);
+   }
+   canvas->addLine(p1, p2, accent, ts->border);
+}
+
 bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBarFlags flags)
 {
    monstro::Window *win = monstro::requireWindow(ctx, __func__, {MONSTRO_ARG(str_id)});
@@ -47,7 +62,7 @@ bool monstro_begin_tab_bar(MonstroContext *ctx, const char *str_id, MonstroTabBa
    state->header_height = bar_height;
 
    MonstroRect bar_rect = {pos.x, pos.y, win->size.x - (pos.x - win->pos.x), bar_height};
-   ctx->canvas->addRectFilled(bar_rect, monstro_color_to_u32(style->tab.background.data.color), 0, MONSTRO_CORNER_NONE);
+   ctx->canvas->addStyleItem(style->tab.background, bar_rect, 0, MONSTRO_CORNER_NONE);
 
    monstro_add_item(ctx, 0.0f, bar_height);
 
@@ -131,37 +146,17 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
    }
 
    MonstroStyleButton *tab_btn = &style->tab.tab_maximize_button;
-   uint32_t bg_color;
-   uint32_t text_color;
+   const MonstroStyleItem *bg = is_selected ? &tab_btn->active : (hovered ? &tab_btn->hover : &tab_btn->normal);
+   uint32_t text_color = monstro_color_to_u32(is_selected ? tab_btn->text_active
+                                                          : (hovered ? tab_btn->text_hover : tab_btn->text_normal));
 
-   if (is_selected)
-   {
-      bg_color = monstro_color_to_u32(tab_btn->active.data.color);
-      text_color = monstro_color_to_u32(tab_btn->text_active);
-   }
-   else if (hovered)
-   {
-      bg_color = monstro_color_to_u32(tab_btn->hover.data.color);
-      text_color = monstro_color_to_u32(tab_btn->text_hover);
-   }
-   else
-   {
-      bg_color = monstro_color_to_u32(tab_btn->normal.data.color);
-      text_color = monstro_color_to_u32(tab_btn->text_normal);
-   }
-
-   canvas->addRectFilled(tab_rect, bg_color, style->tab.rounding, MONSTRO_CORNER_TOP);
+   canvas->addStyleItem(*bg, tab_rect, style->tab.rounding, MONSTRO_CORNER_TOP);
 
    if (is_selected && style->tab.border > 0.0f)
    {
       MonstroVec2 p1 = {tab_rect.x, tab_rect.y + tab_rect.h};
       MonstroVec2 p2 = {tab_rect.x + tab_rect.w, tab_rect.y + tab_rect.h};
-      uint32_t accent = monstro_color_to_u32(ctx->style().tab.border_color);
-      if ((accent & 0xFF000000) == 0)
-      {
-         accent = monstro_color_to_u32(tab_btn->active.data.color);
-      }
-      canvas->addLine(p1, p2, accent, style->tab.border);
+      draw_tab_accent(canvas, &style->tab, p1, p2);
    }
 
    MonstroRect label_rect = {tab_rect.x + style->tab.padding[0], tab_rect.y + style->tab.padding[1], text_size.x,
@@ -186,8 +181,7 @@ bool monstro_begin_tab_item(MonstroContext *ctx, const char *label, bool *p_open
 
       if (close_hovered)
       {
-         canvas->addRectFilled(close_rect, monstro_color_to_u32(tab_btn->hover.data.color), style->tab.rounding,
-                               MONSTRO_CORNER_ALL);
+         canvas->addStyleItem(tab_btn->hover, close_rect, style->tab.rounding, MONSTRO_CORNER_ALL);
          if (monstro_is_mouse_clicked(ctx, MONSTRO_MOUSE_BUTTON_LEFT, false))
          {
             *p_open = false;
@@ -249,7 +243,7 @@ bool monstro_page_tabs(MonstroContext *ctx, const char *str_id, const char *cons
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
    MonstroRect bar_rect = {pos.x, pos.y, bar_w, bar_h};
-   canvas->addRectFilled(bar_rect, monstro_color_to_u32(ts->background.data.color), 0, MONSTRO_CORNER_NONE);
+   canvas->addStyleItem(ts->background, bar_rect, 0, MONSTRO_CORNER_NONE);
 
    // The tabs share the width evenly, with the tab spacing between them.
    float tab_w = (bar_w - ts->spacing[0] * (float)(count - 1)) / (float)count;
@@ -276,15 +270,10 @@ bool monstro_page_tabs(MonstroContext *ctx, const char *str_id, const char *cons
       bool lit = i == *selected;
       const MonstroStyleItem *bg = lit ? &tab_btn->active : (i == hovered ? &tab_btn->hover : &tab_btn->normal);
       MonstroColor text = lit ? tab_btn->text_active : (i == hovered ? tab_btn->text_hover : tab_btn->text_normal);
-      canvas->addRectFilled(tab_rect, monstro_color_to_u32(bg->data.color), ts->rounding, MONSTRO_CORNER_TOP);
+      canvas->addStyleItem(*bg, tab_rect, ts->rounding, MONSTRO_CORNER_TOP);
       if (lit && ts->border > 0.0f)
-      {
-         uint32_t accent = monstro_color_to_u32(ts->border_color);
-         if ((accent & 0xFF000000) == 0)
-            accent = monstro_color_to_u32(tab_btn->active.data.color);
-         canvas->addLine({tab_rect.x, tab_rect.y + tab_rect.h}, {tab_rect.x + tab_rect.w, tab_rect.y + tab_rect.h},
-                         accent, ts->border);
-      }
+         draw_tab_accent(canvas, ts, {tab_rect.x, tab_rect.y + tab_rect.h},
+                         {tab_rect.x + tab_rect.w, tab_rect.y + tab_rect.h});
       if (font)
          canvas->addTextEx(font, tab_rect, monstro_color_to_u32(text), monstro_display_text(labels[i]),
                            tab_btn->text_alignment);
