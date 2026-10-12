@@ -15,7 +15,7 @@ examples.
   - Windows: MSVC, from Visual Studio with the x64 C++ tools. Build from an x64
     developer prompt.
 - Python 3, for `ci/build.py` and the binding generator.
-- The .NET 8 SDK, for the C# binding and its checks.
+- The .NET 10 SDK, for the C# binding and its checks.
 
 The library and its tests need nothing else. The examples need more; see
 [Examples](#examples).

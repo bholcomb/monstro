@@ -1,6 +1,6 @@
 # Monstro for C#
 
-A .NET 8 binding over Monstro's C API, following the Mobius C# binding's two layers:
+A .NET 10 binding over Monstro's C API, following the Mobius C# binding's two layers:
 
 - `Native`: the whole public C API, one to one, under its C names. All enums,
   constants, styles, draw structs, and font structs are included. Opaque C

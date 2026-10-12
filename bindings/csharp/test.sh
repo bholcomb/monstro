@@ -5,7 +5,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 native="${MONSTRO_NATIVE:-$here/../../build/linux-x86_64-release/bin/libmonstro.so}"
 dotnet build "$here/Monstro.Tests" -c Release -v q -nologo
 python3 "$here/generate.py" --check
-probe="$here/Monstro.Tests/bin/Release/net8.0"
+probe="$here/Monstro.Tests/bin/Release/net10.0"
 cc -std=c11 -shared -fPIC -Wall -Wextra -Werror \
     "$here/Monstro.Tests/abi.c" -I "$here/../../include" \
     -o "$probe/libmonstro-binding-test.so"

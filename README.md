@@ -118,7 +118,7 @@ while (running)
   vertical sliders and bars, knobs, page tabs. A drawing API (shapes, curves,
   paths, rotated text and images) builds the rest: gauges, graphs, node
   editors.
-- **.NET binding.** A .NET 8 binding with the whole C API, one to one, and a
+- **.NET binding.** A .NET 10 binding with the whole C API, one to one, and a
   managed layer whose draw data is a zero-copy view of the native frame.
 
 ## Getting Monstro
