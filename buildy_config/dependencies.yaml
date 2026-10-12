@@ -1,10 +1,3 @@
 # Monstro Dependencies
-
-glfw3:
-  file: dependencies/glfw3.yaml
-
-vulkan:
-  file: dependencies/vulkan.yaml
-
-vulkease:
-  file: dependencies/vulkease.yaml
+#
+# Each file in dependencies/ defines one; buildy loads them all.
