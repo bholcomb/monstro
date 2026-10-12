@@ -14,6 +14,16 @@
 #define MONSTRO_API
 #endif
 
+/* Opens a public enum. In C an enum argument may hold any int, and the C API takes whatever a
+ * caller passes and checks it. C++ gives an enum without a fixed underlying type only the values
+ * its enumerators' bits span, so the library (C++) reading an out-of-range argument would be
+ * undefined; there every public enum is an int, whose size and passing match C's enum. */
+#ifdef __cplusplus
+#define MONSTRO_ENUM(name) enum name : int
+#else
+#define MONSTRO_ENUM(name) enum name
+#endif
+
 #ifdef __cplusplus
 namespace monstro { struct Env; struct Context; struct Canvas; struct Theme; }
 typedef monstro::Env MonstroEnv;
@@ -98,7 +108,7 @@ static inline MonstroColor monstro_color_rgb(float r, float g, float b) {
 /* Alignment                                                                 */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroAlign {
+typedef MONSTRO_ENUM(MonstroAlign) {
     MONSTRO_ALIGN_LEFT      = 1 << 0,
     MONSTRO_ALIGN_RIGHT     = 1 << 1,
     MONSTRO_ALIGN_TOP       = 1 << 2,
@@ -113,7 +123,7 @@ typedef enum MonstroAlign {
 /* Corner Flags                                                              */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroCornerFlags {
+typedef MONSTRO_ENUM(MonstroCornerFlags) {
     MONSTRO_CORNER_NONE   = 0,
     MONSTRO_CORNER_LL     = 1 << 0,
     MONSTRO_CORNER_LR     = 1 << 1,
@@ -130,7 +140,7 @@ typedef enum MonstroCornerFlags {
 /* Window Flags and Conditions                                               */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroWindowFlags {
+typedef MONSTRO_ENUM(MonstroWindowFlags) {
     MONSTRO_WINDOW_NONE                 = 0,
 
     /* Decorations */
@@ -171,7 +181,7 @@ typedef enum MonstroWindowFlags {
     MONSTRO_WINDOW_ROOT_DEFAULT = MONSTRO_WINDOW_MENU_BAR | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_ROOT
 } MonstroWindowFlags;
 
-typedef enum MonstroCondition {
+typedef MONSTRO_ENUM(MonstroCondition) {
     MONSTRO_COND_NONE           = 0,
     MONSTRO_COND_ALWAYS         = 1 << 0,
     MONSTRO_COND_ONCE           = 1 << 1,
@@ -183,7 +193,7 @@ typedef enum MonstroCondition {
 /* Layout Direction                                                          */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroLayoutDirection {
+typedef MONSTRO_ENUM(MonstroLayoutDirection) {
     MONSTRO_LAYOUT_HORIZONTAL = 0,
     MONSTRO_LAYOUT_VERTICAL = 1
 } MonstroLayoutDirection;
@@ -192,7 +202,7 @@ typedef enum MonstroLayoutDirection {
 /* Input Enums                                                               */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroKey {
+typedef MONSTRO_ENUM(MonstroKey) {
     MONSTRO_KEY_NONE = 0,
     MONSTRO_KEY_TAB,
     MONSTRO_KEY_LEFT_ARROW,
@@ -259,14 +269,14 @@ typedef enum MonstroKey {
     MONSTRO_KEY_COUNT
 } MonstroKey;
 
-typedef enum MonstroMouseButton {
+typedef MONSTRO_ENUM(MonstroMouseButton) {
     MONSTRO_MOUSE_BUTTON_LEFT = 0,
     MONSTRO_MOUSE_BUTTON_RIGHT = 1,
     MONSTRO_MOUSE_BUTTON_MIDDLE = 2,
     MONSTRO_MOUSE_BUTTON_COUNT = 5
 } MonstroMouseButton;
 
-typedef enum MonstroModFlags {
+typedef MONSTRO_ENUM(MonstroModFlags) {
     MONSTRO_MOD_NONE = 0,
     MONSTRO_MOD_CTRL = 1 << 0,
     MONSTRO_MOD_SHIFT = 1 << 1,
@@ -274,7 +284,7 @@ typedef enum MonstroModFlags {
     MONSTRO_MOD_SUPER = 1 << 3
 } MonstroModFlags;
 
-typedef enum MonstroMouseCursor {
+typedef MONSTRO_ENUM(MonstroMouseCursor) {
     MONSTRO_MOUSE_CURSOR_NONE = -1,
     MONSTRO_MOUSE_CURSOR_ARROW = 0,
     MONSTRO_MOUSE_CURSOR_TEXT_INPUT,
@@ -407,7 +417,7 @@ typedef struct MonstroSprite {
 /* Style Types                                                               */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroStyleItemType {
+typedef MONSTRO_ENUM(MonstroStyleItemType) {
     MONSTRO_STYLE_ITEM_COLOR = 0,
     MONSTRO_STYLE_ITEM_IMAGE = 1,
     MONSTRO_STYLE_ITEM_SPRITE = 2,
@@ -428,7 +438,7 @@ typedef struct MonstroStyleItem {
 /* Font Types                                                                */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroTextureFormat {
+typedef MONSTRO_ENUM(MonstroTextureFormat) {
     MONSTRO_TEXTURE_FORMAT_R8 = 0,
     MONSTRO_TEXTURE_FORMAT_RGBA8 = 1
 } MonstroTextureFormat;

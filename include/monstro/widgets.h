@@ -11,7 +11,7 @@ extern "C" {
 /* Flags                                                                     */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroSelectableFlags {
+typedef MONSTRO_ENUM(MonstroSelectableFlags) {
     MONSTRO_SELECTABLE_NONE             = 0,
     MONSTRO_SELECTABLE_DONT_CLOSE_POPUP = 1 << 0,
     MONSTRO_SELECTABLE_SPAN_ALL_COLUMNS = 1 << 1,
@@ -23,7 +23,7 @@ typedef enum MonstroSelectableFlags {
 } MonstroSelectableFlags;
 
 /* A vertical slider runs from its minimum at the bottom to its maximum at the top. */
-typedef enum MonstroSliderFlags {
+typedef MONSTRO_ENUM(MonstroSliderFlags) {
     MONSTRO_SLIDER_NONE     = 0,
     MONSTRO_SLIDER_VERTICAL = 1 << 0
 } MonstroSliderFlags;
@@ -32,12 +32,12 @@ typedef enum MonstroSliderFlags {
  * A knob turns by dragging up and down, relative to where it was; an absolute
  * knob points where the pointer is, about its centre, from a press on.
  */
-typedef enum MonstroKnobFlags {
+typedef MONSTRO_ENUM(MonstroKnobFlags) {
     MONSTRO_KNOB_NONE     = 0,
     MONSTRO_KNOB_ABSOLUTE = 1 << 0
 } MonstroKnobFlags;
 
-typedef enum MonstroInputTextFlags {
+typedef MONSTRO_ENUM(MonstroInputTextFlags) {
     MONSTRO_INPUT_TEXT_NONE              = 0,
     MONSTRO_INPUT_TEXT_READ_ONLY         = 1 << 0,
     MONSTRO_INPUT_TEXT_PASSWORD          = 1 << 1,
@@ -49,24 +49,24 @@ typedef enum MonstroInputTextFlags {
 } MonstroInputTextFlags;
 
 /* A vertical progress bar fills from the bottom up. */
-typedef enum MonstroProgressFlags {
+typedef MONSTRO_ENUM(MonstroProgressFlags) {
     MONSTRO_PROGRESS_NONE     = 0,
     MONSTRO_PROGRESS_VERTICAL = 1 << 0
 } MonstroProgressFlags;
 
-typedef enum MonstroTreeFlags {
+typedef MONSTRO_ENUM(MonstroTreeFlags) {
     MONSTRO_TREE_NONE         = 0,
     MONSTRO_TREE_DEFAULT_OPEN = 1 << 0,
     MONSTRO_TREE_SELECTED     = 1 << 2
 } MonstroTreeFlags;
 
-typedef enum MonstroTabBarFlags {
+typedef MONSTRO_ENUM(MonstroTabBarFlags) {
     MONSTRO_TAB_BAR_NONE        = 0,
     MONSTRO_TAB_BAR_REORDERABLE = 1 << 0,
     MONSTRO_TAB_BAR_AUTO_SELECT = 1 << 1
 } MonstroTabBarFlags;
 
-typedef enum MonstroButtonFlags {
+typedef MONSTRO_ENUM(MonstroButtonFlags) {
     MONSTRO_BUTTON_NONE               = 0,
     MONSTRO_BUTTON_REPEAT             = 1 << 0,
     MONSTRO_BUTTON_PRESSED_ON_CLICK   = 1 << 1,
@@ -275,7 +275,7 @@ MONSTRO_API void monstro_set_tree_indent(MonstroContext* ctx, float indent);
 /* Group                                                                     */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroGroupFlags {
+typedef MONSTRO_ENUM(MonstroGroupFlags) {
     MONSTRO_GROUP_NONE       = 0,
     MONSTRO_GROUP_BORDER     = 1 << 0,
     MONSTRO_GROUP_BACKGROUND = 1 << 1,
@@ -308,7 +308,7 @@ MONSTRO_API bool monstro_page_tabs(MonstroContext* ctx, const char* str_id, cons
 /* Table                                                                     */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroTableFlags {
+typedef MONSTRO_ENUM(MonstroTableFlags) {
     MONSTRO_TABLE_NONE           = 0,
     MONSTRO_TABLE_BORDERS        = 1 << 0,
     MONSTRO_TABLE_RESIZABLE      = 1 << 1,
@@ -318,7 +318,7 @@ typedef enum MonstroTableFlags {
     MONSTRO_TABLE_SCROLL_Y       = 1 << 5
 } MonstroTableFlags;
 
-typedef enum MonstroTableColumnFlags {
+typedef MONSTRO_ENUM(MonstroTableColumnFlags) {
     MONSTRO_TABLE_COLUMN_NONE           = 0,
     MONSTRO_TABLE_COLUMN_WIDTH_FIXED    = 1 << 0,
     MONSTRO_TABLE_COLUMN_NO_RESIZE      = 1 << 1,
@@ -355,7 +355,7 @@ MONSTRO_API void monstro_separator_text(MonstroContext* ctx, const char* text);
 /* Color Picker                                                              */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroColorPickerFlags {
+typedef MONSTRO_ENUM(MonstroColorPickerFlags) {
     MONSTRO_COLOR_PICKER_NONE       = 0,
     MONSTRO_COLOR_PICKER_NO_ALPHA   = 1 << 0,
     MONSTRO_COLOR_PICKER_NO_SLIDERS = 1 << 1,
@@ -373,12 +373,12 @@ MONSTRO_API bool monstro_color_button(MonstroContext* ctx, const char* label, Mo
 /* File Dialog                                                               */
 /* ------------------------------------------------------------------------- */
 
-typedef enum MonstroFileDialogMode {
+typedef MONSTRO_ENUM(MonstroFileDialogMode) {
     MONSTRO_FILE_DIALOG_OPEN = 0,
     MONSTRO_FILE_DIALOG_SAVE = 1
 } MonstroFileDialogMode;
 
-typedef enum MonstroFileDialogResult {
+typedef MONSTRO_ENUM(MonstroFileDialogResult) {
     MONSTRO_FILE_DIALOG_NONE = 0,
     MONSTRO_FILE_DIALOG_OK   = 1,
     MONSTRO_FILE_DIALOG_CANCEL = 2
