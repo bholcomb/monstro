@@ -72,12 +72,17 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
    monstro::Canvas *canvas = ctx->canvas;
    MonstroFont *font = style->font;
 
+   float padding_x = style->text.padding[0];
+   float padding_y = style->text.padding[1];
+
+   // By default the label fills the layout's width as other full-width widgets do, padding included, so its text
+   // stops short of the window's edge or scrollbar.
    if (wrap_width <= 0.0f)
    {
       monstro::Layout *layout = win->getCurrentLayout();
       if (layout)
       {
-         wrap_width = layout->myAvailableWidth;
+         wrap_width = layout->myAvailableWidth - padding_x * 2.0f;
       }
       if (wrap_width <= 0.0f)
          wrap_width = 200.0f;
@@ -90,8 +95,6 @@ void monstro_label_wrapped(MonstroContext *ctx, const char *text, float wrap_wid
       text_size.y = 16.0f;
    }
 
-   float padding_x = style->text.padding[0];
-   float padding_y = style->text.padding[1];
    float outer_w = wrap_width + padding_x * 2.0f;
    float outer_h = text_size.y + padding_y * 2.0f;
 

@@ -257,3 +257,45 @@ TEST(wrapped_text_breaks_between_words_and_measures_as_drawn)
       CHECK(measured.x <= wrap_width);
    }
 }
+
+TEST(a_wrapped_label_stops_where_full_width_widgets_do)
+{
+   Ui ui;
+   char name[32] = "";
+   const char *text =
+       "This is a long label that will wrap to multiple lines when the width is limited. It demonstrates "
+       "the monstro_label_wrapped function, and it runs on long enough to wrap more than once here.";
+   MonstroRect field = {}, label = {};
+   Bounds glyphs;
+   // The window scrolls: its content needs a vertical scrollbar from the second frame on.
+   for (int frame = 0; frame < 3; frame++)
+   {
+      ui.begin();
+      monstro_set_next_window_pos(ui.ctx, 0, 0, MONSTRO_COND_ALWAYS);
+      monstro_set_next_window_size(ui.ctx, 400, 200, MONSTRO_COND_ALWAYS);
+      monstro_begin_window(
+          ui.ctx, "page", nullptr,
+          (MonstroWindowFlags)(MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_VERTICAL_SCROLLBAR));
+      uint32_t white = ui.vertexCount();
+      monstro_draw_rect_filled(monstro_get_window_canvas(ui.ctx), {0, 0, 1, 1}, 0xffffffff, 0, MONSTRO_CORNER_NONE);
+      monstro_input_text(ui.ctx, "name##", name, sizeof(name), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      field = monstro_get_item_rect(ui.ctx);
+      uint32_t first = ui.vertexCount();
+      monstro_label_wrapped(ui.ctx, text, 0.0f);
+      uint32_t last = ui.vertexCount();
+      label = monstro_get_item_rect(ui.ctx);
+      for (int i = 0; i < 20; i++)
+         monstro_label(ui.ctx, "filler");
+      monstro_end_window(ui.ctx);
+      const MonstroDrawData *data = ui.end();
+      glyphs = glyph_bounds(data, white, first, last);
+   }
+
+   // The field stops at the scrollbar, a scrollbar's width in from the window's padding.
+   const float scrollbar_x = 400.0f - 4.0f - 10.0f;
+   CHECK(near(field.x + field.w, scrollbar_x));
+   // The label is as wide as the field, and its text stays inside it, left of the scrollbar, on more than one line.
+   CHECK(near(label.x + label.w, field.x + field.w));
+   CHECK(!glyphs.empty() && glyphs.x0 >= label.x && glyphs.x1 <= field.x + field.w);
+   CHECK(label.h > 2.0f * monstro_font_get_line_height(ui.font));
+}
