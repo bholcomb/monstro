@@ -258,8 +258,8 @@ TEST(a_vertical_slider_runs_from_its_minimum_at_the_bottom_to_its_maximum_at_the
    MonstroRect r = t.rect;
    CHECK(r.x == 100 && r.w == 30 && r.h == 200);
 
-   // Held a quarter of the way down, then dragged to the bottom.
-   t.press(r.x + 15, r.y + 50);
+   // Held at 75 (the 16 px cursor's centre travels 184 px, from 8 px in at either end), then dragged to the bottom.
+   t.press(r.x + 15, r.y + 8 + 0.25f * 184);
    CHECK(t.changed && t.activated && near(value, 75.0f));
    t.ui.moveMouse(r.x + 15, r.y + 300);
    t.frame();
@@ -289,7 +289,7 @@ TEST(a_vertical_slider_fills_from_the_bottom)
    MonstroRect r = monstro_get_item_rect(ui.ctx);
    monstro_end_window(ui.ctx);
    data = ui.end();
-   // The filled part is drawn in the slider's fill colour, over the bottom quarter.
+   // The filled part is drawn in the slider's fill colour, from the bottom to the cursor's centre at 25.
    uint32_t fill = monstro_color_to_u32(monstro_get_slider_style(ui.ctx)->bar_filled);
    float top = 1e9f, bottom = -1e9f;
    for (uint32_t i = first; i < data->vertex_count; i++)
@@ -298,7 +298,7 @@ TEST(a_vertical_slider_fills_from_the_bottom)
          top = std::fmin(top, data->vertices[i].position[1]);
          bottom = std::fmax(bottom, data->vertices[i].position[1]);
       }
-   CHECK(near(top, r.y + 150.0f, 0.5f) && near(bottom, r.y + 200.0f, 0.5f));
+   CHECK(near(top, r.y + 200.0f - (8.0f + 0.25f * 184.0f), 0.5f) && near(bottom, r.y + 200.0f, 0.5f));
 }
 
 /* ------------------------------------------------------------------------- */

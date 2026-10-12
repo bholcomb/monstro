@@ -91,10 +91,18 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
 
    double old_value = *value;
 
+   // The cursor stays inside the slider: its centre travels from half its length in from one end to half its
+   // length in from the other.
+   float cursor_half = ss->cursor_size[0] * 0.5f;
+   float travel = std::max((vertical ? slider_rect.h : slider_rect.w) - ss->cursor_size[0], 0.0f);
+
    if (held)
    {
-      double ratio = vertical ? 1.0 - (ctx->mouse.pos_y - slider_rect.y) / slider_rect.h
-                              : (ctx->mouse.pos_x - slider_rect.x) / slider_rect.w;
+      double along = vertical ? ctx->mouse.pos_y - (slider_rect.y + cursor_half)
+                              : ctx->mouse.pos_x - (slider_rect.x + cursor_half);
+      double ratio = travel > 0.0f ? along / travel : 0.0;
+      if (vertical)
+         ratio = 1.0 - ratio;
       ratio = clampd(ratio, 0.0, 1.0);
       *value = integer ? min_val + std::round(ratio * range) : min_val + ratio * range;
    }
@@ -119,9 +127,9 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    // Filled portion, from the minimum's end
    if (t > 0.0f)
    {
-      MonstroRect filled_rect =
-          vertical ? MonstroRect{bar_rect.x, bar_rect.y + bar_rect.h * (1.0f - t), bar_rect.w, bar_rect.h * t}
-                   : MonstroRect{bar_rect.x, bar_rect.y, bar_rect.w * t, bar_rect.h};
+      MonstroRect filled_rect = vertical ? MonstroRect{bar_rect.x, bar_rect.y + bar_rect.h - (cursor_half + t * travel),
+                                                       bar_rect.w, cursor_half + t * travel}
+                                         : MonstroRect{bar_rect.x, bar_rect.y, cursor_half + t * travel, bar_rect.h};
       canvas->addRectFilled(filled_rect, monstro_color_to_u32(ss->bar_filled), ss->rounding,
                             vertical ? MONSTRO_CORNER_BOTTOM : MONSTRO_CORNER_LEFT);
    }
@@ -129,13 +137,11 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
    // Cursor, its long side across the bar
    MonstroRect cursor_rect;
    if (vertical)
-      cursor_rect = {slider_rect.x + (slider_rect.w - ss->cursor_size[1]) * 0.5f,
-                     slider_rect.y + (1.0f - t) * slider_rect.h - ss->cursor_size[0] * 0.5f, ss->cursor_size[1],
-                     ss->cursor_size[0]};
+      cursor_rect = {slider_rect.x + (slider_rect.w - ss->cursor_size[1]) * 0.5f, slider_rect.y + (1.0f - t) * travel,
+                     ss->cursor_size[1], ss->cursor_size[0]};
    else
-      cursor_rect = {slider_rect.x + t * slider_rect.w - ss->cursor_size[0] * 0.5f,
-                     slider_rect.y + (slider_rect.h - ss->cursor_size[1]) * 0.5f, ss->cursor_size[0],
-                     ss->cursor_size[1]};
+      cursor_rect = {slider_rect.x + t * travel, slider_rect.y + (slider_rect.h - ss->cursor_size[1]) * 0.5f,
+                     ss->cursor_size[0], ss->cursor_size[1]};
 
    MonstroStyleItem *cursor_style = &ss->cursor_normal;
    if (held)
