@@ -1254,6 +1254,12 @@ if (monstro_begin_table(ctx, "tbl", 3,
 }
 ```
 
+A cell gives the widgets in it the cell's width: a text or number field,
+slider or combo fills its cell.  Rows are `style->table.row_height` tall and
+do not grow to fit; widgets keep their style's padding in a cell, so for
+compact rows push zero padding for the labels, buttons and fields in the
+table, as the widget tour (`examples/basic`) does.
+
 ### Menus
 
 To use a menu bar, add `MONSTRO_WINDOW_MENU_BAR` to the window flags:

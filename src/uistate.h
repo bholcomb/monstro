@@ -98,6 +98,9 @@ struct MonstroTableFrame
    float table_x = 0.0f, table_y = 0.0f;
    float table_w = 0.0f;
    float row_y = 0.0f;
+   // The layout's room before the table, which each cell narrows to its own and monstro_end_table gives back.
+   float outer_available_width = 0.0f;
+   float outer_visible_max_screen_x = 0.0f;
    MonstroTableColumn columns[MONSTRO_MAX_TABLE_COLUMNS] = {};
 };
 

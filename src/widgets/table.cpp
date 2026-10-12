@@ -27,6 +27,25 @@ static float column_offset(MonstroTableFrame *table, int col)
    return x;
 }
 
+// Put the cursor in a cell of the current row and narrow the layout's room to the cell, so that widgets which fill
+// the room they are given (text and number fields, sliders, combos) fill the cell, not the rest of the window.
+static void enter_cell(MonstroContext *ctx, MonstroTableFrame *table, int column)
+{
+   MonstroStyleTable *ts = &ctx->style().table;
+   float cell_x = table->table_x + column_offset(table, column) + ts->cell_padding[0];
+   float cell_w = table->state->widths[column] - ts->cell_padding[0] * 2.0f;
+   if (cell_w < 0.0f)
+      cell_w = 0.0f;
+
+   monstro_set_cursor_screen_pos(ctx, cell_x, table->row_y + ts->cell_padding[1]);
+   monstro::Layout *layout = ctx->getCurrentLayout();
+   if (layout)
+   {
+      layout->myAvailableWidth = cell_w;
+      layout->myVisibleMaxScreenX = cell_x + cell_w;
+   }
+}
+
 // The open table, for calls that belong between monstro_begin_table and monstro_end_table.
 static MonstroTableFrame *require_table(MonstroContext *ctx, const char *function)
 {
@@ -90,6 +109,9 @@ bool monstro_begin_table(MonstroContext *ctx, const char *str_id, int column_cou
    table->table_y = pos.y;
    table->table_w = table_w;
    table->row_y = pos.y;
+   monstro::Layout *layout = win->getCurrentLayout();
+   table->outer_available_width = layout ? layout->myAvailableWidth : 0.0f;
+   table->outer_visible_max_screen_x = layout ? layout->myVisibleMaxScreenX : 0.0f;
    for (int i = 0; i < column_count; i++)
       table->columns[i] = MonstroTableColumn{};
 
@@ -140,6 +162,12 @@ void monstro_end_table(MonstroContext *ctx)
       }
    }
 
+   monstro::Layout *layout = ctx->getCurrentLayout();
+   if (layout)
+   {
+      layout->myAvailableWidth = table->outer_available_width;
+      layout->myVisibleMaxScreenX = table->outer_visible_max_screen_x;
+   }
    monstro_set_cursor_screen_pos(ctx, table->table_x, table->table_y);
    monstro_add_item(ctx, table->table_w, table_h);
 
@@ -315,14 +343,7 @@ bool monstro_table_next_column(MonstroContext *ctx)
    if (table->current_column >= table->state->column_count)
       return false;
 
-   MonstroStyle *style = &ctx->style();
-   MonstroStyleTable *ts = &style->table;
-
-   float cx = table->table_x + column_offset(table, table->current_column) + ts->cell_padding[0];
-   float cy = table->row_y + ts->cell_padding[1];
-
-   monstro_set_cursor_screen_pos(ctx, cx, cy);
-
+   enter_cell(ctx, table, table->current_column);
    return true;
 }
 
@@ -334,14 +355,6 @@ bool monstro_table_set_column_index(MonstroContext *ctx, int column)
       return false;
 
    table->current_column = column;
-
-   MonstroStyle *style = &ctx->style();
-   MonstroStyleTable *ts = &style->table;
-
-   float cx = table->table_x + column_offset(table, column) + ts->cell_padding[0];
-   float cy = table->row_y + ts->cell_padding[1];
-
-   monstro_set_cursor_screen_pos(ctx, cx, cy);
-
+   enter_cell(ctx, table, column);
    return true;
 }

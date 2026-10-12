@@ -101,3 +101,58 @@ TEST(a_knob_keeps_its_width_as_its_value_changes)
    }
    CHECK(widths[0] == widths[1]);
 }
+
+TEST(a_table_cell_holds_the_fields_that_fill_it)
+{
+   Ui ui;
+   char name[32] = "Alpha";
+   float value = 1.0f;
+   const float table_w = 600.0f, action_w = 80.0f;
+   float field_x[3] = {}, field_right[3] = {};
+   Bounds value_text;
+   const MonstroRect table = {50, 50, table_w, 0}; // the table takes the cursor's x and the width it is given
+   MonstroRect after = {};
+   for (int frame = 0; frame < 2; frame++)
+   {
+      uint32_t white = begin_page(ui);
+      monstro_set_cursor_screen_pos(ui.ctx, 50, 50);
+      CHECK(monstro_begin_table(ui.ctx, "t", 3, MONSTRO_TABLE_BORDERS, table_w, 0.0f));
+      monstro_table_setup_column(ui.ctx, "Name", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+      monstro_table_setup_column(ui.ctx, "Value", MONSTRO_TABLE_COLUMN_NONE, 0.0f);
+      monstro_table_setup_column(ui.ctx, "Action", MONSTRO_TABLE_COLUMN_WIDTH_FIXED, action_w);
+      monstro_table_headers_row(ui.ctx);
+      monstro_table_next_row(ui.ctx);
+      monstro_table_next_column(ui.ctx);
+      monstro_input_text(ui.ctx, "name##", name, sizeof(name), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      MonstroRect r = monstro_get_item_rect(ui.ctx);
+      field_x[0] = r.x, field_right[0] = r.x + r.w;
+      monstro_table_next_column(ui.ctx);
+      uint32_t first = ui.vertexCount();
+      monstro_input_float(ui.ctx, "value##", &value, 0.0f, 0.0f, "%.2f", nullptr);
+      uint32_t last = ui.vertexCount();
+      r = monstro_get_item_rect(ui.ctx);
+      field_x[1] = r.x, field_right[1] = r.x + r.w;
+      monstro_table_set_column_index(ui.ctx, 2);
+      monstro_button(ui.ctx, "Reset", nullptr);
+      r = monstro_get_item_rect(ui.ctx);
+      field_x[2] = r.x, field_right[2] = r.x + r.w;
+      monstro_end_table(ui.ctx);
+      // After the table the layout has its whole width again.
+      monstro_input_text(ui.ctx, "after##", name, sizeof(name), MONSTRO_INPUT_TEXT_NONE, nullptr);
+      after = monstro_get_item_rect(ui.ctx);
+      monstro_end_window(ui.ctx);
+      const MonstroDrawData *data = ui.end();
+      value_text = glyph_bounds(data, white, first, last);
+   }
+
+   // Each field lies within its column; the value's text within the value column, left of the action column.
+   float column_w = (table_w - action_w) * 0.5f;
+   float column_x[3] = {table.x, table.x + column_w, table.x + column_w * 2.0f};
+   float column_right[3] = {column_x[1], column_x[2], table.x + table_w};
+   for (int c = 0; c < 3; c++)
+      CHECK(field_x[c] >= column_x[c] && field_right[c] <= column_right[c]);
+   // The fields fill their cells.
+   CHECK(field_right[0] > column_right[0] - 10.0f && field_right[1] > column_right[1] - 10.0f);
+   CHECK(!value_text.empty() && value_text.x0 >= column_x[1] && value_text.x1 <= column_right[1]);
+   CHECK(after.w > table_w);
+}
