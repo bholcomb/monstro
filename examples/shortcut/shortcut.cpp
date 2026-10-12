@@ -112,7 +112,7 @@ void shortcut_editor_draw(ShortcutEditor *se, MonstroContext *ctx)
             monstro_table_next_column(ctx);
             if (se->capturing && se->rebinding_index == i)
             {
-               monstro_label_colored(ctx, "Press a key...", {255, 200, 80, 255});
+               monstro_label_colored(ctx, "Press a key...", monstro_color_rgb(1.0f, 0.78f, 0.31f));
 
                for (int k = 0; k < MONSTRO_KEY_COUNT; k++)
                {
@@ -151,7 +151,7 @@ void shortcut_editor_draw(ShortcutEditor *se, MonstroContext *ctx)
                }
                else
                {
-                  monstro_label_colored(ctx, "(unbound)", {120, 120, 120, 255});
+                  monstro_label_colored(ctx, "(unbound)", monstro_color_rgb(0.47f, 0.47f, 0.47f));
                }
             }
 

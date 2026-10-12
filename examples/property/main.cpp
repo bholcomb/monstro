@@ -17,7 +17,7 @@ static void on_init(ExampleApp *, void *)
    property_editor_add_section(&g_editor, "Rendering");
    property_editor_add_bool(&g_editor, "Visible", true);
    property_editor_add_bool(&g_editor, "Cast Shadows", true);
-   property_editor_add_color(&g_editor, "Tint", {255, 255, 255, 255});
+   property_editor_add_color(&g_editor, "Tint", MONSTRO_COLOR_WHITE);
    property_editor_add_float(&g_editor, "Opacity", 1.0f, 0.0f, 1.0f);
 
    const char *blend_modes[] = {"Opaque", "Alpha Blend", "Additive", "Multiply"};

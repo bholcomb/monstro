@@ -519,8 +519,8 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
                             "This is a long label that will wrap to multiple lines when the width is limited. It "
                             "demonstrates the monstro_label_wrapped function.",
                             0.0f);
-      monstro_label_colored(ctx, " Colored Label(Red) ", {255, 80, 80, 255});
-      monstro_label_colored(ctx, "Colored Label (Green)", {80, 255, 80, 255});
+      monstro_label_colored(ctx, "Colored Label (Red)", monstro_color_rgb(1.0f, 0.3f, 0.3f));
+      monstro_label_colored(ctx, "Colored Label (Green)", monstro_color_rgb(0.3f, 1.0f, 0.3f));
 
       monstro_separator_text(ctx, "Spacing Helpers");
 
