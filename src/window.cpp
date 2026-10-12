@@ -257,11 +257,11 @@ bool Window::end()
    {
       if (show_scrollbar_y)
       {
-         drawVerticalScrollbar(header_h);
+         drawVerticalScrollbar();
       }
       if (show_scrollbar_x)
       {
-         drawHorizontalScrollbar(header_h);
+         drawHorizontalScrollbar();
       }
    }
 
@@ -446,7 +446,7 @@ void Window::clampScrollOffsets()
       scroll_y = max_scroll_y;
 }
 
-void Window::drawVerticalScrollbar(float header_h)
+void Window::drawVerticalScrollbar()
 {
    if (!show_scrollbar_y || collapsed)
       return;
@@ -459,7 +459,7 @@ void Window::drawVerticalScrollbar(float header_h)
 
    float max_scroll = getMaxScrollY();
    MonstroRect content_rect = getContentRect();
-   MonstroRect track_rect = {content_rect.x + content_rect.w, pos.y + header_h, bar_w, content_rect.h};
+   MonstroRect track_rect = {content_rect.x + content_rect.w, content_rect.y, bar_w, content_rect.h};
 
    canvas().addStyleItem(ss->normal, track_rect, ss->rounding, MONSTRO_CORNER_ALL);
 
@@ -523,7 +523,7 @@ void Window::drawVerticalScrollbar(float header_h)
    }
 }
 
-void Window::drawHorizontalScrollbar(float header_h)
+void Window::drawHorizontalScrollbar()
 {
    if (!show_scrollbar_x || collapsed)
       return;
@@ -536,7 +536,7 @@ void Window::drawHorizontalScrollbar(float header_h)
 
    float max_scroll = getMaxScrollX();
    MonstroRect content_rect = getContentRect();
-   MonstroRect track_rect = {content_rect.x, pos.y + header_h + content_rect.h, content_rect.w, bar_h};
+   MonstroRect track_rect = {content_rect.x, content_rect.y + content_rect.h, content_rect.w, bar_h};
 
    canvas().addStyleItem(ss->normal, track_rect, ss->rounding, MONSTRO_CORNER_ALL);
 
@@ -611,12 +611,13 @@ void Window::pushContentClipRect()
    }
    else
    {
-      // The content starts a padding in from the window's edge, so the clip reaches a padding past the view,
-      // up to a scrollbar where there is one.
+      // Content scrolls under the window's left and top padding, so the clip runs from the window's edge (below
+      // its bars) to the content view's right and bottom edges: the scrollbars, where there are any.
       const MonstroStyle &style = ctx->style();
-      content_rect.w = getContentRight();
-      if (!show_scrollbar_x)
-         content_rect.h += style.window.padding[1];
+      content_rect.x -= style.window.padding[0];
+      content_rect.y -= style.window.padding[1];
+      content_rect.w += style.window.padding[0];
+      content_rect.h += style.window.padding[1];
       canvas().pushClipRect(content_rect);
    }
    content_clip_pushed = true;
@@ -875,15 +876,14 @@ void Window::setCursorScreenPos(float x, float y)
 
 MonstroRect Window::getRect() const { return {pos.x, pos.y, size.x, size.y}; }
 
-float Window::getContentRight() const
-{
-   return content_view_width + (show_scrollbar_y ? 0.0f : ctx->style().window.padding[0]);
-}
+float Window::getContentRight() const { return ctx->style().window.padding[0] + content_view_width; }
 
 MonstroRect Window::getContentRect() const
 {
+   const MonstroStyle &style = ctx->style();
    float header_h = getTitleBarHeight() + getMenuBarHeight();
-   return {pos.x, pos.y + header_h, content_view_width, content_view_height};
+   return {pos.x + style.window.padding[0], pos.y + header_h + style.window.padding[1], content_view_width,
+           content_view_height};
 }
 
 bool Window::mouseOverTitle() const

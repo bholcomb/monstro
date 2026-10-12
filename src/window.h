@@ -76,9 +76,11 @@ struct Window
    void setCursorScreenPos(float x, float y);
 
    MonstroRect getRect() const;
+   // The window's padding insets one box on every side, below the title and menu bars. The scrollbars stand inside
+   // it along its right and bottom edges, and the content view is the rest: this rect, on screen.
    MonstroRect getContentRect() const;
-   // The content region's right edge from the window's left, as the content is clipped: at the vertical scrollbar
-   // where there is one, else a padding in from the window's right edge.
+   // The content region's right edge from the window's left, as the content is clipped: the content view's right
+   // edge, at the vertical scrollbar where there is one, else a padding in from the window's right edge.
    float getContentRight() const;
    float getTitleBarHeight() const;
    MonstroRect getTitleBarRect() const;
@@ -118,8 +120,8 @@ struct Window
    void clampScrollOffsets();
    float getMaxScrollX() const;
    float getMaxScrollY() const;
-   void drawVerticalScrollbar(float header_h);
-   void drawHorizontalScrollbar(float header_h);
+   void drawVerticalScrollbar();
+   void drawHorizontalScrollbar();
 };
 
 } // namespace monstro

@@ -1338,6 +1338,11 @@ it.  Calling it outside a popup stops the program.
 By default, widgets stack vertically inside a window.  Use layouts to change
 this.
 
+The window's padding is the same on every side: content starts a padding in
+from the window's left and top edges, and the vertical and horizontal
+scrollbars stand a padding in from its right and bottom edges, with the
+content view running up to them.
+
 ### Horizontal layout
 
 ```c

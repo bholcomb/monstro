@@ -293,9 +293,9 @@ TEST(a_wrapped_label_stops_where_full_width_widgets_do)
       glyphs = glyph_bounds(data, white, first, last);
    }
 
-   // The field stops at the scrollbar, which stands at the content view's right edge: the window's width less a
-   // padding each side and the scrollbar's width.
-   const float scrollbar_x = 400.0f - 4.0f * 2.0f - 10.0f;
+   // The field stops at the scrollbar, which stands a padding in from the window's right edge: the window's width
+   // less that padding and the scrollbar's width.
+   const float scrollbar_x = 400.0f - 4.0f - 10.0f;
    CHECK(near(field.x + field.w, scrollbar_x));
    // The label is as wide as the field, and its text stays inside it, left of the scrollbar, on more than one line.
    CHECK(near(label.x + label.w, field.x + field.w));
@@ -366,8 +366,9 @@ TEST(widgets_that_fill_the_width_stop_at_the_content_edge)
       ui.end();
    }
 
-   // The scrollbar stands at the content view's right edge: the window's width less a padding each side and its own.
-   const float content_right = 400.0f - 6.0f * 2.0f - 14.0f;
+   // The scrollbar stands a padding in from the window's right edge, at the content view's right edge: the window's
+   // width less that padding and the scrollbar's width.
+   const float content_right = 400.0f - 6.0f - 14.0f;
    for (int i = 0; i < COUNT; i++)
    {
       float right = rects[i].x + rects[i].w;
@@ -419,6 +420,72 @@ TEST(an_indent_moves_content_in_by_exactly_its_width)
    CHECK(near(before.x, parent.x));
    CHECK(near(indented.x, before.x + 30.0f));
    CHECK(near(after.x, before.x));
+}
+
+// The window's padding is the same on every side: content starts a padding in from the window's left and top edges,
+// and the scrollbars stand a padding in from its right and bottom edges, the vertical one beside the content view and
+// the horizontal one below it.
+TEST(scrollbars_stand_a_window_padding_in_from_the_edges)
+{
+   Ui ui;
+   MonstroStyle style;
+   monstro_style_set_default(&style);
+   style.window.padding[0] = 6.0f;
+   style.window.padding[1] = 5.0f;
+   style.window.scrollbar_size[0] = 14.0f;
+   style.window.scrollbar_size[1] = 12.0f;
+   const MonstroColor vertical_color = monstro_color_from_u32(0xff123456u);
+   const MonstroColor horizontal_color = monstro_color_from_u32(0xff654321u);
+   style.scrollv.normal.data.color = vertical_color;
+   style.scrollh.normal.data.color = horizontal_color;
+   monstro_context_set_theme(ui.ctx, monstro_theme_register(ui.env, "scrolled", &style));
+
+   for (int wide = 0; wide < 2; wide++)
+   {
+      char text[16] = "text";
+      MonstroRect field = {};
+      Bounds vertical, horizontal;
+      for (int frame = 0; frame < 3; frame++) // the scrollbars show from the second frame, when the content is known
+      {
+         ui.begin();
+         monstro_set_next_window_pos(ui.ctx, 0, 0, MONSTRO_COND_ALWAYS);
+         monstro_set_next_window_size(ui.ctx, 400, 300, MONSTRO_COND_ALWAYS);
+         monstro_begin_window(
+             ui.ctx, "page", nullptr,
+             (MonstroWindowFlags)(MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLLBARS));
+         monstro_input_text(ui.ctx, "Text", text, sizeof(text), MONSTRO_INPUT_TEXT_NONE, nullptr);
+         field = monstro_get_item_rect(ui.ctx);
+         if (wide)
+            monstro_dummy(ui.ctx, 1000.0f, 10.0f);
+         for (int i = 0; i < 30; i++)
+            monstro_label(ui.ctx, "filler");
+         monstro_end_window(ui.ctx);
+         const MonstroDrawData *data = ui.end();
+         vertical = colored_bounds(data, 0, data->vertex_count, monstro_color_to_u32(vertical_color));
+         horizontal = colored_bounds(data, 0, data->vertex_count, monstro_color_to_u32(horizontal_color));
+      }
+
+      // Left and right: the content a padding in from the left, the vertical scrollbar a padding in from the right
+      // with the content view up to it. Top and bottom likewise.
+      CHECK(!vertical.empty());
+      CHECK(near(field.x, 6.0f));
+      CHECK(near(vertical.x1, 400.0f - 6.0f));
+      CHECK(near(vertical.x0, 400.0f - 6.0f - 14.0f));
+      CHECK(near(field.x + field.w, vertical.x0));
+      CHECK(near(vertical.y0, 5.0f));
+      if (!wide)
+      {
+         CHECK(horizontal.empty());
+         CHECK(near(vertical.y1, 300.0f - 5.0f));
+         continue;
+      }
+      CHECK(!horizontal.empty());
+      CHECK(near(horizontal.x0, 6.0f));
+      CHECK(near(horizontal.x1, vertical.x0));
+      CHECK(near(horizontal.y1, 300.0f - 5.0f));
+      CHECK(near(horizontal.y0, 300.0f - 5.0f - 12.0f));
+      CHECK(near(vertical.y1, horizontal.y0));
+   }
 }
 
 TEST(a_label_is_level_with_the_text_of_widgets_beside_it)
