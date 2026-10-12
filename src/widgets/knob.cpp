@@ -99,7 +99,6 @@ bool monstro_knob_ex(MonstroContext *ctx, const char *label, float *value, float
 
    // A knob with no shown label ("id##") is the knob alone, without the space before it.
    float label_gap = display[0] ? ks->padding[0] : 0.0f;
-   float total_w = label_w + label_gap + knob_diameter;
    float total_h = knob_diameter > text_h ? knob_diameter : text_h;
 
    MonstroVec2 pos = monstro_get_cursor_screen_pos(ctx);
@@ -202,14 +201,23 @@ bool monstro_knob_ex(MonstroContext *ctx, const char *label, float *value, float
                               MONSTRO_CORNER_ALL);
    }
 
-   // Value text centered on the knob
+   // The value to the right of the knob, in room for the widest of its minimum, maximum and value, so that the
+   // knob's width holds still as it turns.
+   float value_w = 0.0f;
    if (format && font)
    {
       char buf[64];
-      snprintf(buf, sizeof(buf), format, *value);
-      MonstroRect text_rect = {knob_rect.x, knob_rect.y, knob_diameter, knob_diameter};
-      canvas->addTextEx(font, text_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_CENTER);
+      const float shown[] = {min_val, max_val, *value}; // the value last, so buf ends holding it
+      for (float v : shown)
+      {
+         snprintf(buf, sizeof(buf), format, v);
+         monstro_utf8_trim_partial(buf);
+         value_w = fmaxf(value_w, monstro_font_measure_text(font, buf, 0.0f).x);
+      }
+      MonstroRect text_rect = {knob_rect.x + knob_diameter + ks->padding[0], knob_rect.y, value_w, knob_diameter};
+      canvas->addTextEx(font, text_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_DEFAULT);
    }
+   float total_w = label_w + label_gap + knob_diameter + (value_w > 0.0f ? ks->padding[0] + value_w : 0.0f);
 
    // Label to the left of the knob
    if (font && display[0])

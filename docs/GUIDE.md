@@ -1010,7 +1010,9 @@ monstro_knob(ctx, "Gain", &gain, 0.0f, 1.0f, "%.2f", NULL);
 monstro_knob_sized(ctx, "Rate", &gain, 0.0f, 100.0f, "%.1f", 60.0f, NULL);
 ```
 
-A knob turns by dragging up and down, from where it was.  An absolute knob
+The label shows to the left of the knob and the value to its right, in room
+for the widest of the minimum, maximum and value.  A knob turns by dragging
+up and down, from where it was.  An absolute knob
 (`MONSTRO_KNOB_ABSOLUTE`, through `monstro_knob_ex`) points where the pointer
 is instead: while held, its value is the pointer's angle about its centre,
 over the sweep from the minimum at the lower left, clockwise over the top, to
