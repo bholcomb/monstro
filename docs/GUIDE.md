@@ -1572,7 +1572,11 @@ monstro_end_disabled(ctx);
 A theme is a `MonstroStyle` registered once in the environment.  It is
 immutable from then on, and any number of contexts reference it.
 `monstro_init` registers three built-in themes, `"default"`, `"dark"` and
-`"light"`; a new context uses `"default"`.
+`"light"`; a new context uses `"default"`.  The default theme is dark
+blue-grey with a blue accent; `"dark"` is neutral charcoal with a teal accent;
+`"light"` is light grey with white fields, dark text and a blue accent, on
+every widget.  `monstro_style_set_default`, `monstro_style_set_dark` and
+`monstro_style_set_light` fill a style with each, as a start for your own.
 
 ```c
 MonstroTheme* dark = monstro_theme_find(env, "dark");

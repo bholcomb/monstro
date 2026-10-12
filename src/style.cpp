@@ -612,41 +612,364 @@ void monstro_style_set_default(MonstroStyle *style)
    style->window.tooltip_padding[1] = 4.0f;
 }
 
-void monstro_style_set_dark(MonstroStyle *style) { monstro_style_set_default(style); }
+// The colours of a built-in theme besides the default. Every colour a widget draws comes from one of these.
+struct Palette
+{
+   MonstroColor text, text_strong, text_dim;
+   MonstroColor window, header, title, border;
+   MonstroColor button, button_hover, button_active;
+   MonstroColor field, toggle, toggle_hover, accent;
+   MonstroColor slider_bar, slider_bar_hover, slider_cursor, slider_cursor_hover;
+   MonstroColor scroll_track, scroll_thumb, scroll_thumb_hover;
+   MonstroColor menu, row_hover, row_selected;
+   MonstroColor tab_bar, tab, tab_hover, tab_selected;
+   MonstroColor tooltip, group, group_border, table_odd_row, separator;
+   MonstroColor chart, chart_highlight, edit_cursor, selection, selection_text, modal_dim;
+};
 
+static MonstroStyleButton paletteButton(const MonstroStyleButton &base, const Palette &p, MonstroColor normal,
+                                        MonstroColor border)
+{
+   MonstroStyleButton b = base;
+   b.normal = styleItemColor(normal);
+   b.hover = styleItemColor(p.button_hover);
+   b.active = styleItemColor(p.button_active);
+   b.border_color = border;
+   b.text_background = normal;
+   b.text_normal = p.text;
+   b.text_hover = p.text_strong;
+   b.text_active = p.text_strong;
+   return b;
+}
+
+// The default theme's sizes and shapes in the palette's colours.
+static void style_from_palette(MonstroStyle *style, const Palette &p)
+{
+   monstro_style_set_default(style);
+   MonstroColor none = {0.0f, 0.0f, 0.0f, 0.0f};
+
+   style->text.color = p.text;
+   style->text.background = p.window;
+
+   style->button = paletteButton(style->button, p, p.button, p.border);
+
+   MonstroStyleButton *contextual = &style->contextual_button;
+   contextual->hover = styleItemColor(p.row_hover);
+   contextual->active = styleItemColor(p.row_selected);
+   contextual->text_background = p.menu;
+   contextual->text_normal = p.text;
+   contextual->text_hover = p.text_strong;
+   contextual->text_active = p.text_strong;
+
+   MonstroStyleButton *menu_button = &style->menu_button;
+   menu_button->normal = styleItemColor(p.header);
+   menu_button->hover = styleItemColor(p.row_hover);
+   menu_button->active = styleItemColor(p.row_selected);
+   menu_button->text_background = p.header;
+   menu_button->text_normal = p.text;
+   menu_button->text_hover = p.text_strong;
+   menu_button->text_active = p.text_strong;
+
+   MonstroStyleToggle *toggles[] = {&style->checkbox, &style->option};
+   for (MonstroStyleToggle *t : toggles)
+   {
+      t->normal = styleItemColor(p.toggle);
+      t->hover = styleItemColor(p.toggle_hover);
+      t->active = styleItemColor(t == &style->option ? p.toggle : p.toggle_hover);
+      t->cursor_normal = styleItemColor(p.accent);
+      t->cursor_hover = styleItemColor(p.accent);
+      t->border_color = p.border;
+      t->text_background = p.window;
+      t->text_normal = p.text;
+      t->text_hover = p.text_strong;
+      t->text_active = p.text_strong;
+   }
+
+   MonstroStyleSelectable *sel = &style->selectable;
+   sel->normal = styleItemColor(none);
+   sel->hover = styleItemColor(p.row_hover);
+   sel->pressed = styleItemColor(p.row_selected);
+   sel->normal_active = styleItemColor(p.row_selected);
+   sel->hover_active = styleItemColor(p.row_selected);
+   sel->pressed_active = styleItemColor(p.row_selected);
+   sel->text_normal = p.text;
+   sel->text_hover = p.text_strong;
+   sel->text_pressed = p.text_strong;
+   sel->text_normal_active = p.text_strong;
+   sel->text_hover_active = p.text_strong;
+   sel->text_pressed_active = p.text_strong;
+   sel->text_background = p.window;
+
+   MonstroStyleSlider *slider = &style->slider;
+   slider->border_color = p.border;
+   slider->bar_normal = p.slider_bar;
+   slider->bar_hover = p.slider_bar_hover;
+   slider->bar_active = p.slider_bar_hover;
+   slider->bar_filled = p.accent;
+   slider->cursor_normal = styleItemColor(p.slider_cursor);
+   slider->cursor_hover = styleItemColor(p.slider_cursor_hover);
+   slider->cursor_active = styleItemColor(p.accent);
+   slider->inc_button = paletteButton(slider->inc_button, p, p.header, p.border);
+   slider->dec_button = slider->inc_button;
+
+   MonstroStyleProgress *progress = &style->progress;
+   progress->normal = styleItemColor(p.slider_bar);
+   progress->hover = styleItemColor(p.slider_bar);
+   progress->active = styleItemColor(p.slider_bar);
+   progress->cursor_normal = styleItemColor(p.accent);
+   progress->cursor_hover = styleItemColor(p.accent);
+   progress->cursor_active = styleItemColor(p.accent);
+
+   MonstroStyleScrollbar *scroll = &style->scrollh;
+   scroll->normal = styleItemColor(p.scroll_track);
+   scroll->hover = styleItemColor(p.scroll_track);
+   scroll->active = styleItemColor(p.scroll_track);
+   scroll->cursor_normal = styleItemColor(p.scroll_thumb);
+   scroll->cursor_hover = styleItemColor(p.scroll_thumb_hover);
+   scroll->cursor_active = styleItemColor(p.accent);
+   scroll->border_color = p.scroll_track;
+   scroll->cursor_border_color = p.scroll_track;
+   scroll->inc_button = paletteButton(scroll->inc_button, p, p.header, p.border);
+   scroll->dec_button = scroll->inc_button;
+   style->scrollv = style->scrollh;
+
+   MonstroStyleEdit *edits[] = {&style->edit, &style->property.edit};
+   for (MonstroStyleEdit *e : edits)
+   {
+      e->normal = styleItemColor(p.field);
+      e->hover = styleItemColor(p.field);
+      e->active = styleItemColor(p.field);
+      e->border_color = e == &style->edit ? p.border : none;
+      e->cursor_normal = p.edit_cursor;
+      e->cursor_hover = p.edit_cursor;
+      e->cursor_text_normal = p.field;
+      e->cursor_text_hover = p.field;
+      e->text_normal = p.text;
+      e->text_hover = p.text_strong;
+      e->text_active = p.text_strong;
+      e->selected_normal = p.selection;
+      e->selected_hover = p.selection;
+      e->selected_text_normal = p.selection_text;
+      e->selected_text_hover = p.selection_text;
+   }
+   style->edit.scrollbar = style->scrollv;
+
+   MonstroStyleProperty *property = &style->property;
+   property->normal = styleItemColor(p.field);
+   property->hover = styleItemColor(p.field);
+   property->active = styleItemColor(p.field);
+   property->border_color = p.border;
+   property->label_normal = p.text;
+   property->label_hover = p.text;
+   property->label_active = p.text;
+   property->dec_button = paletteButton(property->dec_button, p, p.field, none);
+   property->inc_button = property->dec_button;
+
+   style->chart.background = styleItemColor(p.chart);
+   style->chart.border_color = p.border;
+   style->chart.selected_color = p.chart_highlight;
+   style->chart.color = p.accent;
+
+   MonstroStyleCombo *combo = &style->combo;
+   combo->normal = styleItemColor(p.button);
+   combo->hover = styleItemColor(p.button_hover);
+   combo->active = styleItemColor(p.button_hover);
+   combo->border_color = p.border;
+   combo->label_normal = p.text;
+   combo->label_hover = p.text_strong;
+   combo->label_active = p.text_strong;
+   combo->symbol_normal = p.text;
+   combo->symbol_hover = p.text_strong;
+   combo->symbol_active = p.text_strong;
+   combo->button = paletteButton(combo->button, p, p.button, none);
+
+   MonstroStyleTab *tab = &style->tab;
+   tab->background = styleItemColor(p.tab_bar);
+   tab->border_color = p.accent;
+   tab->text = p.text_dim;
+   MonstroStyleButton tab_button = paletteButton(tab->tab_maximize_button, p, p.tab, none);
+   tab_button.hover = styleItemColor(p.tab_hover);
+   tab_button.active = styleItemColor(p.tab_selected);
+   tab_button.text_background = p.tab_bar;
+   tab_button.text_normal = p.text_dim;
+   tab->tab_maximize_button = tab_button;
+   tab->tab_minimize_button = tab_button;
+   MonstroStyleButton node_button = tab->node_maximize_button;
+   node_button.normal = styleItemColor(p.window);
+   node_button.hover = styleItemColor(p.window);
+   node_button.active = styleItemColor(p.window);
+   node_button.text_background = p.tab_bar;
+   node_button.text_normal = p.text;
+   node_button.text_hover = p.text;
+   node_button.text_active = p.text;
+   tab->node_maximize_button = node_button;
+   tab->node_minimize_button = node_button;
+
+   style->separator.color = p.separator;
+
+   style->tooltip.background = styleItemColor(p.tooltip);
+   style->tooltip.border_color = p.border;
+   style->tooltip.text = p.text;
+
+   MonstroStyleMenu *menu = &style->menu;
+   menu->normal = styleItemColor(p.menu);
+   menu->hover = styleItemColor(p.row_hover);
+   menu->active = styleItemColor(p.row_selected);
+   menu->border_color = p.border;
+   menu->text_normal = p.text;
+   menu->text_hover = p.text_strong;
+   menu->text_active = p.text_strong;
+
+   // A collapsing header is a bar in the tree's active colour.
+   MonstroStyleTree *tree = &style->tree;
+   tree->normal = styleItemColor(p.window);
+   tree->hover = styleItemColor(p.row_hover);
+   tree->active = styleItemColor(p.button);
+   tree->selected = styleItemColor(p.row_selected);
+   tree->text_normal = p.text;
+   tree->text_hover = p.text_strong;
+   tree->text_active = p.text_strong;
+   tree->text_selected = p.text_strong;
+
+   MonstroStyleTable *table = &style->table;
+   table->background = styleItemColor(p.window);
+   table->border_color = p.border;
+   table->row_color_even = p.window;
+   table->row_color_odd = p.table_odd_row;
+   table->header_normal = styleItemColor(p.header);
+   table->header_hover = styleItemColor(p.button_hover);
+   table->header_active = styleItemColor(p.button_active);
+   table->header_text = p.text;
+
+   MonstroStyleKnob *knob = &style->knob;
+   knob->normal = styleItemColor(p.button);
+   knob->hover = styleItemColor(p.button_hover);
+   knob->active = styleItemColor(p.button_active);
+   knob->border_color = p.border;
+   knob->track_normal = p.slider_bar;
+   knob->track_filled = p.accent;
+   knob->indicator_normal = styleItemColor(p.text);
+   knob->indicator_hover = styleItemColor(p.text_strong);
+   knob->indicator_active = styleItemColor(p.text_strong);
+
+   MonstroStyleWindowHeader *header = &style->window.header;
+   header->normal = styleItemColor(p.title);
+   header->hover = styleItemColor(p.button_hover);
+   header->active = styleItemColor(p.title);
+   header->label_normal = p.text;
+   header->label_hover = p.text_strong;
+   header->label_active = p.text_strong;
+   header->close_button = paletteButton(header->close_button, p, p.title, none);
+   header->minimize_button = header->close_button;
+
+   MonstroStyleWindow *window = &style->window;
+   window->background = p.window;
+   window->fixed_background = styleItemColor(p.window);
+   window->border_style = styleItemColor(p.border);
+   window->border_color = p.border;
+   window->popup_border_color = p.border;
+   window->combo_border_color = p.border;
+   window->contextual_border_color = p.border;
+   window->menu_border_color = p.header; // the menu bar's background
+   window->group_background = styleItemColor(p.group);
+   window->group_border_color = p.group_border;
+   window->tooltip_border_color = p.border;
+   window->scaler = styleItemColor(p.text_dim);
+   window->modal_dim_color = p.modal_dim;
+}
+
+// Neutral charcoal with a teal accent, where the default is blue-grey.
+void monstro_style_set_dark(MonstroStyle *style)
+{
+   if (!style)
+      return;
+   Palette p;
+   p.text = {0.86f, 0.86f, 0.86f, 1.0f};
+   p.text_strong = {1.0f, 1.0f, 1.0f, 1.0f};
+   p.text_dim = {0.60f, 0.60f, 0.60f, 1.0f};
+   p.window = {0.13f, 0.13f, 0.14f, 1.0f};
+   p.header = {0.09f, 0.09f, 0.10f, 1.0f};
+   p.title = {0.18f, 0.18f, 0.19f, 1.0f};
+   p.border = {0.05f, 0.05f, 0.05f, 1.0f};
+   p.button = {0.22f, 0.22f, 0.23f, 1.0f};
+   p.button_hover = {0.30f, 0.30f, 0.32f, 1.0f};
+   p.button_active = {0.10f, 0.42f, 0.38f, 1.0f};
+   p.field = {0.07f, 0.07f, 0.08f, 1.0f};
+   p.toggle = {0.07f, 0.07f, 0.08f, 1.0f};
+   p.toggle_hover = {0.20f, 0.20f, 0.21f, 1.0f};
+   p.accent = {0.16f, 0.62f, 0.56f, 1.0f};
+   p.slider_bar = {0.22f, 0.22f, 0.23f, 1.0f};
+   p.slider_bar_hover = {0.27f, 0.27f, 0.29f, 1.0f};
+   p.slider_cursor = {0.55f, 0.55f, 0.57f, 1.0f};
+   p.slider_cursor_hover = {0.70f, 0.70f, 0.72f, 1.0f};
+   p.scroll_track = {0.09f, 0.09f, 0.10f, 1.0f};
+   p.scroll_thumb = {0.30f, 0.30f, 0.32f, 1.0f};
+   p.scroll_thumb_hover = {0.40f, 0.40f, 0.42f, 1.0f};
+   p.menu = {0.10f, 0.10f, 0.11f, 1.0f};
+   p.row_hover = {0.24f, 0.24f, 0.26f, 1.0f};
+   p.row_selected = {0.10f, 0.38f, 0.35f, 1.0f};
+   p.tab_bar = {0.08f, 0.08f, 0.09f, 1.0f};
+   p.tab = {0.16f, 0.16f, 0.17f, 1.0f};
+   p.tab_hover = {0.26f, 0.26f, 0.28f, 1.0f};
+   p.tab_selected = {0.13f, 0.13f, 0.14f, 1.0f};
+   p.tooltip = {0.20f, 0.20f, 0.21f, 1.0f};
+   p.group = {0.17f, 0.17f, 0.18f, 1.0f};
+   p.group_border = {0.26f, 0.26f, 0.28f, 1.0f};
+   p.table_odd_row = {1.0f, 1.0f, 1.0f, 0.04f};
+   p.separator = {0.30f, 0.30f, 0.32f, 1.0f};
+   p.chart = {0.08f, 0.08f, 0.09f, 1.0f};
+   p.chart_highlight = {1.0f, 0.68f, 0.14f, 1.0f};
+   p.edit_cursor = {0.40f, 0.85f, 0.78f, 1.0f};
+   p.selection = {0.10f, 0.42f, 0.38f, 1.0f};
+   p.selection_text = {1.0f, 1.0f, 1.0f, 1.0f};
+   p.modal_dim = {0.0f, 0.0f, 0.0f, 0.5f};
+   style_from_palette(style, p);
+}
+
+// Light grey surfaces, white fields and dark text, with a blue accent.
 void monstro_style_set_light(MonstroStyle *style)
 {
    if (!style)
       return;
-
-   monstro_style_set_default(style);
-
-   MonstroColor TEXT_L = rgba(40, 40, 40, 255);
-   MonstroColor WINDOW_L = rgba(240, 240, 240, 255);
-   MonstroColor HEADER_L = rgba(220, 220, 220, 255);
-   MonstroColor BORDER_L = rgba(180, 180, 180, 255);
-   MonstroColor BUTTON_L = rgba(220, 220, 220, 255);
-   MonstroColor BUTTON_HOVER_L = rgba(200, 200, 200, 255);
-   MonstroColor BUTTON_ACTIVE_L = rgba(180, 180, 180, 255);
-
-   style->text.color = TEXT_L;
-
-   style->button.normal = styleItemColor(BUTTON_L);
-   style->button.hover = styleItemColor(BUTTON_HOVER_L);
-   style->button.active = styleItemColor(BUTTON_ACTIVE_L);
-   style->button.border_color = BORDER_L;
-   style->button.text_normal = TEXT_L;
-   style->button.text_hover = rgba(20, 20, 20, 255);
-   style->button.text_active = rgba(60, 60, 60, 255);
-
-   style->window.background = WINDOW_L;
-   style->window.fixed_background = styleItemColor(WINDOW_L);
-   style->window.border_style = styleItemColor(BORDER_L);
-   style->window.border_color = BORDER_L;
-   style->window.header.normal = styleItemColor(HEADER_L);
-   style->window.header.hover = styleItemColor(rgba(210, 210, 210, 255));
-   style->window.header.active = styleItemColor(rgba(200, 200, 200, 255));
-   style->window.header.label_normal = TEXT_L;
-   style->window.header.label_hover = TEXT_L;
-   style->window.header.label_active = TEXT_L;
+   Palette p;
+   p.text = {0.12f, 0.12f, 0.14f, 1.0f};
+   p.text_strong = {0.0f, 0.0f, 0.0f, 1.0f};
+   p.text_dim = {0.38f, 0.38f, 0.40f, 1.0f};
+   p.window = {0.95f, 0.95f, 0.96f, 1.0f};
+   p.header = {0.88f, 0.88f, 0.90f, 1.0f};
+   p.title = {0.82f, 0.84f, 0.88f, 1.0f};
+   p.border = {0.68f, 0.69f, 0.72f, 1.0f};
+   p.button = {0.87f, 0.88f, 0.90f, 1.0f};
+   p.button_hover = {0.80f, 0.85f, 0.92f, 1.0f};
+   p.button_active = {0.70f, 0.79f, 0.92f, 1.0f};
+   p.field = {1.0f, 1.0f, 1.0f, 1.0f};
+   p.toggle = {0.84f, 0.85f, 0.88f, 1.0f}; // a checkbox has no outline: its box stands out from the window
+   p.toggle_hover = {0.78f, 0.83f, 0.92f, 1.0f};
+   p.accent = {0.16f, 0.44f, 0.80f, 1.0f};
+   p.slider_bar = {0.82f, 0.83f, 0.86f, 1.0f};
+   p.slider_bar_hover = {0.77f, 0.78f, 0.82f, 1.0f};
+   p.slider_cursor = {0.52f, 0.55f, 0.61f, 1.0f};
+   p.slider_cursor_hover = {0.42f, 0.45f, 0.52f, 1.0f};
+   p.scroll_track = {0.90f, 0.90f, 0.92f, 1.0f};
+   p.scroll_thumb = {0.68f, 0.69f, 0.72f, 1.0f};
+   p.scroll_thumb_hover = {0.58f, 0.59f, 0.63f, 1.0f};
+   p.menu = {0.97f, 0.97f, 0.98f, 1.0f};
+   p.row_hover = {0.85f, 0.89f, 0.96f, 1.0f};
+   p.row_selected = {0.74f, 0.83f, 0.95f, 1.0f};
+   p.tab_bar = {0.86f, 0.86f, 0.88f, 1.0f};
+   p.tab = {0.86f, 0.86f, 0.88f, 1.0f};
+   p.tab_hover = {0.92f, 0.92f, 0.94f, 1.0f};
+   p.tab_selected = {0.98f, 0.98f, 0.99f, 1.0f};
+   p.tooltip = {1.0f, 0.99f, 0.92f, 1.0f};
+   p.group = {0.90f, 0.90f, 0.92f, 1.0f};
+   p.group_border = {0.78f, 0.79f, 0.82f, 1.0f};
+   p.table_odd_row = {0.0f, 0.0f, 0.0f, 0.04f};
+   p.separator = {0.75f, 0.76f, 0.79f, 1.0f};
+   p.chart = {1.0f, 1.0f, 1.0f, 1.0f};
+   p.chart_highlight = {0.90f, 0.50f, 0.10f, 1.0f};
+   p.edit_cursor = {0.16f, 0.44f, 0.80f, 1.0f};
+   p.selection = {0.65f, 0.78f, 0.95f, 1.0f};
+   p.selection_text = {0.0f, 0.0f, 0.0f, 1.0f};
+   p.modal_dim = {0.0f, 0.0f, 0.0f, 0.3f};
+   style_from_palette(style, p);
 }
