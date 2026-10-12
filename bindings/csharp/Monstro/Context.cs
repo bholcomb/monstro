@@ -123,7 +123,7 @@ public sealed unsafe class Context : IDisposable
         return handle;
     }
 
-    // As in C, pair BeginWindow with EndWindow even when BeginWindow returns false.
+    // As in C, call EndWindow only when BeginWindow returned true (without a close pointer, it does).
     public bool BeginWindow(string name, MonstroWindowFlags flags = MonstroWindowFlags.Default) =>
         Native.monstro_begin_window(RequireFrame(), name ?? throw new ArgumentNullException(nameof(name)), null, flags);
     public void EndWindow() => Native.monstro_end_window(RequireFrame());

@@ -71,14 +71,17 @@ python3 bindings/csharp/generate.py --check   # fails if the committed files are
 ### Everything CI runs
 
 ```sh
-python3 ci/build.py [--buildy PATH]
+python3 ci/build.py [--buildy PATH] [--version VERSION]
 ```
 
 This is what CI runs on each platform: it builds the release library alone,
 runs the headless suite (not on Windows), checks that the library exports every
 function the binding imports, runs the binding's checks, and on Windows checks
-that the C runtime is linked in. It leaves the library in `build/ci/out/`, named
-as a release names it. On Windows, run it from an x64 developer prompt.
+that the C runtime is linked in. It then packages the library with the headers
+into the archive a release publishes for the platform, checks the archive holds
+exactly the expected files, and leaves it alone in `build/ci/out/`. The archive's
+version is `--version`, by default the short commit. On Windows, run it from an
+x64 developer prompt.
 
 ## Examples
 
@@ -121,9 +124,25 @@ The others are `monstro_interaction`, `monstro_cockpit`, `monstro_console`,
 `.github/workflows/build.yml` builds and tests the library on Linux x64,
 Windows x64 and macOS arm64 for every push to `main` and every pull request. A
 pushed version tag also publishes a GitHub release with each platform's
-library and a `SHA256SUMS` file:
+archive and a `SHA256SUMS` file:
 
 ```sh
 git tag v0.1.0
 git push origin v0.1.0
 ```
+
+The archives are `monstro-<version>-linux-x64.tar.gz`,
+`monstro-<version>-osx-arm64.tar.gz` and `monstro-<version>-win-x64.zip`, where
+`<version>` is the tag without its `v` (`0.1.0`); a build that is not a tag's
+names its archive with the short commit instead. Each unpacks to one directory,
+`monstro-<version>-<platform>/`, holding:
+
+- `include/`: the public headers, as in the repository's `include/`.
+- The library, named as it is built: `lib/libmonstro.so` on Linux,
+  `lib/libmonstro.dylib` on macOS, and on Windows `bin/libmonstro.dll` with its
+  import library `lib/libmonstro.lib`.
+- `LICENSE`.
+
+Programs that link the library record its name alone (its SONAME on Linux,
+`@rpath/libmonstro.dylib` on macOS), not where it was linked from, so they find
+it beside them or on their rpath.

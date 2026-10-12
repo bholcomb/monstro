@@ -119,8 +119,8 @@ while (running)
         ui.SliderFloat("Throttle", ref throttle, 0, 1);
         ui.Checkbox("Running lights", ref lights);
         if (ui.Button("Launch")) Launch();
+        ui.EndWindow();
     }
-    ui.EndWindow();
     DrawData draw = ui.EndFrame();
     if (draw.Changed) Render(draw.Vertices, draw.Indices, draw.Commands);
 }
@@ -128,18 +128,20 @@ while (running)
 
 ## Getting Monstro
 
-Each [release](https://github.com/bholcomb/monstro/releases) holds the shared
-library for every platform, with a `SHA256SUMS` file:
+Each [release](https://github.com/bholcomb/monstro/releases) holds an archive
+for every platform, with a `SHA256SUMS` file. An archive unpacks to one
+directory, `monstro-<version>-<platform>/`, holding the public headers in
+`include/`, the library and `LICENSE`:
 
-| Platform | File |
-| --- | --- |
-| Linux x64 | `linux-x64-libmonstro.so` |
-| Windows x64 | `win-x64-libmonstro.dll`, and its import library `win-x64-libmonstro.lib` |
-| macOS 11 or later, Apple Silicon | `osx-arm64-libmonstro.dylib` |
+| Platform | Archive | Library |
+| --- | --- | --- |
+| Linux x64 | `monstro-<version>-linux-x64.tar.gz` | `lib/libmonstro.so` |
+| Windows x64 | `monstro-<version>-win-x64.zip` | `bin/libmonstro.dll`, and its import library `lib/libmonstro.lib` |
+| macOS 11 or later, Apple Silicon | `monstro-<version>-osx-arm64.tar.gz` | `lib/libmonstro.dylib` |
 
-Rename the file to `libmonstro.so`, `libmonstro.dll` or `libmonstro.dylib`, the
-name the .NET binding loads (and the import library to `libmonstro.lib`), and
-use the headers in `include/` from the same tag. For .NET, reference
+For C and C++, add `include/` to the include path and link `libmonstro` from
+`lib/` (on Windows, link `lib/libmonstro.lib` and ship `bin/libmonstro.dll`).
+For .NET, reference
 [`bindings/csharp/Monstro/Monstro.csproj`](bindings/csharp/Monstro/Monstro.csproj)
 and put the library beside your app.
 

@@ -43,8 +43,8 @@ if (hud.BeginWindow("Controls"))
     if (hud.Button("Launch")) Launch();
     hud.Checkbox("Enabled", ref enabled);
     hud.SliderFloat("Throttle", ref throttle, 0, 1);
+    hud.EndWindow();
 }
-hud.EndWindow();
 DrawData draw = hud.EndFrame();
 if (draw.Changed)
     Render(draw.Vertices, draw.Indices, draw.Commands);

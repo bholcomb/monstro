@@ -15,4 +15,10 @@ targets:
         - "../externals"
       defines:
         - "MONSTRO_EXPORT=1"
+      # A program linked against the library records this name, not the path it was linked from,
+      # so the library loads from wherever the program ships it: beside it, or on its rpath.
+      link:
+        flags:
+          - linux: ["-Wl,-soname,libmonstro.so"]
+          - macos: ["-Wl,-install_name,@rpath/libmonstro.dylib"]
       deps: []

@@ -1,6 +1,8 @@
-# Builds monstro's shared library on every platform games ship it for and runs the tests there.
-# Pushes and pull requests build and test; a version tag (v*) also publishes a release holding
-# each platform's library (with the DLL's import library on Windows) and a SHA256SUMS file.
+# Builds monstro's shared library on every platform games ship it for, runs the tests there and
+# packages it with its headers: monstro-<version>-<rid>.tar.gz (.zip on Windows), as ci/build.py
+# describes. The version is the tag's without its v on a tag (v0.1.0 -> 0.1.0), else the short
+# commit. Pushes and pull requests build, test and package; a version tag (v*) also publishes a
+# release holding the three archives and a SHA256SUMS file.
 #
 # Every platform builds with the buildy release pinned in ci/buildy.json.
 
@@ -78,8 +80,13 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Build and test
-        run: ${{ matrix.python }} ci/build.py --buildy ${{ matrix.buildy }}
+      - name: Build, test and package
+        run: |
+          version="$(git rev-parse --short HEAD)"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          ${{ matrix.python }} ci/build.py --buildy ${{ matrix.buildy }} --version "$version"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -104,7 +111,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          expected="linux-x64-libmonstro.so osx-arm64-libmonstro.dylib win-x64-libmonstro.dll win-x64-libmonstro.lib"
+          version="${GITHUB_REF_NAME#v}"
+          expected="monstro-$version-linux-x64.tar.gz monstro-$version-osx-arm64.tar.gz monstro-$version-win-x64.zip"
           found="$(ls | sort | tr '\n' ' ' | sed 's/ $//')"
           if [ "$found" != "$expected" ]; then
             echo "Expected the files '$expected', found '$found'"
@@ -114,5 +122,5 @@ jobs:
           cat SHA256SUMS
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$GITHUB_REF_NAME" \
-            --notes "monstro's shared library for each platform, built and tested at $GITHUB_SHA." \
+            --notes "monstro's shared library and headers for each platform, built and tested at $GITHUB_SHA." \
             $expected SHA256SUMS

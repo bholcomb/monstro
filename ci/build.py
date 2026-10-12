@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """The CI build: monstro's shared library for this platform, built with buildy, then the tests that
-run here. The library is libmonstro on every platform; it lands in build/ci/out/ named for its
-platform (linux-x64-libmonstro.so, win-x64-libmonstro.dll, osx-arm64-libmonstro.dylib), as the
-release publishes it. On Windows the DLL's import library, which C and C++ programs link against,
-lands beside it (win-x64-libmonstro.lib).
+run here, then the archive the release publishes for this platform, alone in build/ci/out/:
+monstro-<version>-linux-x64.tar.gz, monstro-<version>-osx-arm64.tar.gz or
+monstro-<version>-win-x64.zip. Its one top-level directory, monstro-<version>-<rid>/, holds
+include/ (the public headers as in the repository), LICENSE and the library, libmonstro on every
+platform: lib/libmonstro.so, lib/libmonstro.dylib, or bin/libmonstro.dll with its import library
+lib/libmonstro.lib.
 
 Run it from anywhere; Windows needs the MSVC developer environment (cl.exe, link.exe, dumpbin.exe)."""
 
@@ -15,6 +17,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "build/ci"
@@ -69,6 +73,93 @@ def load_check(built):
     print(f"{built.name}: exports all {len(names)} functions; an environment made and destroyed", flush=True)
 
 
+def check_library_name(rid, built):
+    """A program linked against the library records the library's own name (its SONAME on Linux,
+    its install name on macOS), not the path it was linked from, so it loads from wherever the
+    program ships it. src/buildy.yaml sets both; Windows records the DLL's file name."""
+    if rid == "linux-x64":
+        dynamic = subprocess.run(["readelf", "-d", str(built)], check=True, capture_output=True, text=True).stdout
+        names = re.findall(r"\(SONAME\)\s+Library soname: \[(.*)\]", dynamic)
+        expected = ["libmonstro.so"]
+    elif rid == "osx-arm64":
+        names = subprocess.run(["otool", "-D", str(built)], check=True, capture_output=True, text=True).stdout.splitlines()[1:]
+        expected = ["@rpath/libmonstro.dylib"]
+    else:
+        return
+    if names != expected:
+        raise SystemExit(f"{built} is named {names} for the programs that link it; expected {expected}")
+    print(f"{built.name}: programs that link it load {expected[0]}", flush=True)
+
+
+def package(rid, version, built):
+    """Writes this platform's release archive to build/ci/out/ and checks that it holds exactly the
+    expected files, each identical to its source. Entries are sorted, owned by root, with
+    normalized permissions."""
+    top = f"monstro-{version}-{rid}"
+    files = {f"{top}/LICENSE": ROOT / "LICENSE"}
+    for header in sorted((ROOT / "include").rglob("*")):
+        if header.is_file():
+            files[f"{top}/{header.relative_to(ROOT).as_posix()}"] = header
+    if rid == "win-x64":
+        implib = built.parents[1] / "lib/libmonstro.lib"
+        if not implib.is_file():
+            raise SystemExit(f"buildy built {built} without its import library {implib}")
+        files[f"{top}/bin/{built.name}"] = built
+        files[f"{top}/lib/{implib.name}"] = implib
+    else:
+        files[f"{top}/lib/{built.name}"] = built
+    directories = {f"{top}/"}
+    for name in files:
+        parts = name.split("/")[:-1]
+        directories.update("/".join(parts[:end]) + "/" for end in range(1, len(parts) + 1))
+    expected = sorted(directories | set(files))
+
+    out = WORK / "out"
+    out.mkdir()
+    if rid == "win-x64":
+        archive = out / f"{top}.zip"
+        with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
+            for name in expected:
+                zipped.write(files[name] if name in files else ROOT, name)
+        with zipfile.ZipFile(archive) as zipped:
+            found = sorted(zipped.namelist())
+            contents = {name: zipped.read(name) for name in found if not name.endswith("/")}
+    else:
+        archive = out / f"{top}.tar.gz"
+
+        def normalize(info):
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            info.mode = 0o755 if info.isdir() or info.name.endswith(built.name) else 0o644
+            return info
+
+        with tarfile.open(archive, "w:gz") as tarred:
+            for name in expected:
+                tarred.add(files[name] if name in files else ROOT, name.rstrip("/"), recursive=False, filter=normalize)
+        with tarfile.open(archive) as tarred:
+            members = tarred.getmembers()
+            found = sorted(member.name + "/" if member.isdir() else member.name for member in members)
+            contents = {member.name: tarred.extractfile(member).read() for member in members if member.isfile()}
+    if found != expected:
+        missing = sorted(set(expected) - set(found))
+        extra = sorted(set(found) - set(expected))
+        raise SystemExit(f"{archive} is missing {missing} and has extra (or repeated) entries {extra or 'none'}")
+    different = [name for name, source in files.items() if contents.get(name) != source.read_bytes()]
+    if different:
+        raise SystemExit(f"{archive} holds {different} different from their sources")
+    if sorted(out.iterdir()) != [archive]:
+        raise SystemExit(f"{out} holds {sorted(path.name for path in out.iterdir())}; expected only {archive.name}")
+    print(f"Built {archive}:", *expected, sep="\n  ", flush=True)
+
+
+def short_commit():
+    """The checkout's short commit: the version of a build that is not a release."""
+    result = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise SystemExit(f"{ROOT} is not a git checkout ({result.stderr.strip()}); pass --version")
+    return result.stdout.strip()
+
+
 def binding_tests(rid, library, built):
     """The .NET binding's checks against this library: every export, struct layouts against the
     headers (the ABI probe), input, fonts and draw output. .NET finds both libraries beside the app."""
@@ -96,7 +187,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--buildy", type=Path,
                         help="The buildy executable (default: buildy on PATH; CI passes the pinned release's)")
+    parser.add_argument("--version",
+                        help="The version in the archive's name: a release's tag without its v, as 0.1.0 (default: the short commit)")
     args = parser.parse_args()
+    version = args.version or short_commit()
+    if not re.fullmatch(r"[0-9a-zA-Z][0-9a-zA-Z.+-]*", version) or version.startswith("v"):
+        parser.error(f"--version {version!r}: expected a tag without its v (0.1.0) or a commit")
     key = (sys.platform, platform.machine())
     if key not in PLATFORMS:
         parser.error(f"CI builds Linux x86_64, Windows x64 and macOS arm64, not {key}")
@@ -112,6 +208,7 @@ def main():
     # The headless suite (also under ASan and UBSan) runs where fork and POSIX pipes exist.
     if rid != "win-x64":
         run("bash", ROOT / "tests/run.sh")
+    check_library_name(rid, built)
     load_check(built)
     binding_tests(rid, library, built)
     if rid == "win-x64":
@@ -122,16 +219,7 @@ def main():
         if "vcruntime" in dependents.lower() or "msvcp" in dependents.lower():
             raise SystemExit(f"{built} imports the Visual C++ runtime; link it statically (/MT)")
 
-    release = WORK / "out" / f"{rid}-{library}"
-    release.parent.mkdir()
-    shutil.copy2(built, release)
-    print(f"Built {release}")
-    if rid == "win-x64":
-        implib = built.parents[1] / "lib/libmonstro.lib"
-        if not implib.is_file():
-            raise SystemExit(f"buildy built {built} without its import library {implib}")
-        shutil.copy2(implib, release.with_suffix(".lib"))
-        print(f"Built {release.with_suffix('.lib')}")
+    package(rid, version, built)
 
 
 if __name__ == "__main__":
