@@ -156,3 +156,24 @@ TEST(a_table_cell_holds_the_fields_that_fill_it)
    CHECK(!value_text.empty() && value_text.x0 >= column_x[1] && value_text.x1 <= column_right[1]);
    CHECK(after.w > table_w);
 }
+
+TEST(a_slider_label_is_level_with_its_value)
+{
+   Ui ui;
+   float value = 0.0f;
+   uint32_t white = begin_page(ui);
+   monstro_set_cursor_screen_pos(ui.ctx, 100, 100);
+   uint32_t first = ui.vertexCount();
+   // The label and the value are the same glyph, so their quads match when they are level.
+   monstro_slider_float(ui.ctx, "0", &value, 0.0f, 1.0f, "%.0f", nullptr);
+   uint32_t last = ui.vertexCount();
+   MonstroRect item = monstro_get_item_rect(ui.ctx);
+   monstro_end_window(ui.ctx);
+   const MonstroDrawData *data = ui.end();
+
+   float label_end = item.x + monstro_font_measure_text(ui.font, "0", 0.0f).x;
+   Bounds label = glyph_bounds(data, white, first, last, -1e9f, label_end);
+   Bounds shown = glyph_bounds(data, white, first, last, label_end, 1e9f);
+   CHECK(!label.empty() && !shown.empty());
+   CHECK(near(label.y0, shown.y0) && near(label.y1, shown.y1));
+}

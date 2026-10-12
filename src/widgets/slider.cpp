@@ -161,10 +161,10 @@ static bool slider_impl(MonstroContext *ctx, const char *label, double *value, d
       canvas->addTextEx(font, slider_rect, monstro_color_to_u32(style->text.color), buf, MONSTRO_ALIGN_CENTER);
    }
 
-   // Label
+   // Label, level with the value text
    if (font)
    {
-      canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_LEFT);
+      canvas->addTextEx(font, label_rect, monstro_color_to_u32(style->text.color), display, MONSTRO_ALIGN_DEFAULT);
    }
 
    monstro_add_item(ctx, total_w, slider_h);
