@@ -177,3 +177,30 @@ TEST(a_slider_label_is_level_with_its_value)
    CHECK(!label.empty() && !shown.empty());
    CHECK(near(label.y0, shown.y0) && near(label.y1, shown.y1));
 }
+
+TEST(the_item_after_columns_follows_their_last_row)
+{
+   Ui ui;
+   MonstroRect first_cell = {}, last_cell = {}, after = {};
+   begin_page(ui);
+   monstro_set_cursor_screen_pos(ui.ctx, 50, 50);
+   monstro_begin_columns(ui.ctx, "form", 2);
+   for (int row = 0; row < 2; row++)
+   {
+      monstro_label(ui.ctx, "key");
+      if (row == 0)
+         first_cell = monstro_get_item_rect(ui.ctx);
+      monstro_next_column(ui.ctx);
+      monstro_label(ui.ctx, "value");
+      last_cell = monstro_get_item_rect(ui.ctx);
+      monstro_next_column(ui.ctx);
+   }
+   monstro_end_columns(ui.ctx);
+   monstro_label(ui.ctx, "after");
+   after = monstro_get_item_rect(ui.ctx);
+   monstro_end_window(ui.ctx);
+   ui.end();
+
+   // The next item comes straight after the last row, as it would after the same labels one under another.
+   CHECK(near(after.y, last_cell.y + last_cell.h) && after.x == first_cell.x);
+}

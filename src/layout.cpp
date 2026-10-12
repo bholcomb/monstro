@@ -354,7 +354,8 @@ void monstro_end_columns(MonstroContext *ctx)
    {
       layout->myAvailableWidth = cs->columns_w;
       layout->myVisibleMaxScreenX = cs->prev_visible_max_screen_x;
-      monstro_set_cursor_screen_pos(ctx, cs->columns_x, final_y);
+      // The columns are one item, from where they began: the next item follows their last row.
+      monstro_set_cursor_screen_pos(ctx, cs->columns_x, cs->start_y);
       monstro_add_item(ctx, cs->columns_w, total_h);
    }
 }
