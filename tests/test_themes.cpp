@@ -273,3 +273,35 @@ static void check_game_theme(const GameTheme *game_theme)
 TEST(the_scifi_theme_draws_art_on_every_main_widget) { check_game_theme(&GAME_THEME_SCIFI); }
 
 TEST(the_rpg_theme_draws_art_on_every_main_widget) { check_game_theme(&GAME_THEME_RPG); }
+
+// The frame a context draws in a game theme, set before its first frame or switched to between frames after frames in
+// the default theme, as the widget tour's --theme and its Theme menu do.
+static uint64_t frame_in_theme(const GameTheme *game_theme, int default_frames)
+{
+   Ui ui;
+   uint64_t uploaded = 0;
+   MonstroTheme *theme = game_theme_register(ui.env, game_theme, "examples/themes", fake_upload, &uploaded);
+   ui.moveMouse(790, 590); // away from every widget
+   for (int frame = 0; frame < default_frames; frame++)
+   {
+      ui.begin();
+      widget_frame(ui.ctx);
+      ui.end();
+   }
+   monstro_context_set_theme(ui.ctx, theme);
+   const MonstroDrawData *data = nullptr;
+   for (int frame = 0; frame < 2; frame++)
+   {
+      ui.begin();
+      widget_frame(ui.ctx);
+      data = ui.end();
+   }
+   return data->content_hash;
+}
+
+TEST(a_game_theme_switched_to_between_frames_draws_as_one_set_before_the_first)
+{
+   CHECK(frame_in_theme(&GAME_THEME_SCIFI, 3) == frame_in_theme(&GAME_THEME_SCIFI, 0));
+   CHECK(frame_in_theme(&GAME_THEME_RPG, 3) == frame_in_theme(&GAME_THEME_RPG, 0));
+   CHECK(frame_in_theme(&GAME_THEME_SCIFI, 0) != frame_in_theme(&GAME_THEME_RPG, 0));
+}
