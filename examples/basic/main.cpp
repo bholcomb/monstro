@@ -515,7 +515,11 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_separator_text(ctx, "Label Variants");
 
       monstro_label_sized(ctx, "Sized Label", 200.0f, 30.0f);
-      monstro_label_wrapped(ctx, "This is a long label that will wrap to multiple lines when the width is limited. It demonstrates the monstro_label_wrapped function.", 0.0f); monstro_label_colored(ctx, " Colored Label(Red) ",{255, 80, 80, 255});
+      monstro_label_wrapped(ctx,
+                            "This is a long label that will wrap to multiple lines when the width is limited. It "
+                            "demonstrates the monstro_label_wrapped function.",
+                            0.0f);
+      monstro_label_colored(ctx, " Colored Label(Red) ", {255, 80, 80, 255});
       monstro_label_colored(ctx, "Colored Label (Green)", {80, 255, 80, 255});
 
       monstro_separator_text(ctx, "Spacing Helpers");
@@ -580,62 +584,72 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_separator_text(ctx, "File Dialog");
       monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
       {
-          if (monstro_button(ctx, "Open File...", nullptr)) {
-              monstro_file_dialog_open(d->fileDialog, "Open File", nullptr,
-         "Source Files|*.cpp;*.h;*.txt|All Files|*",
-         MONSTRO_FILE_DIALOG_OPEN);
-          }
-          if (monstro_button(ctx, "Save File...", nullptr)) {
-              monstro_file_dialog_open(d->fileDialog, "Save File", nullptr,
-         "Text Files|*.txt|All Files|*", MONSTRO_FILE_DIALOG_SAVE);
-          }
+         if (monstro_button(ctx, "Open File...", nullptr))
+         {
+            monstro_file_dialog_open(d->fileDialog, "Open File", nullptr, "Source Files|*.cpp;*.h;*.txt|All Files|*",
+                                     MONSTRO_FILE_DIALOG_OPEN);
+         }
+         if (monstro_button(ctx, "Save File...", nullptr))
+         {
+            monstro_file_dialog_open(d->fileDialog, "Save File", nullptr, "Text Files|*.txt|All Files|*",
+                                     MONSTRO_FILE_DIALOG_SAVE);
+         }
       }
       monstro_end_layout(ctx);
-      if (monstro_file_dialog_is_open(d->fileDialog)) {
-          MonstroFileDialogResult r = monstro_file_dialog_draw(ctx, d->fileDialog);
-          if (r == MONSTRO_FILE_DIALOG_OK) {
-              strncpy(d->lastFilePath, monstro_file_dialog_get_path(d->fileDialog), sizeof(d->lastFilePath) - 1);
-              printf("Selected: %s\n", d->lastFilePath);
-          }
+      if (monstro_file_dialog_is_open(d->fileDialog))
+      {
+         MonstroFileDialogResult r = monstro_file_dialog_draw(ctx, d->fileDialog);
+         if (r == MONSTRO_FILE_DIALOG_OK)
+         {
+            strncpy(d->lastFilePath, monstro_file_dialog_get_path(d->fileDialog), sizeof(d->lastFilePath) - 1);
+            printf("Selected: %s\n", d->lastFilePath);
+         }
       }
-      if (d->lastFilePath[0]) {
-          monstro_label(ctx, d->lastFilePath);
+      if (d->lastFilePath[0])
+      {
+         monstro_label(ctx, d->lastFilePath);
       }
 
       monstro_separator_text(ctx, "Color Picker");
-      if (monstro_color_button(ctx, "picker_swatch##", d->pickerColor, 40.0f, 20.0f)) {
-          d->colorPickerOpen = !d->colorPickerOpen;
+      if (monstro_color_button(ctx, "picker_swatch##", d->pickerColor, 40.0f, 20.0f))
+      {
+         d->colorPickerOpen = !d->colorPickerOpen;
       }
 
       monstro_separator_text(ctx, "Modal Dialog");
 
-      if (monstro_button(ctx, "Open Modal", nullptr)) {
-          d->showModal = true;
-          monstro_open_popup_ex(ctx, "ConfirmModal", true);
+      if (monstro_button(ctx, "Open Modal", nullptr))
+      {
+         d->showModal = true;
+         monstro_open_popup_ex(ctx, "ConfirmModal", true);
       }
 
-      if (d->showModal) {
-          if (monstro_begin_popup_modal(ctx, "ConfirmModal", &d->showModal, (MonstroWindowFlags)0)) {
-              monstro_label(ctx, "Are you sure?");
-              monstro_label(ctx, "This action cannot be undone.");
-              monstro_spacer(ctx, 10.0f);
-              monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
-              {
-                  if (monstro_button(ctx, "OK", nullptr)) {
-                      printf("Modal: OK clicked\n");
-                      d->showModal = false;
-                      monstro_close_current_popup(ctx);
-                  }
-                  monstro_spacer(ctx, 10.0f);
-                  if (monstro_button(ctx, "Cancel", nullptr)) {
-                      printf("Modal: Cancel clicked\n");
-                      d->showModal = false;
-                      monstro_close_current_popup(ctx);
-                  }
-              }
-              monstro_end_layout(ctx);
-              monstro_end_popup(ctx);
-          }
+      if (d->showModal)
+      {
+         if (monstro_begin_popup_modal(ctx, "ConfirmModal", &d->showModal, (MonstroWindowFlags)0))
+         {
+            monstro_label(ctx, "Are you sure?");
+            monstro_label(ctx, "This action cannot be undone.");
+            monstro_spacer(ctx, 10.0f);
+            monstro_begin_layout(ctx, MONSTRO_LAYOUT_HORIZONTAL);
+            {
+               if (monstro_button(ctx, "OK", nullptr))
+               {
+                  printf("Modal: OK clicked\n");
+                  d->showModal = false;
+                  monstro_close_current_popup(ctx);
+               }
+               monstro_spacer(ctx, 10.0f);
+               if (monstro_button(ctx, "Cancel", nullptr))
+               {
+                  printf("Modal: Cancel clicked\n");
+                  d->showModal = false;
+                  monstro_close_current_popup(ctx);
+               }
+            }
+            monstro_end_layout(ctx);
+            monstro_end_popup(ctx);
+         }
       }
       monstro_end_window(ctx);
    }
@@ -645,10 +659,10 @@ static void basic_update(ExampleApp *app, void *ud, float dt)
       monstro_set_next_window_pos(ctx, 550.0f, 300.0f, MONSTRO_COND_FIRST_USE_EVER);
       monstro_set_next_window_size(ctx, 250.0f, 400.0f, MONSTRO_COND_FIRST_USE_EVER);
 
-      MonstroWindowFlags pickerFlags = (MonstroWindowFlags)(
-          MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_TITLE_BAR | MONSTRO_WINDOW_BORDERS | MONSTRO_WINDOW_MOVABLE |
-          MONSTRO_WINDOW_COLLAPSABLE | MONSTRO_WINDOW_RESIZABLE | MONSTRO_WINDOW_INPUTS |
-          MONSTRO_WINDOW_SCROLL_WITH_MOUSE);
+      MonstroWindowFlags pickerFlags =
+          (MonstroWindowFlags)(MONSTRO_WINDOW_BACKGROUND | MONSTRO_WINDOW_TITLE_BAR | MONSTRO_WINDOW_BORDERS |
+                               MONSTRO_WINDOW_MOVABLE | MONSTRO_WINDOW_COLLAPSABLE | MONSTRO_WINDOW_RESIZABLE |
+                               MONSTRO_WINDOW_INPUTS | MONSTRO_WINDOW_SCROLL_WITH_MOUSE);
 
       if (monstro_begin_window(ctx, "Color Picker", &d->colorPickerOpen, pickerFlags))
       {
