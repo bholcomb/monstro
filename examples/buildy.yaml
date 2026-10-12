@@ -15,9 +15,12 @@ targets:
       language: cpp
       sources:
         - "basic/*.cpp"
+        - "themes/themes.cpp"
       include_dirs:
         - "../include"
+        - "../externals"
         - "common"
+        - "themes"
       deps:
         - glfw3
         - vulkease
@@ -228,3 +231,57 @@ staging:
         - "fonts/DejaVuSans.ttf"
         - "fonts/DejaVuSansMono-bitmap.png"
         - "fonts/LICENSE-DejaVu.txt"
+
+    - folder: data/themes/scifi
+      files:
+        - "themes/scifi/KenneyFuture.ttf"
+        - "themes/scifi/bar_shadow_round_outline_small_square.png"
+        - "themes/scifi/bar_shadow_round_small_square.png"
+        - "themes/scifi/bar_shadow_square_large.png"
+        - "themes/scifi/bar_shadow_square_outline_large.png"
+        - "themes/scifi/bar_shadow_square_outline_small_square.png"
+        - "themes/scifi/bar_shadow_square_small.png"
+        - "themes/scifi/bar_shadow_square_small_square.png"
+        - "themes/scifi/blue_bar_round_gloss_large_square.png"
+        - "themes/scifi/blue_bar_round_gloss_small_square.png"
+        - "themes/scifi/blue_bar_square_gloss_large.png"
+        - "themes/scifi/blue_bar_square_gloss_small_square.png"
+        - "themes/scifi/blue_bar_square_large.png"
+        - "themes/scifi/blue_bar_square_small.png"
+        - "themes/scifi/blue_button_square_header_large_rectangle.png"
+        - "themes/scifi/button_rectangle.png"
+        - "themes/scifi/button_rectangle_depth.png"
+        - "themes/scifi/button_square_depth.png"
+        - "themes/scifi/grey_bar_round_gloss_large_square.png"
+        - "themes/scifi/panel_glass_screws.png"
+        - "themes/scifi/panel_rectangle.png"
+        - "themes/scifi/red_bar_square_large.png"
+        - "themes/scifi/yellow_bar_round_gloss_large_square.png"
+        - "themes/scifi/yellow_bar_round_gloss_small_square.png"
+        - "themes/scifi/yellow_bar_square_gloss_large.png"
+        - "themes/scifi/yellow_bar_square_gloss_small_square.png"
+        - "themes/scifi/yellow_bar_square_small.png"
+        - "themes/scifi/README.md"
+
+    - folder: data/themes/rpg
+      files:
+        - "themes/rpg/barBack_horizontal.png"
+        - "themes/rpg/barBack_vertical.png"
+        - "themes/rpg/barRed_horizontal.png"
+        - "themes/rpg/barYellow_horizontal.png"
+        - "themes/rpg/barYellow_vertical.png"
+        - "themes/rpg/buttonLong_beige.png"
+        - "themes/rpg/buttonLong_beige_pressed.png"
+        - "themes/rpg/buttonLong_brown.png"
+        - "themes/rpg/buttonLong_brown_pressed.png"
+        - "themes/rpg/buttonLong_grey_pressed.png"
+        - "themes/rpg/buttonRound_blue.png"
+        - "themes/rpg/buttonRound_brown.png"
+        - "themes/rpg/buttonSquare_blue.png"
+        - "themes/rpg/buttonSquare_brown.png"
+        - "themes/rpg/buttonSquare_brown_pressed.png"
+        - "themes/rpg/iconCheck_beige.png"
+        - "themes/rpg/iconCircle_beige.png"
+        - "themes/rpg/panel_beige.png"
+        - "themes/rpg/panel_beigeLight.png"
+        - "themes/rpg/README.md"

@@ -2232,6 +2232,36 @@ monstro_context_set_theme(ctx, monstro_theme_register(env, "skin", &style));
 values.  The draw commands will batch by texture automatically.  Keep
 frequently-used elements in the same atlas to minimize texture switches.
 
+### The widget tour's game themes
+
+The widget tour (`examples/basic`) has two textured themes besides the
+built-in ones, `"scifi"` and `"rpg"`, built from Kenney's CC0 UI packs
+(`examples/themes/scifi/README.md` and `examples/themes/rpg/README.md` name
+the packs and list the files).  `examples/themes/themes.cpp` describes each as
+a table: one PNG (or part of one) per style slot with its nine-patch borders,
+or none for a sprite, over a base function for the colours and sizes where no
+art fits.  `game_theme_register` reads the PNGs with stb_image, hands each to
+the host's upload callback once and registers the theme; the tour uploads
+them as VulkEase textures in its init, before the first frame.
+
+- **Sci-Fi** (UI Pack: Sci-fi 2.0, with its Kenney Future font): light grey
+  panels with screws under a blue title strip; raised grey buttons that light
+  blue under the pointer; dark slots for fields, progress bars, scrollbar
+  tracks, checkboxes and radio buttons, holding glossy blue (yellow under the
+  pointer) lights, thumbs and fills; glossy round slider cursors and knobs;
+  blue tabs, rows and table headers.  Dark navy text throughout.
+- **RPG** (UI pack: RPG extension, with DejaVu Sans): a beige panel under a
+  brown title plank; brown buttons that turn beige under the pointer;
+  parchment fields; brown checkboxes and radio buttons with cream checks and
+  dots; round brown slider cursors and knobs; rounded orange progress bars
+  and golden scrollbar thumbs in their dark backs; beige and brown tabs and
+  planks for rows, headers and the combo box.  Dark brown text, cream on the
+  brown art.
+
+Some parts stay colours, as there is no style item for them: the slider's bar
+and fill, the knob's track, the menu bar and table rows.  Start the tour in one
+with `--theme scifi` or `--theme rpg`, or pick it from its Theme menu.
+
 ---
 
 ## Extending: Building Complex Dialogs
@@ -2455,7 +2485,7 @@ The kitchen-sink demo (`examples/basic/main.cpp`).  Exercises most of the
 widget catalog in a single window: labels, buttons, checkboxes, sliders, knobs,
 text input, tables, trees, tabs, color picker, child scroll regions, file
 dialog, menus, and more.  Its Theme menu switches between the built-in themes
-(`--theme NAME` starts in one).  Also serves as the reference for GLFW/Vulkan
+and two textured game themes, Sci-Fi and RPG (`--theme NAME` starts in one).  Also serves as the reference for GLFW/Vulkan
 integration.
 
 ### interaction

@@ -1,4 +1,5 @@
 #include "example_app.h"
+#include "themes.h"
 #include <monstro/icons.h>
 #include <monstro/widgets.h>
 
@@ -36,12 +37,16 @@ struct BasicDemo
    uint64_t iconAtlasTextureId;
    MonstroIconId firstIconId;
 
+   // The game themes' art, one texture per image.
+   VETexture themeTextures[64];
+   int themeTextureCount;
+
    // The Theme menu picks a theme during a frame; it takes effect before the next one.
    const char *nextTheme;
 };
 
-// The Theme menu: the themes monstro_init registers.
-static const char *const THEMES[] = {"default", "dark", "light"};
+// The Theme menu: the themes monstro_init registers, then the two textured game themes basic_init registers.
+static const char *const THEMES[] = {"default", "dark", "light", "scifi", "rpg"};
 
 static bool is_theme_name(const char *name)
 {
@@ -53,6 +58,26 @@ static bool is_theme_name(const char *name)
       }
    }
    return false;
+}
+
+// Uploads one of a game theme's images as a texture; its view is the texture ID the theme's items carry.
+static uint64_t upload_theme_image(void *user, const char *path, const unsigned char *rgba, int width, int height)
+{
+   ExampleApp *app = (ExampleApp *)user;
+   BasicDemo *d = (BasicDemo *)app->user_data;
+   if (d->themeTextureCount == (int)(sizeof(d->themeTextures) / sizeof(d->themeTextures[0])))
+   {
+      fprintf(stderr, "too many theme images at %s\n", path);
+      abort();
+   }
+   VETexture *texture = &d->themeTextures[d->themeTextureCount++];
+   VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
+   ea_check(veCreateTexture2D(app->device, (uint32_t)width, (uint32_t)height, VK_FORMAT_R8G8B8A8_UNORM, usage, path,
+                              texture),
+            "veCreateTexture2D(theme)");
+   ea_check(veHostWriteTextureRegion(app->device, *texture, rgba, (size_t)width * (size_t)height * 4, nullptr),
+            "veHostWriteTextureRegion(theme)");
+   return (uint64_t)veGetDefaultTextureView(app->device, *texture);
 }
 
 static void basic_init(ExampleApp *app, void *ud)
@@ -86,6 +111,10 @@ static void basic_init(ExampleApp *app, void *ud)
    d->firstIconId = 1;
    monstro_register_icon_atlas(app->env, d->firstIconId, d->iconAtlasTextureId, icon_w, icon_h, atlas_w, atlas_h, cols,
                                rows);
+
+   // Before the first frame, while fonts may still join the atlas: the Sci-Fi theme brings its own.
+   game_theme_register(app->env, &GAME_THEME_SCIFI, "data/themes", upload_theme_image, app);
+   game_theme_register(app->env, &GAME_THEME_RPG, "data/themes", upload_theme_image, app);
 }
 
 // A context's theme changes only between frames.
@@ -727,6 +756,10 @@ static void basic_shutdown(ExampleApp *app, void *ud)
    {
       veDestroyTexture(app->device, d->iconAtlasTexture);
    }
+   for (int i = 0; i < d->themeTextureCount; i++)
+   {
+      veDestroyTexture(app->device, d->themeTextures[i]);
+   }
 }
 
 int main(int argc, char *argv[])
@@ -740,7 +773,7 @@ int main(int argc, char *argv[])
          demo.nextTheme = argv[++i];
          continue;
       }
-      fprintf(stderr, "usage: monstro_basic [--theme default|dark|light]\n");
+      fprintf(stderr, "usage: monstro_basic [--theme default|dark|light|scifi|rpg]\n");
       return 2;
    }
 

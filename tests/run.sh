@@ -11,7 +11,7 @@ mkdir -p "$out"
 
 sources=("$root"/src/*.cpp "$root"/src/widgets/*.cpp "$root"/tests/*.cpp)
 # The example widget libraries are smoke-tested too; they are not held to -Werror.
-examples=(console curve node plot property shortcut timeline toast)
+examples=(console curve node plot property shortcut themes timeline toast)
 flags=(-std=c++17 -Wall -Wextra -Wshadow -Werror -g -I"$root/include" -I"$root/externals" -I"$root/src")
 
 build() {
@@ -21,7 +21,7 @@ build() {
    local objects=()
    mkdir -p "$out/$name.examples"
    for example in "${examples[@]}"; do
-      c++ -std=c++17 -g -I"$root/include" "$@" -c "$root/examples/$example/$example.cpp" \
+      c++ -std=c++17 -g -I"$root/include" -I"$root/externals" "$@" -c "$root/examples/$example/$example.cpp" \
          -o "$out/$name.examples/$example.o"
       objects+=("$out/$name.examples/$example.o")
    done

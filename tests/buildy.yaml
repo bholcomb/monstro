@@ -14,6 +14,7 @@ targets:
         - "../examples/plot/plot.cpp"
         - "../examples/property/property.cpp"
         - "../examples/shortcut/shortcut.cpp"
+        - "../examples/themes/themes.cpp"
         - "../examples/timeline/timeline.cpp"
         - "../examples/toast/toast.cpp"
       include_dirs:
