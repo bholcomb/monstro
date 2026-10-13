@@ -139,7 +139,8 @@ Monstro is prebuilt for Linux x64, Windows x64 and macOS on Apple Silicon.
 Each [release](https://github.com/bholcomb/monstro/releases) holds an archive
 for each, with a `SHA256SUMS` file. An archive unpacks to one directory,
 `monstro-<version>-<platform>/`, holding the public headers in `include/`, the
-library and `LICENSE`:
+library, the .NET binding `dotnet/Monstro.dll` (the same assembly on every
+platform) and `LICENSE`:
 
 | Platform | Archive | Library |
 | --- | --- | --- |
@@ -149,8 +150,8 @@ library and `LICENSE`:
 
 For C and C++, add `include/` to the include path and link `libmonstro` from
 `lib/` (on Windows, link `lib/libmonstro.lib` and ship `bin/libmonstro.dll`).
-For .NET, reference
-[`bindings/csharp/Monstro/Monstro.csproj`](bindings/csharp/Monstro/Monstro.csproj)
+For .NET 10, reference `dotnet/Monstro.dll` (or build
+[`bindings/csharp/Monstro/Monstro.csproj`](bindings/csharp/Monstro/Monstro.csproj))
 and put the library beside your app.
 
 To build from source, see [docs/BUILD.md](docs/BUILD.md).

@@ -13,13 +13,15 @@ A .NET 10 binding over Monstro's C API, following the Mobius C# binding's two la
   from it, with frames, input, windows and common widgets. `Handle` on either
   is the native handle for mixing the layers.
 
-Reference `Monstro/Monstro.csproj`. There are no managed package dependencies.
+Reference `Monstro/Monstro.csproj`, or the built `dotnet/Monstro.dll` in each
+[release](https://github.com/bholcomb/monstro/releases) archive, beside that
+platform's native library. There are no managed package dependencies.
 The binding imports `libmonstro`, the native library's name on every platform:
 `libmonstro.so` on Linux, `libmonstro.dll` on Windows, `libmonstro.dylib` on macOS
 (on Windows, `monstro.dll` would be this binding's own `Monstro.dll`, since file names
 ignore case). Put it beside the app or on the loader's search path. CI tests the
-binding on Linux x64, Windows x64 and macOS arm64. Build and ship the native library
-separately from `Monstro.dll`.
+binding on Linux x64, Windows x64 and macOS arm64, as packaged in each release
+archive. Ship the native library beside `Monstro.dll`.
 No graphics API, window toolkit, or renderer is part of the binding.
 
 ```csharp

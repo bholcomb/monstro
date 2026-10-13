@@ -1,8 +1,8 @@
-# Builds monstro's shared library on every platform games ship it for, runs the tests there and
-# packages it with its headers: monstro-<version>-<rid>.tar.gz (.zip on Windows), as ci/build.py
-# describes. The version is the tag's without its v on a tag (v0.1.0 -> 0.1.0), else the short
-# commit. Pushes and pull requests build, test and package; a version tag (v*) also publishes a
-# release holding the three archives and a SHA256SUMS file.
+# Builds monstro's shared library and its .NET binding on every platform games ship it for, runs
+# the tests there and packages both with the headers: monstro-<version>-<rid>.tar.gz (.zip on
+# Windows), as ci/build.py describes. The version is the tag's without its v on a tag
+# (v0.1.0 -> 0.1.0), else the short commit. Pushes and pull requests build, test and package; a
+# version tag (v*) also publishes a release holding the three archives and a SHA256SUMS file.
 #
 # Every platform builds with the buildy release pinned in ci/buildy.json.
 
@@ -122,5 +122,5 @@ jobs:
           cat SHA256SUMS
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$GITHUB_REF_NAME" \
-            --notes "monstro's shared library and headers for each platform, built and tested at $GITHUB_SHA." \
+            --notes "monstro's shared library, headers and .NET binding for each platform, built and tested at $GITHUB_SHA." \
             $expected SHA256SUMS

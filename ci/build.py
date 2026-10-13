@@ -3,9 +3,10 @@
 run here, then the archive the release publishes for this platform, alone in build/ci/out/:
 monstro-<version>-linux-x64.tar.gz, monstro-<version>-osx-arm64.tar.gz or
 monstro-<version>-win-x64.zip. Its one top-level directory, monstro-<version>-<rid>/, holds
-include/ (the public headers as in the repository), LICENSE and the library, libmonstro on every
+include/ (the public headers as in the repository), LICENSE, the library, libmonstro on every
 platform: lib/libmonstro.so, lib/libmonstro.dylib, or bin/libmonstro.dll with its import library
-lib/libmonstro.lib.
+lib/libmonstro.lib, and the .NET binding, dotnet/Monstro.dll, the same assembly on every platform.
+The binding's checks run against the archive's binding and library.
 
 Run it from anywhere; Windows needs the MSVC developer environment (cl.exe, link.exe, dumpbin.exe)."""
 
@@ -91,12 +92,26 @@ def check_library_name(rid, built):
     print(f"{built.name}: programs that link it load {expected[0]}", flush=True)
 
 
-def package(rid, version, built):
+def read_archive(archive):
+    """The archive's entry names (directories end in /), sorted, and each file's contents."""
+    if archive.suffix == ".zip":
+        with zipfile.ZipFile(archive) as zipped:
+            found = sorted(zipped.namelist())
+            contents = {name: zipped.read(name) for name in found if not name.endswith("/")}
+    else:
+        with tarfile.open(archive) as tarred:
+            members = tarred.getmembers()
+            found = sorted(member.name + "/" if member.isdir() else member.name for member in members)
+            contents = {member.name: tarred.extractfile(member).read() for member in members if member.isfile()}
+    return found, contents
+
+
+def package(rid, version, built, binding):
     """Writes this platform's release archive to build/ci/out/ and checks that it holds exactly the
     expected files, each identical to its source. Entries are sorted, owned by root, with
     normalized permissions."""
     top = f"monstro-{version}-{rid}"
-    files = {f"{top}/LICENSE": ROOT / "LICENSE"}
+    files = {f"{top}/LICENSE": ROOT / "LICENSE", f"{top}/dotnet/{binding.name}": binding}
     for header in sorted((ROOT / "include").rglob("*")):
         if header.is_file():
             files[f"{top}/{header.relative_to(ROOT).as_posix()}"] = header
@@ -121,9 +136,6 @@ def package(rid, version, built):
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
             for name in expected:
                 zipped.write(files[name] if name in files else ROOT, name)
-        with zipfile.ZipFile(archive) as zipped:
-            found = sorted(zipped.namelist())
-            contents = {name: zipped.read(name) for name in found if not name.endswith("/")}
     else:
         archive = out / f"{top}.tar.gz"
 
@@ -136,10 +148,7 @@ def package(rid, version, built):
         with tarfile.open(archive, "w:gz") as tarred:
             for name in expected:
                 tarred.add(files[name] if name in files else ROOT, name.rstrip("/"), recursive=False, filter=normalize)
-        with tarfile.open(archive) as tarred:
-            members = tarred.getmembers()
-            found = sorted(member.name + "/" if member.isdir() else member.name for member in members)
-            contents = {member.name: tarred.extractfile(member).read() for member in members if member.isfile()}
+    found, contents = read_archive(archive)
     if found != expected:
         missing = sorted(set(expected) - set(found))
         extra = sorted(set(found) - set(expected))
@@ -150,6 +159,7 @@ def package(rid, version, built):
     if sorted(out.iterdir()) != [archive]:
         raise SystemExit(f"{out} holds {sorted(path.name for path in out.iterdir())}; expected only {archive.name}")
     print(f"Built {archive}:", *expected, sep="\n  ", flush=True)
+    return archive
 
 
 def short_commit():
@@ -160,10 +170,16 @@ def short_commit():
     return result.stdout.strip()
 
 
-def binding_tests(rid, library, built):
-    """The .NET binding's checks against this library: every export, struct layouts against the
-    headers (the ABI probe), input, fonts and draw output. .NET finds both libraries beside the app."""
+def build_binding(rid):
+    """Builds the .NET binding in Release for net10.0, the assembly every archive ships, and its
+    checks' console runner beside the ABI probe they load. Returns Monstro.dll and the runner's
+    directory, which holds neither native library: binding_tests() adds the archive's."""
     dotnet = WORK / "dotnet"
+    run("dotnet", "build", ROOT / "bindings/csharp/Monstro/Monstro.csproj", "-c", "Release", "-f", "net10.0",
+        "--artifacts-path", dotnet, "--nologo", "-nr:false")
+    binding = dotnet / "bin/Monstro/release/Monstro.dll"
+    if not binding.is_file():
+        raise SystemExit(f"dotnet build did not write {binding}")
     run("dotnet", "build", ROOT / "bindings/csharp/Monstro.Tests/Monstro.Tests.csproj", "-c", "Release",
         "--artifacts-path", dotnet, "--nologo", "-nr:false")
     app = dotnet / "bin/Monstro.Tests/release"
@@ -179,8 +195,23 @@ def binding_tests(rid, library, built):
     else:
         run("cc", "-std=c11", "-shared", "-fPIC", "-Wall", "-Wextra", "-Werror", probe, "-I", ROOT / "include",
             "-o", app / "libmonstro-binding-test.so")
-    shutil.copy2(built, app / library)
-    run("dotnet", app / "Monstro.Tests.dll", app / library, ROOT / "examples/fonts/DejaVuSans.ttf")
+    return binding, app
+
+
+def binding_tests(library, archive, app):
+    """The .NET binding's checks, run with the archive's Monstro.dll and native library in place of
+    the ones built: every export, struct layouts against the headers (the ABI probe), input, fonts
+    and draw output, all through the archive's binding importing libmonstro by name. .NET finds
+    both libraries beside the app."""
+    _, contents = read_archive(archive)
+    top = archive.name.removesuffix(".zip").removesuffix(".tar.gz")
+    native = f"bin/{library}" if library.endswith(".dll") else f"lib/{library}"
+    runner = WORK / "package-tests"
+    shutil.copytree(app, runner)
+    for path in ("dotnet/Monstro.dll", native):
+        (runner / path.split("/")[-1]).write_bytes(contents[f"{top}/{path}"])
+    print(f"Running the binding's checks with {archive.name}'s Monstro.dll and {library}", flush=True)
+    run("dotnet", runner / "Monstro.Tests.dll", runner / library, ROOT / "examples/fonts/DejaVuSans.ttf")
 
 
 def main():
@@ -210,7 +241,7 @@ def main():
         run("bash", ROOT / "tests/run.sh")
     check_library_name(rid, built)
     load_check(built)
-    binding_tests(rid, library, built)
+    binding, app = build_binding(rid)
     if rid == "win-x64":
         # A game ships this DLL to machines without the Visual C++ redistributable: the C runtime is
         # linked in (cl's default, /MT), never imported.
@@ -219,7 +250,8 @@ def main():
         if "vcruntime" in dependents.lower() or "msvcp" in dependents.lower():
             raise SystemExit(f"{built} imports the Visual C++ runtime; link it statically (/MT)")
 
-    package(rid, version, built)
+    archive = package(rid, version, built, binding)
+    binding_tests(library, archive, app)
 
 
 if __name__ == "__main__":

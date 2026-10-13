@@ -76,12 +76,14 @@ python3 ci/build.py [--buildy PATH] [--version VERSION]
 
 This is what CI runs on each platform: it builds the release library alone,
 runs the headless suite (not on Windows), checks that the library exports every
-function the binding imports, runs the binding's checks, and on Windows checks
-that the C runtime is linked in. It then packages the library with the headers
-into the archive a release publishes for the platform, checks the archive holds
-exactly the expected files, and leaves it alone in `build/ci/out/`. The archive's
-version is `--version`, by default the short commit. On Windows, run it from an
-x64 developer prompt.
+function the binding imports, builds the binding in Release for `net10.0`, and
+on Windows checks that the C runtime is linked in. It then packages the library,
+the headers and the binding into the archive a release publishes for the
+platform, checks the archive holds exactly the expected files, and runs the
+binding's checks with the archive's `Monstro.dll` and library in place of the
+ones built, so the packaged binding loads the packaged `libmonstro` by name. The
+archive is left alone in `build/ci/out/`. Its version is `--version`, by default
+the short commit. On Windows, run it from an x64 developer prompt.
 
 ## Examples
 
@@ -141,6 +143,9 @@ names its archive with the short commit instead. Each unpacks to one directory,
 - The library, named as it is built: `lib/libmonstro.so` on Linux,
   `lib/libmonstro.dylib` on macOS, and on Windows `bin/libmonstro.dll` with its
   import library `lib/libmonstro.lib`.
+- `dotnet/Monstro.dll`: the .NET binding, built in Release for `net10.0`. It is
+  the same managed assembly on every platform and imports the library as
+  `libmonstro`.
 - `LICENSE`.
 
 Programs that link the library record its name alone (its SONAME on Linux,
